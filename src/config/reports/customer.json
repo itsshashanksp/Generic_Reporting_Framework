@@ -1,0 +1,13 @@
+{
+    "id": "customer_report",
+    "title": "Customer Report",
+
+    "request": {
+        "controller": "Query",
+        "action": "select",
+        "table": "CustomerTable",
+        "columns": [
+          "*"
+        ]
+    }
+}

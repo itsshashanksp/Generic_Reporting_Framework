@@ -1,0 +1,23 @@
+[
+  {
+    "id": "dashboard",
+    "title": "Dashboard",
+    "route": "/"
+  },
+  {
+    "id": "reports",
+    "title": "Reports",
+    "children": [
+      {
+        "id": "customer_report",
+        "title": "Customer Report",
+        "reportId": "customer_report"
+      }
+    ]
+  },
+  {
+    "id": "settings",
+    "title": "Settings",
+    "route": "/settings"
+  }
+]
