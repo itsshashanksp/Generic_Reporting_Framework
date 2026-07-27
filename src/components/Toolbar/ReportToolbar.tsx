@@ -4,6 +4,9 @@ import ToolbarButton from "./ToolbarButton";
 import { toolbarConfig } from "../../engine/ToolbarEngine";
 
 import { useSearch } from "../../engine/SearchEngine";
+import { useGrid } from "../../engine/GridContext";
+
+import { exportCSV } from "../../engine/ExportEngine";
 
 export default function ReportToolbar() {
 
@@ -11,6 +14,10 @@ export default function ReportToolbar() {
         search,
         setSearch,
     } = useSearch();
+
+    const {
+        api,
+    } = useGrid();
 
     return (
 
@@ -26,15 +33,29 @@ export default function ReportToolbar() {
             <div>
 
                 {toolbarConfig.enableRefresh && (
-                    <ToolbarButton label="Refresh" />
+                    <ToolbarButton
+                        label="Refresh"
+                        onClick={() => window.location.reload()}
+                    />
                 )}
 
                 {toolbarConfig.enableExport && (
-                    <ToolbarButton label="Export" />
+                    <ToolbarButton
+                        label="Export CSV"
+                        onClick={() => {
+
+                            if (api) {
+                                exportCSV(api);
+                            }
+
+                        }}
+                    />
                 )}
 
                 {toolbarConfig.enableSettings && (
-                    <ToolbarButton label="Settings" />
+                    <ToolbarButton
+                        label="Settings"
+                    />
                 )}
 
             </div>

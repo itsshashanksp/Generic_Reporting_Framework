@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { AgGridReact } from "ag-grid-react";
 
 import { useSearch } from "../../engine/SearchEngine";
+import { useGrid } from "../../engine/GridContext";
 
 import {
     defaultColumn,
@@ -25,15 +26,19 @@ export default function GenericGrid({
 
     const { search } = useSearch();
 
+    const { setApi } = useGrid();
+
     const gridRef = useRef<AgGridReact>(null);
 
     useEffect(() => {
 
         if (gridRef.current?.api) {
+
             gridRef.current.api.setGridOption(
                 "quickFilterText",
                 search
             );
+
         }
 
     }, [search]);
@@ -47,9 +52,15 @@ export default function GenericGrid({
 
             <AgGridReact
                 ref={gridRef}
+
+                onGridReady={(params) => {
+                    setApi(params.api);
+                }}
+
                 rowData={rows}
                 columnDefs={columns}
                 defaultColDef={defaultColumn}
+
                 {...defaultGridOptions}
             />
 
