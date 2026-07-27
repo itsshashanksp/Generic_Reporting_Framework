@@ -1,3 +1,47 @@
+export interface ReportRequest {
+    controller: string;
+    action: string;
+    table: string;
+    columns: string[];
+    where?: string;
+    orderBy?: string;
+}
+
+export interface ToolbarConfig {
+    search: boolean;
+    export: boolean;
+    refresh: boolean;
+    settings: boolean;
+}
+
+export interface GridConfig {
+    pagination: boolean;
+    pageSize: number;
+    rowSelection: "single" | "multiple";
+}
+
+export interface ReportFilter {
+    id: string;
+    label: string;
+    type:
+        | "text"
+        | "number"
+        | "date"
+        | "daterange"
+        | "select"
+        | "multiselect"
+        | "checkbox";
+
+    field: string;
+
+    defaultValue?: unknown;
+
+    options?: {
+        label: string;
+        value: string | number;
+    }[];
+}
+
 export interface ReportDefinition {
 
     id: string;
@@ -8,30 +52,11 @@ export interface ReportDefinition {
 
     icon?: string;
 
-    toolbar: {
+    toolbar: ToolbarConfig;
 
-        search: boolean;
+    grid: GridConfig;
 
-        export: boolean;
+    filters: ReportFilter[];
 
-        refresh: boolean;
-
-        settings: boolean;
-
-    };
-
-    grid: {
-
-        pagination: boolean;
-
-        pageSize: number;
-
-        rowSelection: "single" | "multiple";
-
-    };
-
-    filters: any[];
-
-    request: any;
-
+    request: ReportRequest;
 }
