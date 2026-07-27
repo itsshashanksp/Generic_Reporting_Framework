@@ -15,6 +15,8 @@ import Empty from "../components/Common/Empty";
 
 import { UIState } from "../engine/UIStateEngine";
 
+import { ReportToolbar } from "../components/Toolbar";
+
 export default function ReportViewer() {
 
     const { reportId } = useParams();
@@ -103,6 +105,8 @@ export default function ReportViewer() {
             <p>
                 <strong>Execution Time:</strong> {result?.executionTime} ms
             </p>
+            
+            <ReportToolbar />
 
             <GenericGrid
                 rows={rows}
