@@ -1,13 +1,16 @@
-import { useState } from "react";
-
 import SearchBox from "./SearchBox";
 import ToolbarButton from "./ToolbarButton";
 
 import { toolbarConfig } from "../../engine/ToolbarEngine";
 
+import { useSearch } from "../../engine/SearchEngine";
+
 export default function ReportToolbar() {
 
-    const [search, setSearch] = useState("");
+    const {
+        search,
+        setSearch,
+    } = useSearch();
 
     return (
 
