@@ -21,6 +21,5 @@ export function parseResponse(response: any) {
 
     return {
         rows,
-        columns,
     };
 }

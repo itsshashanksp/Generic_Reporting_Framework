@@ -12,13 +12,14 @@ import {
 } from "../../engine/GridEngine";
 
 import type { GridConfig } from "../../types/report";
+import type { ColumnDefinition } from "../../types/column";
 
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
 
 interface Props {
     rows: any[];
-    columns: any[];
+    columns: ColumnDefinition[];
     gridConfig: GridConfig;
 }
 
@@ -47,6 +48,16 @@ export default function GenericGrid({
 
     }, [search]);
 
+    const columnDefs = columns
+        .filter(column => column.visible)
+        .map(column => ({
+            field: column.field,
+            headerName: column.header,
+            sortable: column.sortable,
+            filter: column.filterable,
+            width: column.width,
+        }));
+
     return (
 
         <div
@@ -62,7 +73,7 @@ export default function GenericGrid({
                 }}
 
                 rowData={rows}
-                columnDefs={columns}
+                columnDefs={columnDefs}
 
                 defaultColDef={defaultColumn}
 

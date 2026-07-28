@@ -1,4 +1,5 @@
 import { defaultReportDefinition } from "./defaults";
+import { loadColumns } from "../ColumnEngine";
 
 export function loadDefinition(report: any) {
 
@@ -7,6 +8,8 @@ export function loadDefinition(report: any) {
         ...defaultReportDefinition,
 
         ...report,
+
+        columns: loadColumns(report.columns || [])
 
     };
 

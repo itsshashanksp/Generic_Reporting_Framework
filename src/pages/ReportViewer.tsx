@@ -35,11 +35,10 @@ export default function ReportViewer() {
 
     const [errorMessage, setErrorMessage] = useState("");
 
-    const { rows, columns } = result
+    const { rows } = result
         ? parseResponse(result)
         : {
-              rows: [],
-              columns: [],
+               rows: [],
           };
 
     useEffect(() => {
@@ -120,7 +119,7 @@ export default function ReportViewer() {
 
             <GenericGrid
                 rows={rows}
-                columns={columns}
+                columns={report!.columns}
                 gridConfig={report!.grid}
             />
 

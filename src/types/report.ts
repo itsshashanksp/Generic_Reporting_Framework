@@ -1,8 +1,8 @@
+import type { ColumnDefinition } from "./column";
 export interface ReportRequest {
     controller: string;
     action: string;
     table: string;
-    columns: string[];
     where?: string;
     orderBy?: string;
 }
@@ -55,6 +55,8 @@ export interface ReportDefinition {
     toolbar: ToolbarConfig;
 
     grid: GridConfig;
+
+    columns: ColumnDefinition[];
 
     filters: ReportFilter[];
 
