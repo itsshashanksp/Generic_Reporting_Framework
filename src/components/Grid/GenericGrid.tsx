@@ -11,17 +11,21 @@ import {
     gridTheme,
 } from "../../engine/GridEngine";
 
+import type { GridConfig } from "../../types/report";
+
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
 
 interface Props {
     rows: any[];
     columns: any[];
+    gridConfig: GridConfig;
 }
 
 export default function GenericGrid({
     rows,
     columns,
+    gridConfig,
 }: Props) {
 
     const { search } = useSearch();
@@ -59,7 +63,12 @@ export default function GenericGrid({
 
                 rowData={rows}
                 columnDefs={columns}
+
                 defaultColDef={defaultColumn}
+
+                pagination={gridConfig.pagination}
+                paginationPageSize={gridConfig.pageSize}
+                rowSelection={gridConfig.rowSelection}
 
                 {...defaultGridOptions}
             />

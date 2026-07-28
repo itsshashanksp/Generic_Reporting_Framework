@@ -1,14 +1,23 @@
 import SearchBox from "./SearchBox";
 import ToolbarButton from "./ToolbarButton";
 
-import { toolbarConfig } from "../../engine/ToolbarEngine";
-
 import { useSearch } from "../../engine/SearchEngine";
 import { useGrid } from "../../engine/GridContext";
 
 import { exportCSV } from "../../engine/ExportEngine";
 
-export default function ReportToolbar() {
+interface ReportToolbarProps {
+    config: {
+        search: boolean;
+        export: boolean;
+        refresh: boolean;
+        settings: boolean;
+    };
+}
+
+export default function ReportToolbar({
+    config,
+}: ReportToolbarProps) {
 
     const {
         search,
@@ -32,27 +41,25 @@ export default function ReportToolbar() {
 
             <div>
 
-                {toolbarConfig.enableRefresh && (
+                {config.refresh && (
                     <ToolbarButton
                         label="Refresh"
                         onClick={() => window.location.reload()}
                     />
                 )}
 
-                {toolbarConfig.enableExport && (
+                {config.export && (
                     <ToolbarButton
                         label="Export CSV"
                         onClick={() => {
-
                             if (api) {
                                 exportCSV(api);
                             }
-
                         }}
                     />
                 )}
 
-                {toolbarConfig.enableSettings && (
+                {config.settings && (
                     <ToolbarButton
                         label="Settings"
                     />
@@ -60,13 +67,11 @@ export default function ReportToolbar() {
 
             </div>
 
-            {toolbarConfig.enableSearch && (
-
+            {config.search && (
                 <SearchBox
                     value={search}
                     onChange={setSearch}
                 />
-
             )}
 
         </div>

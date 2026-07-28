@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { getReport } from "../engine/ReportEngine/reportLoader";
+import { loadDefinition } from "../engine/ReportDefinitionEngine";
+
 import { executeRequest } from "../api/request";
 
 import type { ApiResponse } from "../types/api";
@@ -21,7 +23,11 @@ export default function ReportViewer() {
 
     const { reportId } = useParams();
 
-    const report = getReport(reportId || "");
+    const rawReport = getReport(reportId || "");
+
+    const report = useMemo(() => {
+        return rawReport ? loadDefinition(rawReport) : null;
+    }, [rawReport]);
 
     const [result, setResult] = useState<ApiResponse | null>(null);
 
@@ -69,7 +75,9 @@ export default function ReportViewer() {
 
                 setUiState(UIState.ERROR);
 
-                setErrorMessage(err.message || "Unexpected error occurred.");
+                setErrorMessage(
+                    err.message || "Unexpected error occurred."
+                );
 
             });
 
@@ -88,12 +96,12 @@ export default function ReportViewer() {
 
         <div>
 
-            <h1>{report?.title}</h1>
+            <h1>{report!.title}</h1>
 
             <h2>Request</h2>
 
             <pre>
-                {JSON.stringify(report?.request, null, 4)}
+                {JSON.stringify(report!.request, null, 4)}
             </pre>
 
             <h2>Report Information</h2>
@@ -105,12 +113,15 @@ export default function ReportViewer() {
             <p>
                 <strong>Execution Time:</strong> {result?.executionTime} ms
             </p>
-            
-            <ReportToolbar />
+
+            <ReportToolbar
+                config={report!.toolbar}
+            />
 
             <GenericGrid
                 rows={rows}
                 columns={columns}
+                gridConfig={report!.grid}
             />
 
         </div>
