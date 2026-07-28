@@ -19,6 +19,8 @@ import { UIState } from "../engine/UIStateEngine";
 
 import { ReportToolbar } from "../components/Toolbar";
 
+import { FilterRenderer } from "../components/Filters";
+
 export default function ReportViewer() {
 
     const { reportId } = useParams();
@@ -112,6 +114,10 @@ export default function ReportViewer() {
             <p>
                 <strong>Execution Time:</strong> {result?.executionTime} ms
             </p>
+            
+            <FilterRenderer
+                filters={report!.filters}
+            />
 
             <ReportToolbar
                 config={report!.toolbar}
