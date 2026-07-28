@@ -1,4 +1,6 @@
 import type { ColumnDefinition } from "./column";
+import type { FilterDefinition } from "./filter";
+
 export interface ReportRequest {
     controller: string;
     action: string;
@@ -58,7 +60,7 @@ export interface ReportDefinition {
 
     columns: ColumnDefinition[];
 
-    filters: ReportFilter[];
+    filters: FilterDefinition[];
 
     request: ReportRequest;
 }

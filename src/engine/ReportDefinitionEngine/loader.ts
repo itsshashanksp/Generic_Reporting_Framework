@@ -1,5 +1,6 @@
 import { defaultReportDefinition } from "./defaults";
 import { loadColumns } from "../ColumnEngine";
+import { loadFilters } from "../FilterEngine";
 
 export function loadDefinition(report: any) {
 
@@ -9,7 +10,9 @@ export function loadDefinition(report: any) {
 
         ...report,
 
-        columns: loadColumns(report.columns || [])
+        columns: loadColumns(report.columns || []),
+
+        filters: loadFilters(report.filters || [])
 
     };
 

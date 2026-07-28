@@ -31,7 +31,18 @@
     }
   ],
 
-  "filters": [],
+"filters": [
+    {
+        "field": "Cust_Name",
+        "label": "Customer Name",
+        "type": "text"
+    },
+    {
+        "field": "Cust_Add",
+        "label": "Address",
+        "type": "text"
+    }
+],
 
   "request": {
     "controller": "Query",
