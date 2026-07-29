@@ -1,7 +1,5 @@
-import SearchBox from "./SearchBox";
 import ToolbarButton from "./ToolbarButton";
 
-import { useSearch } from "../../engine/SearchEngine";
 import { useGrid } from "../../engine/GridContext";
 
 import { exportCSV } from "../../engine/ExportEngine";
@@ -18,11 +16,6 @@ interface ReportToolbarProps {
 export default function ReportToolbar({
     config,
 }: ReportToolbarProps) {
-
-    const {
-        search,
-        setSearch,
-    } = useSearch();
 
     const {
         api,
@@ -66,13 +59,6 @@ export default function ReportToolbar({
                 )}
 
             </div>
-
-            {config.search && (
-                <SearchBox
-                    value={search}
-                    onChange={setSearch}
-                />
-            )}
 
         </div>
 

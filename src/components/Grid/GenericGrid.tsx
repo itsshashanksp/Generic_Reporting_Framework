@@ -1,8 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 
 import { AgGridReact } from "ag-grid-react";
 
-import { useSearch } from "../../engine/SearchEngine";
 import { useGrid } from "../../engine/GridContext";
 
 import {
@@ -29,24 +28,9 @@ export default function GenericGrid({
     gridConfig,
 }: Props) {
 
-    const { search } = useSearch();
-
     const { setApi } = useGrid();
 
     const gridRef = useRef<AgGridReact>(null);
-
-    useEffect(() => {
-
-        if (gridRef.current?.api) {
-
-            gridRef.current.api.setGridOption(
-                "quickFilterText",
-                search
-            );
-
-        }
-
-    }, [search]);
 
     const columnDefs = columns
         .filter(column => column.visible)
@@ -54,7 +38,7 @@ export default function GenericGrid({
             field: column.field,
             headerName: column.header,
             sortable: column.sortable,
-            filter: column.filterable,
+            filter: false,
             width: column.width,
         }));
 
