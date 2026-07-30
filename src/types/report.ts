@@ -1,5 +1,9 @@
 import type { ColumnDefinition } from "./column";
 import type { FilterDefinition } from "./filter";
+export interface SortDefinition {
+    column: string;
+    direction: "ASC" | "DESC";
+}
 
 export interface ReportRequest {
     controller: string;
@@ -8,9 +12,9 @@ export interface ReportRequest {
 
     columns?: string[];
 
-    where?: string;
+    where?: any[];
 
-    orderBy?: string;
+    sort?: SortDefinition[];
 
     filters?: Record<string, any>;
 }
