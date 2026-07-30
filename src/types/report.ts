@@ -5,8 +5,14 @@ export interface ReportRequest {
     controller: string;
     action: string;
     table: string;
+
+    columns?: string[];
+
     where?: string;
+
     orderBy?: string;
+
+    filters?: Record<string, any>;
 }
 
 export interface ToolbarConfig {
