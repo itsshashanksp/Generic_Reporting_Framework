@@ -16,6 +16,7 @@
     "rowSelection": "multiple"
   },
 
+
   "columns": [
     {
       "field": "Cust_Name",
@@ -49,5 +50,5 @@
     "action": "select",
     "table": "CustomerTable",
     "columns": ["*"]
-  }
+  } 
 }
