@@ -1,4 +1,4 @@
-const API_URL = "http://localhost/Backend/api/index.php";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export async function apiClient(body: object) {
     const response = await fetch(API_URL, {
