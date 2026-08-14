@@ -31,6 +31,8 @@ import { buildWhere } from "../engine/FilterQueryBuilder";
 
 import { buildGrouping } from "../engine/GroupingEngine";
 
+import { useGrid } from "../engine/GridContext";
+
 export default function ReportViewer() {
 
     const { reportId } = useParams();
@@ -61,6 +63,8 @@ export default function ReportViewer() {
         : {
               rows: [],
           };
+
+    const { api } = useGrid();
 
     const loadReport = useCallback(
     async (
@@ -182,6 +186,115 @@ export default function ReportViewer() {
 
     };
 
+    const handleExportAll = async (
+    format: "csv" | "excel"
+) => {
+
+    if (!report || !api) {
+        return;
+    }
+
+    try {
+
+        const grouping = buildGrouping(
+            report.grid.grouping
+        );
+
+        const requestColumns =
+            report.grid.grouping?.enabled
+                ? grouping.columns
+                : report.request.columns;
+
+        const exportRequest = {
+            ...report.request,
+
+            columns: requestColumns,
+
+            groupBy: grouping.groupBy,
+
+            where: [
+                ...(Array.isArray(report.request.where)
+                    ? report.request.where
+                    : []),
+
+                ...buildWhere(filters),
+            ],
+
+            // Export All:
+            // do NOT send page/pageSize
+        };
+
+        const response = await executeRequest(
+            exportRequest
+        );
+
+        if (!response.success) {
+
+            console.error(
+                "Export All failed:",
+                response.message
+            );
+
+            return;
+        }
+
+        const exportRows = parseResponse(response).rows;
+
+        if (!exportRows.length) {
+
+            console.warn(
+                "Export All: no rows returned."
+            );
+
+            return;
+        }
+
+        const currentRows = rows;
+
+        api.setGridOption(
+            "rowData",
+            exportRows
+        );
+
+        if (format === "csv") {
+
+            api.exportDataAsCsv({
+                fileName:
+                    report.export?.filename
+                        ? `${report.export.filename}.csv`
+                        : "report.csv",
+            });
+
+        }
+
+        if (format === "excel") {
+
+            api.exportDataAsExcel({
+                fileName:
+                    report.export?.filename
+                        ? `${report.export.filename}.xlsx`
+                        : "report.xlsx",
+            });
+
+        }
+
+        api.setGridOption(
+            "rowData",
+            currentRows
+        );
+
+    }
+    catch (error) {
+
+        console.error(
+            "Export All failed:",
+            error
+        );
+
+    }
+
+};
+
     useEffect(() => {
 
         if (report) {
@@ -247,6 +360,8 @@ export default function ReportViewer() {
 
             <ReportToolbar
                 config={report!.toolbar}
+                exportConfig={report!.export}
+                onExportAll={handleExportAll}
             />
 
             <GenericGrid

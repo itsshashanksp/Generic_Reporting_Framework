@@ -1,3 +1,11 @@
-// Reserved for future AG Grid module registration.
+import {
+    ModuleRegistry,
+} from "ag-grid-community";
 
-export {};
+import {
+    ExcelExportModule,
+} from "@ag-grid-enterprise/excel-export";
+
+ModuleRegistry.registerModules([
+    ExcelExportModule,
+]);

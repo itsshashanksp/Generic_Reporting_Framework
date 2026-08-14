@@ -1,7 +1,7 @@
 import type { ColumnDefinition } from "./column";
 import type { FilterDefinition } from "./filter";
 import type { GroupingConfig } from "./grouping";
-
+import type { ExportConfig } from "./export";
 export interface SortDefinition {
     column: string;
     direction: "ASC" | "DESC";
@@ -94,6 +94,8 @@ export interface ReportDefinition {
     toolbar: ToolbarConfig;
 
     grid: GridConfig;
+
+    export?: ExportConfig;
 
     columns: ColumnDefinition[];
 
