@@ -10,11 +10,14 @@
     "settings": false
   },
 
-  "grid": {
-    "pagination": true,
-    "pageSize": 50,
+"grid": {
+    "pagination": {
+        "enabled": true,
+        "pageSize": 5000,
+        "pageSizeOptions": [25, 50, 100]
+    },
     "rowSelection": "multiple"
-  },
+},
 
   "columns": [
     {

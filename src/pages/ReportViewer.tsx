@@ -50,13 +50,21 @@ export default function ReportViewer() {
 
     const [errorMessage, setErrorMessage] = useState("");
 
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const [totalRows, setTotalRows] = useState(0);
+
     const { rows } = result
         ? parseResponse(result)
         : {
               rows: [],
           };
 
-    const loadReport = useCallback(async (activeFilters = filters) => {
+    const loadReport = useCallback(
+    async (
+        activeFilters = filters,
+        activePage = currentPage
+    ) => {
 
         if (!report) {
 
@@ -82,11 +90,17 @@ export default function ReportViewer() {
 
                      ...buildWhere(activeFilters),
 
-                ]
+                ],
+
+                page: activePage,
+
+                pageSize: report.grid.pagination.pageSize,
 
             });
 
             setResult(response);
+
+            setTotalRows(response.rowsReturned);
 
             if (!response.success) {
 
@@ -121,7 +135,8 @@ export default function ReportViewer() {
 
         }
 
-    }, [report, filters]);
+    }, [report, filters, currentPage
+]);
 
     const handleSearch = () => {
 
@@ -129,7 +144,9 @@ export default function ReportViewer() {
 
         console.log("Where:", buildWhere(filters));
 
-        loadReport();
+        setCurrentPage(1);
+
+        loadReport(filters, 1);
 
     };
 
@@ -137,7 +154,17 @@ export default function ReportViewer() {
 
         clearFilters();
 
-        loadReport({});
+        setCurrentPage(1);
+
+        loadReport({}, 1);
+
+    };
+
+    const handlePageChange = (page: number) => {
+
+        setCurrentPage(page);
+
+        loadReport(filters, page);
 
     };
 
@@ -212,6 +239,9 @@ export default function ReportViewer() {
                 rows={rows}
                 columns={report!.columns}
                 gridConfig={report!.grid}
+                currentPage={currentPage}
+                totalRows={totalRows}
+                onPageChange={handlePageChange} 
             />
 
         </div>

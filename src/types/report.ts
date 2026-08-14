@@ -1,8 +1,20 @@
 import type { ColumnDefinition } from "./column";
 import type { FilterDefinition } from "./filter";
+
 export interface SortDefinition {
     column: string;
     direction: "ASC" | "DESC";
+}
+
+export interface PaginationConfig {
+    enabled: boolean;
+    pageSize: number;
+    pageSizeOptions?: number[];
+}
+
+export interface ReportPagination {
+    page: number;
+    pageSize: number;
 }
 
 export interface ReportRequest {
@@ -16,6 +28,10 @@ export interface ReportRequest {
 
     sort?: SortDefinition[];
 
+    page?: number;
+
+    pageSize?: number;
+
     filters?: Record<string, any>;
 }
 
@@ -27,8 +43,10 @@ export interface ToolbarConfig {
 }
 
 export interface GridConfig {
-    pagination: boolean;
+    pagination: PaginationConfig;
+
     pageSize: number;
+
     rowSelection: "single" | "multiple";
 }
 
@@ -55,7 +73,6 @@ export interface ReportFilter {
 }
 
 export interface ReportDefinition {
-
     id: string;
 
     title: string;

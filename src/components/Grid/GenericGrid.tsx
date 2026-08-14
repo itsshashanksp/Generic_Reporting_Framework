@@ -20,12 +20,20 @@ interface Props {
     rows: any[];
     columns: ColumnDefinition[];
     gridConfig: GridConfig;
+
+    currentPage: number;
+    totalRows: number;
+
+    onPageChange: (page: number) => void;
 }
 
 export default function GenericGrid({
     rows,
     columns,
     gridConfig,
+    currentPage,
+    totalRows,
+    onPageChange,
 }: Props) {
 
     const { setApi } = useGrid();
@@ -61,12 +69,98 @@ export default function GenericGrid({
 
                 defaultColDef={defaultColumn}
 
-                pagination={gridConfig.pagination}
-                paginationPageSize={gridConfig.pageSize}
+                pagination={gridConfig.pagination.enabled}
+                paginationPageSize={gridConfig.pagination.pageSize}
+                paginationPageSizeSelector={
+                    gridConfig.pagination.pageSizeOptions
+                }
+
                 rowSelection={gridConfig.rowSelection}
 
                 {...defaultGridOptions}
             />
+
+{gridConfig.pagination.enabled && (
+    <div
+        style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "10px 0",
+        }}
+    >
+        <div>
+            Page {currentPage} of{" "}
+            {Math.max(
+                1,
+                Math.ceil(
+                    totalRows / gridConfig.pagination.pageSize
+                )
+            )}
+        </div>
+
+        <div
+            style={{
+                display: "flex",
+                gap: "8px",
+            }}
+        >
+            <button
+                disabled={currentPage <= 1}
+                onClick={() => onPageChange(1)}
+            >
+                First
+            </button>
+
+            <button
+                disabled={currentPage <= 1}
+                onClick={() =>
+                    onPageChange(currentPage - 1)
+                }
+            >
+                Previous
+            </button>
+
+            <button
+                disabled={
+                    currentPage >=
+                    Math.ceil(
+                        totalRows /
+                        gridConfig.pagination.pageSize
+                    )
+                }
+                onClick={() =>
+                    onPageChange(currentPage + 1)
+                }
+            >
+                Next
+            </button>
+
+            <button
+                disabled={
+                    currentPage >=
+                    Math.ceil(
+                        totalRows /
+                        gridConfig.pagination.pageSize
+                    )
+                }
+                onClick={() =>
+                    onPageChange(
+                        Math.max(
+                            1,
+                            Math.ceil(
+                                totalRows /
+                                gridConfig.pagination.pageSize
+                            )
+                        )
+                    )
+                }
+            >
+                Last
+            </button>
+        </div>
+    </div>
+)}
 
         </div>
 
