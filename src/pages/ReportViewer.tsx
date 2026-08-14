@@ -50,13 +50,6 @@ export default function ReportViewer() {
 
     const [errorMessage, setErrorMessage] = useState("");
 
-    const [sortModel, setSortModel] = useState<
-        {
-            column: string;
-            direction: "ASC" | "DESC";
-        }[]
-    >([]);
-
     const { rows } = result
         ? parseResponse(result)
         : {
@@ -89,9 +82,7 @@ export default function ReportViewer() {
 
                      ...buildWhere(activeFilters),
 
-                ],
-
-                sort: sortModel,
+                ]
 
             });
 
@@ -130,7 +121,7 @@ export default function ReportViewer() {
 
         }
 
-    }, [report, filters, sortModel]);
+    }, [report, filters]);
 
     const handleSearch = () => {
 
@@ -150,37 +141,15 @@ export default function ReportViewer() {
 
     };
 
-    const handleSortChange = (
-        sort: {
-            column: string;
-            direction: "ASC" | "DESC";
-        }[]
-    ) => {
-
-        setSortModel(sort);
-
-    };
-
     useEffect(() => {
 
         if (report) {
-
-            if (!report) return;
 
             loadReport();
 
         }
 
     }, [report]);
-
-    useEffect(() => {
-
-        if (!report) return;
-
-        loadReport();
-
-    }, [sortModel]);
-
 
     if (uiState === UIState.LOADING)
         return <Loading />;
@@ -243,7 +212,6 @@ export default function ReportViewer() {
                 rows={rows}
                 columns={report!.columns}
                 gridConfig={report!.grid}
-                onSortChange={handleSortChange}
             />
 
         </div>
