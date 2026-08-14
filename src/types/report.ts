@@ -1,5 +1,6 @@
 import type { ColumnDefinition } from "./column";
 import type { FilterDefinition } from "./filter";
+import type { GroupingConfig } from "./grouping";
 
 export interface SortDefinition {
     column: string;
@@ -22,7 +23,16 @@ export interface ReportRequest {
     action: string;
     table: string;
 
-    columns?: string[];
+    columns?: (
+        | string
+        | {
+              function: string;
+              column: string;
+              alias?: string;
+          }
+    )[];
+
+    groupBy?: string[];
 
     where?: any[];
 
@@ -45,9 +55,9 @@ export interface ToolbarConfig {
 export interface GridConfig {
     pagination: PaginationConfig;
 
-    pageSize: number;
-
     rowSelection: "single" | "multiple";
+
+    grouping?: GroupingConfig;
 }
 
 export interface ReportFilter {

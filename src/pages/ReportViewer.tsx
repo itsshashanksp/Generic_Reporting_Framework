@@ -29,6 +29,8 @@ import { useFilters } from "../engine/FilterContext";
 
 import { buildWhere } from "../engine/FilterQueryBuilder";
 
+import { buildGrouping } from "../engine/GroupingEngine";
+
 export default function ReportViewer() {
 
     const { reportId } = useParams();
@@ -79,9 +81,21 @@ export default function ReportViewer() {
 
         try {
 
+            const grouping = buildGrouping(
+                 report.grid.grouping
+            );
+            const requestColumns =
+                report.grid.grouping?.enabled
+                    ? grouping.columns
+                    : report.request.columns;
+
             const response = await executeRequest({
 
                 ...report.request,
+
+                columns: requestColumns,
+
+                groupBy: grouping.groupBy,
 
                 where: [
                     ...(Array.isArray(report.request.where)

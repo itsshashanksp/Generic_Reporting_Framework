@@ -10,14 +10,47 @@
     "settings": false
   },
 
-"grid": {
+  "grid": {
     "pagination": {
-        "enabled": true,
-        "pageSize": 5000,
-        "pageSizeOptions": [25, 50, 100]
+      "enabled": true,
+      "pageSize": 100,
+      "pageSizeOptions": [25, 50, 100]
     },
-    "rowSelection": "multiple"
-},
+
+    "rowSelection": "multiple",
+
+    "grouping": {
+      "enabled": true,
+
+      "groups": [
+        {
+          "field": "Cust_Name",
+          "header": "Customer Name"
+        }
+      ],
+ 
+      "aggregates": [
+        {
+          "field": "Cust_Name",
+          "function": "COUNT",
+          "alias": "TotalCustomers",
+          "header": "Total Customers"
+        },
+        {
+          "field": "Bill_Amt",
+          "function": "MIN",
+          "alias": "MinimumBill",
+          "header": "Minimum Bill"
+        },
+        {
+          "field": "Bill_Amt",
+          "function": "MAX",
+          "alias": "MaximumBill",
+          "header": "Maximum Bill"
+        }
+      ]
+    }
+  },
 
   "columns": [
     {
@@ -29,23 +62,23 @@
       "header": "Address"
     },
     {
-      "field": "Cust_Mob",
+      "field": "Cust_Phon4",
       "header": "Mobile"
     }
   ],
 
-"filters": [
+  "filters": [
     {
-        "field": "Cust_Name",
-        "label": "Customer Name",
-        "type": "text"
+      "field": "Cust_Name",
+      "label": "Customer Name",
+      "type": "text"
     },
     {
-        "field": "Cust_Add",
-        "label": "Address",
-        "type": "text"
+      "field": "Cust_Add",
+      "label": "Address",
+      "type": "text"
     }
-],
+  ],
 
   "request": {
     "controller": "Query",

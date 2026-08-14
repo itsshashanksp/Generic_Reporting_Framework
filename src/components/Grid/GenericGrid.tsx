@@ -40,7 +40,42 @@ export default function GenericGrid({
 
     const gridRef = useRef<AgGridReact>(null);
 
-    const columnDefs = columns
+const groupedColumns =
+    gridConfig.grouping?.enabled
+        ? gridConfig.grouping.groups ?? []
+        : [];
+
+const aggregateColumns =
+    gridConfig.grouping?.enabled
+        ? gridConfig.grouping.aggregates ?? []
+        : [];
+
+const columnDefs = gridConfig.grouping?.enabled
+    ? [
+        ...groupedColumns.map(group => ({
+            field: group.field,
+            headerName: group.header ?? group.field,
+            sortable: true,
+            filter: false,
+            width: 200,
+        })),
+
+        ...aggregateColumns.map(aggregate => ({
+            field:
+                aggregate.alias ??
+                `${aggregate.function}_${aggregate.field}`,
+
+            headerName:
+                aggregate.header ??
+                aggregate.alias ??
+                `${aggregate.function} ${aggregate.field}`,
+
+            sortable: true,
+            filter: false,
+            width: 180,
+        })),
+    ]
+    : columns
         .filter(column => column.visible)
         .map(column => ({
             field: column.field,
