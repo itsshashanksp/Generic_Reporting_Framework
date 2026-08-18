@@ -25,12 +25,15 @@ interface ReportToolbarProps {
     onExportAll?: (
         format: "csv" | "excel"
     ) => void;
+
+    onSaveReport?: () => void;
 }
 
 export default function ReportToolbar({
     config,
     exportConfig,
     onExportAll,
+    onSaveReport,
 }: ReportToolbarProps) {
 
     const {
@@ -129,6 +132,13 @@ export default function ReportToolbar({
                             }
                         />
                     )}
+
+                {onSaveReport && (
+                    <ToolbarButton
+                        label="Save Report"
+                        onClick={onSaveReport}
+                    />
+                )}
 
                 {config.settings && (
                     <ToolbarButton

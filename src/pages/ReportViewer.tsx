@@ -33,6 +33,10 @@ import { buildGrouping } from "../engine/GroupingEngine";
 
 import { useGrid } from "../engine/GridContext";
 
+import { saveSavedReport } from "../engine/SavedReportEngine";
+import SavedReports from "../components/SavedReports/SavedReports";
+import type { SavedReport } from "../types/savedReport";
+
 export default function ReportViewer() {
 
     const { reportId } = useParams();
@@ -69,7 +73,8 @@ export default function ReportViewer() {
     const loadReport = useCallback(
     async (
         activeFilters = filters,
-        activePage = currentPage
+        activePage = currentPage,
+        activePageSize = report?.grid.pagination.pageSize ?? 50
     ) => {
 
         if (!report) {
@@ -112,13 +117,13 @@ export default function ReportViewer() {
 
                 page: activePage,
 
-                pageSize: report.grid.pagination.pageSize,
+                pageSize: activePageSize,
 
             });
 
             setResult(response);
 
-            setTotalRows(response.rowsReturned);
+            setTotalRows(response.totalRows);
 
             if (!response.success) {
 
@@ -185,6 +190,111 @@ export default function ReportViewer() {
         loadReport(filters, page);
 
     };
+
+const handleSaveReport = () => {
+
+    if (!report) {
+        return;
+    }
+
+    const now = new Date().toISOString();
+
+    const savedPage =
+        api
+            ? api.paginationGetCurrentPage() + 1
+            : currentPage;
+
+    const savedPageSize =
+        api
+            ? api.paginationGetPageSize()
+            : report.grid.pagination.pageSize;
+
+    saveSavedReport({
+        id: `${report.id}-${Date.now()}`,
+
+        reportId: report.id,
+
+        name: report.title,
+
+        createdAt: now,
+
+        updatedAt: now,
+
+        state: {
+            filters,
+
+            sorting: [],
+
+            grouping: report.grid.grouping
+                ? {
+                      groups:
+                          report.grid.grouping.groups?.map(
+                              group => ({
+                                  field: group.field,
+                              })
+                          ) ?? [],
+
+                      aggregates:
+                          report.grid.grouping.aggregates?.map(
+                              aggregate => ({
+                                  field: aggregate.field,
+                                  function: aggregate.function,
+                                  alias: aggregate.alias,
+                              })
+                          ) ?? [],
+                  }
+                : undefined,
+
+            pagination: {
+                page: savedPage,
+                pageSize: savedPageSize,
+            },
+        },
+    });
+
+    console.log("Saved page:", savedPage);
+    console.log("Saved page size:", savedPageSize);
+
+    alert("Report saved successfully.");
+};
+
+const handleLoadSavedReport = async (
+    savedReport: SavedReport
+) => {
+
+    if (!report) {
+        return;
+    }
+
+    const savedPage =
+        savedReport.state.pagination?.page ?? 1;
+
+    const savedPageSize =
+        savedReport.state.pagination?.pageSize ??
+        report.grid.pagination.pageSize;
+
+    setCurrentPage(savedPage);
+
+    await loadReport(
+        savedReport.state.filters,
+        savedPage,
+        savedPageSize
+    );
+
+    if (api) {
+
+        api.setGridOption(
+            "paginationPageSize",
+            savedPageSize
+        );
+
+        api.paginationGoToPage(
+            savedPage - 1
+        );
+
+    }
+
+};
 
     const handleExportAll = async (
     format: "csv" | "excel"
@@ -358,10 +468,16 @@ export default function ReportViewer() {
 
             </div>
 
+            <SavedReports
+                reportId={report!.id}
+                onLoad={handleLoadSavedReport}
+            />
+
             <ReportToolbar
                 config={report!.toolbar}
                 exportConfig={report!.export}
                 onExportAll={handleExportAll}
+                onSaveReport={handleSaveReport}
             />
 
             <GenericGrid
