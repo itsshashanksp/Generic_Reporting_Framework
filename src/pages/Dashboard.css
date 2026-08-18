@@ -1,0 +1,31 @@
+.dashboard-grid {
+    width: 100%;
+}
+
+@media (max-width: 1024px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(6, 1fr) !important;
+    }
+}
+
+@media (max-width: 600px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(1, 1fr) !important;
+    }
+}
+
+.dashboard-grid > div {
+    min-width: 0;
+}
+
+@media (max-width: 1024px) {
+    .dashboard-grid > div {
+        grid-column: span 6 !important;
+    }
+}
+
+@media (max-width: 600px) {
+    .dashboard-grid > div {
+        grid-column: span 1 !important;
+    }
+}

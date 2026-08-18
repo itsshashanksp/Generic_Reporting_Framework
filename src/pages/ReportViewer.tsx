@@ -60,8 +60,6 @@ export default function ReportViewer() {
 
     const [currentPage, setCurrentPage] = useState(1);
 
-    const [totalRows, setTotalRows] = useState(0);
-
     const { rows } = result
         ? parseResponse(result)
         : {
@@ -123,8 +121,6 @@ export default function ReportViewer() {
 
             setResult(response);
 
-            setTotalRows(response.totalRows);
-
             if (!response.success) {
 
                 setUiState(UIState.ERROR);
@@ -183,14 +179,6 @@ export default function ReportViewer() {
 
     };
 
-    const handlePageChange = (page: number) => {
-
-        setCurrentPage(page);
-
-        loadReport(filters, page);
-
-    };
-
 const handleSaveReport = () => {
 
     if (!report) {
@@ -229,14 +217,14 @@ const handleSaveReport = () => {
                 ? {
                       groups:
                           report.grid.grouping.groups?.map(
-                              group => ({
+                              (group: any) => ({
                                   field: group.field,
                               })
                           ) ?? [],
 
                       aggregates:
                           report.grid.grouping.aggregates?.map(
-                              aggregate => ({
+                              (aggregate: any) => ({
                                   field: aggregate.field,
                                   function: aggregate.function,
                                   alias: aggregate.alias,
@@ -484,9 +472,6 @@ const handleLoadSavedReport = async (
                 rows={rows}
                 columns={report!.columns}
                 gridConfig={report!.grid}
-                currentPage={currentPage}
-                totalRows={totalRows}
-                onPageChange={handlePageChange} 
             />
 
         </div>

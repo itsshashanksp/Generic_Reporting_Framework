@@ -14,15 +14,15 @@ export const defaultReportDefinition: Partial<ReportDefinition> = {
 
     },
 
-    grid: {
-
-        pagination: true,
-
+grid: {
+    pagination: {
+        enabled: true,
         pageSize: 50,
-
-        rowSelection: "multiple",
-
+        pageSizeOptions: [25, 50, 100],
     },
+
+    rowSelection: "single",
+},
 
     filters: [],
 

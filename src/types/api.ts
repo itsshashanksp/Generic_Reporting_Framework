@@ -3,5 +3,6 @@ export interface ApiResponse {
     message: string;
     executionTime: number;
     rowsReturned: number;
+    totalRows: number;
     data: Record<string, unknown>[];
 }

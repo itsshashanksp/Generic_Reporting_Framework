@@ -1,0 +1,190 @@
+{
+    "id": "customer-dashboard",
+
+    "title": "Customer Dashboard",
+
+    "description": "Customer reporting dashboard.",
+    
+    "layout": {
+    "columns": 12,
+    "tabletColumns": 6,
+    "mobileColumns": 1
+    },
+
+    "filters": [
+        {
+            "field": "Cust_Name",
+            "label": "Customer Name",
+            "type": "text"
+        },
+        {
+            "field": "Cust_Add",
+            "label": "Address",
+            "type": "text"
+        }
+    ],
+
+    "widgets": [
+    {
+        "id": "total-customers",
+        "type": "stat",
+        "title": "Total Customers",
+        "format": "number",
+        "width": 4,
+        "height": 150,
+        "visible": true,
+        "position": {
+            "x": 0,
+            "y": 1
+        },
+        "request": {
+            "controller": "Query",
+            "action": "select",
+            "table": "CustomerTable",
+            "columns": [
+                {
+                    "function": "COUNT",
+                    "column": "Cust_Name",
+                    "alias": "TotalCustomers"
+                }
+            ]
+        }
+    },
+    {
+        "id": "minimum-bill",
+        "type": "stat",
+        "title": "Minimum Bill",
+        "format": "currency",
+        "width": 4,
+        "height": 150,
+        "visible": true,
+        "position": {
+            "x": 4,
+            "y": 1
+        },
+        "request": {
+            "controller": "Query",
+            "action": "select",
+            "table": "CustomerTable",
+            "columns": [
+                {
+                    "function": "MIN",
+                    "column": "Bill_Amt",
+                    "alias": "MinimumBill"
+                }
+            ]
+        }
+    },
+    {
+        "id": "maximum-bill",
+        "type": "stat",
+        "title": "Maximum Bill",
+        "format": "currency",
+        "width": 4,
+        "height": 150,
+        "visible": true,
+        "position": {
+            "x": 8,
+            "y": 1
+        },
+        "request": {
+            "controller": "Query",
+            "action": "select",
+            "table": "CustomerTable",
+            "columns": [
+                {
+                    "function": "MAX",
+                    "column": "Bill_Amt",
+                    "alias": "MaximumBill"
+                }
+            ]
+        }
+    },
+    {
+    "id": "total-billing",
+    "type": "stat",
+    "title": "Total Billing",
+    "width": 4,
+    "height": 150,
+    "visible": true,
+    "position": {
+        "x": 0,
+        "y": 2
+    },
+    "format": "currency",
+    "request": {
+        "controller": "Query",
+        "action": "select",
+        "table": "CustomerTable",
+        "columns": [
+            {
+                "function": "SUM",
+                "column": "Bill_Amt",
+                "alias": "TotalBilling"
+            }
+        ]
+    }
+},
+{
+    "id": "average-bill",
+    "type": "stat",
+    "title": "Average Bill",
+    "width": 4,
+    "height": 150,
+    "visible": true,
+    "position": {
+        "x": 4,
+        "y": 2
+    },
+    "format": "currency",
+    "request": {
+        "controller": "Query",
+        "action": "select",
+        "table": "CustomerTable",
+        "columns": [
+            {
+                "function": "AVG",
+                "column": "Bill_Amt",
+                "alias": "AverageBill"
+            }
+        ]
+    }
+},
+{
+    "id": "customer-chart",
+    "type": "chart",
+    "title": "Customers by Address",
+    "chartType": "bar",
+    "showLegend": true,
+    "showTooltip": true,
+    "showGrid": true,
+    "showLabels": false,
+    "width": 8,
+    "height": 400,
+    "visible": true,
+    "position": {
+        "x": 0,
+        "y": 3
+    },
+    "xField": "Cust_Add",
+    "yField": "CustomerCount",
+    "request": {
+        "controller": "Query",
+        "action": "select",
+        "table": "CustomerTable",
+        "columns": [
+            "Cust_Add",
+            {
+                "function": "COUNT",
+                "column": "Cust_Name",
+                "alias": "CustomerCount"
+            }
+        ],
+        "groupBy": [
+            "Cust_Add"
+        ]
+    }
+}
+    
+    ]
+}

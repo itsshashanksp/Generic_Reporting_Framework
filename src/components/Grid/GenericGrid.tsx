@@ -17,23 +17,15 @@ import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
 
 interface Props {
-    rows: any[];
+    rows: Record<string, unknown>[];
     columns: ColumnDefinition[];
     gridConfig: GridConfig;
-
-    currentPage: number;
-    totalRows: number;
-
-    onPageChange: (page: number) => void;
 }
 
 export default function GenericGrid({
     rows,
     columns,
     gridConfig,
-    currentPage,
-    totalRows,
-    onPageChange,
 }: Props) {
 
     const { setApi } = useGrid();

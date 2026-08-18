@@ -5,6 +5,7 @@ import Layout from "../components/Layout/Layout";
 import Dashboard from "../pages/Dashboard";
 import ReportViewer from "../pages/ReportViewer";
 import Settings from "../pages/Settings";
+import DashboardViewer from "../pages/DashboardViewer";
 
 export default function AppRouter() {
 
@@ -13,6 +14,11 @@ export default function AppRouter() {
         <BrowserRouter>
 
             <Routes>
+
+                <Route
+                    path="/dashboard/:dashboardId"
+                    element={<DashboardViewer />}
+                />
 
                 <Route element={<Layout />}>
 

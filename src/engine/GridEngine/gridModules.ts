@@ -1,6 +1,6 @@
 import {
     ModuleRegistry,
-} from "ag-grid-community";
+} from "@ag-grid-community/core";
 
 import {
     ExcelExportModule,
