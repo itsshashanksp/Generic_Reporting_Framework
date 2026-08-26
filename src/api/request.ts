@@ -1,5 +1,9 @@
 import { apiClient } from "./client";
 
-export async function executeRequest(request: object) {
+import type { ApiResponse } from "../types/api";
+
+export async function executeRequest(
+    request: object
+): Promise<ApiResponse> {
     return apiClient(request);
 }

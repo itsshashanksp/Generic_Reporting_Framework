@@ -26,25 +26,14 @@ import {
 
 import { executeRequest } from "../../api/request";
 
+import type { WidgetRequest } from "../../types/widget";
+
 interface ChartWidgetProps {
     title: string;
 
-    request: {
-        controller: string;
-        action: string;
-        table: string;
+    description?: string;
 
-        columns: (
-            | string
-            | {
-                  function: string;
-                  column: string;
-                  alias?: string;
-              }
-        )[];
-
-        groupBy?: string[];
-    };
+    request: WidgetRequest;
 
     xField: string;
     yField: string;
@@ -59,6 +48,7 @@ interface ChartWidgetProps {
 
 export default function ChartWidget({
     title,
+    description,
     request,
     xField,
     yField,
@@ -70,8 +60,10 @@ export default function ChartWidget({
 }: ChartWidgetProps) {
 
     const { filters } = useFilters();
-    const { refreshKey } = useDashboard();
-    
+
+    const { refreshKey } =
+        useDashboard();
+
     const [data, setData] = useState<
         {
             name: string;
@@ -82,6 +74,12 @@ export default function ChartWidget({
     const [loading, setLoading] =
         useState(true);
 
+    const [error, setError] =
+        useState<string | null>(null);
+
+    const [empty, setEmpty] =
+        useState(false);
+
     useEffect(() => {
 
         const loadChart = async () => {
@@ -90,29 +88,31 @@ export default function ChartWidget({
 
                 setLoading(true);
 
+                setError(null);
+
+                setEmpty(false);
+
                 const response =
                     await executeRequest({
+
                         ...request,
 
                         where: [
-                            ...(Array.isArray(
-                                (request as any).where
-                            )
-                                ? (request as any).where
-                                : []),
+                            ...(request.where ?? []),
 
                             ...buildWhere(filters),
                         ],
+
                     });
 
                 if (
                     response.success &&
-                    response.data
+                    response.data?.length
                 ) {
 
                     const chartData =
                         response.data.map(
-                            (row: any) => ({
+                            (row: Record<string, unknown>) => ({
                                 name:
                                     String(
                                         row[xField]
@@ -129,6 +129,24 @@ export default function ChartWidget({
 
                     setData(chartData);
 
+                } else if (
+                    response.success &&
+                    !response.data?.length
+                ) {
+
+                    setEmpty(true);
+
+                    setData([]);
+
+                } else {
+
+                    setError(
+                        response.message ||
+                        "Failed to load chart."
+                    );
+
+                    setData([]);
+
                 }
 
             }
@@ -138,6 +156,12 @@ export default function ChartWidget({
                     "Failed to load chart:",
                     error
                 );
+
+                setError(
+                    "Failed to load chart."
+                );
+
+                setData([]);
 
             }
             finally {
@@ -161,8 +185,152 @@ export default function ChartWidget({
     if (loading) {
 
         return (
-            <div>
-                Loading...
+            <div
+                style={{
+                    width: "100%",
+                    height: "100%",
+                }}
+            >
+                <h2
+                    style={{
+                        marginTop: 0,
+                        marginBottom: "4px",
+                    }}
+                >
+                    {title}
+                </h2>
+
+                {description && (
+                    <div
+                        style={{
+                            fontSize: "12px",
+                            opacity: 0.6,
+                            marginBottom: "8px",
+                        }}
+                    >
+                        {description}
+                    </div>
+                )}
+
+                <div>Loading...</div>
+            </div>
+        );
+
+    }
+
+    if (error) {
+
+        return (
+            <div
+                style={{
+                    width: "100%",
+                    height: "100%",
+                }}
+            >
+
+                <h2
+                    style={{
+                          marginTop: 0,
+                          marginBottom: "4px",
+                    }}
+                >
+                    {title}
+                </h2>
+
+                {description && (
+                    <div
+                        style={{
+                            fontSize: "12px",
+                            opacity: 0.6,
+                            marginBottom: "8px",
+                        }}
+                    >
+                        {description}
+                    </div>
+                )}
+
+                <div
+                    style={{
+                        padding: "20px",
+                        textAlign: "center",
+                        color: "red",
+                    }}
+                >
+
+                    <strong>
+                        Failed to load chart
+                    </strong>
+
+                    <div
+                        style={{
+                            fontSize: "12px",
+                            marginTop: "6px",
+                        }}
+                    >
+                        {error}
+                    </div>
+
+                </div>
+
+            </div>
+        );
+
+    }
+
+    if (empty) {
+
+        return (
+            <div
+                style={{
+                    width: "100%",
+                    height: "100%",
+                }}
+            >
+
+                <h2
+                    style={{
+                        marginTop: 0,
+                        marginBottom: "4px",
+                    }}
+                >
+                    {title}
+                </h2>
+
+                {description && (
+                    <div
+                        style={{
+                            fontSize: "12px",
+                            opacity: 0.6,
+                            marginBottom: "8px",
+                        }}
+                    >
+                        {description}
+                    </div>
+                )}
+
+                <div
+                    style={{
+                        padding: "20px",
+                        textAlign: "center",
+                    }}
+                >
+
+                    <strong>
+                        No Data
+                    </strong>
+
+                    <div
+                        style={{
+                            fontSize: "12px",
+                            marginTop: "6px",
+                            opacity: 0.7,
+                        }}
+                    >
+                        The query returned no data.
+                    </div>
+
+                </div>
+
             </div>
         );
 
@@ -179,10 +347,23 @@ export default function ChartWidget({
             <h2
                 style={{
                     marginTop: 0,
+                    marginBottom: "4px",
                 }}
             >
                 {title}
             </h2>
+
+            {description && (
+                <div
+                    style={{
+                        fontSize: "12px",
+                        opacity: 0.6,
+                        marginBottom: "8px",
+                    }}
+                >
+                    {description}
+                </div>
+            )}
 
             <div
                 style={{

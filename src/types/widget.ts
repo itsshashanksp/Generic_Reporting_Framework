@@ -14,12 +14,39 @@ export type ChartType =
     | "line"
     | "pie";
 
+export interface WidgetWhereCondition {
+    column: string;
+    operator: string;
+    value: unknown;
+}
+
+export interface WidgetRequest {
+    controller: string;
+    action: string;
+    table: string;
+
+    columns: (
+        | string
+        | {
+              function: string;
+              column: string;
+              alias?: string;
+          }
+    )[];
+
+    groupBy?: string[];
+
+    where?: WidgetWhereCondition[];
+}
+
 export interface DashboardWidget {
     id: string;
 
     type: WidgetType;
 
     title: string;
+
+    description?: string;
 
     reportId?: string;
 
@@ -38,26 +65,13 @@ export interface DashboardWidget {
     showGrid?: boolean;
     showLabels?: boolean;
 
-    request?: {
-        controller: string;
-        action: string;
-        table: string;
-
-        columns: (
-            | string
-            | {
-                  function: string;
-                  column: string;
-                  alias?: string;
-              }
-        )[];
-
-        groupBy?: string[];
-    };
+    request?: WidgetRequest;
 
     width?: number;
 
     height?: number;
+
+    pageSize?: number;
 
     visible?: boolean;
 

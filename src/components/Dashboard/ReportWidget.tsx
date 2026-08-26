@@ -1,7 +1,12 @@
 import { useFilters } from "../../engine/FilterContext";
 import { buildWhere } from "../../engine/FilterQueryBuilder";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+    useEffect,
+    useMemo,
+    useState,
+    type ReactNode,
+} from "react";
 
 import { getReport } from "../../engine/ReportEngine/reportLoader";
 import { loadDefinition } from "../../engine/ReportDefinitionEngine";
@@ -15,7 +20,7 @@ import { parseResponse } from "../../engine/ResponseEngine/responseParser";
 import ReportDataGrid from "./ReportDataGrid";
 
 import Loading from "../Common/Loading";
-import Error from "../Common/Error";
+import ErrorState from "../Common/Error";
 import Empty from "../Common/Empty";
 
 import { UIState } from "../../engine/UIStateEngine";
@@ -27,11 +32,55 @@ import { useDashboard } from "../../engine/DashboardContext";
 interface ReportWidgetProps {
     reportId: string;
     title: string;
+    description?: string;
+}
+
+function ReportWidgetFrame({
+    title,
+    description,
+    children,
+}: {
+    title: string;
+    description?: string;
+    children: ReactNode;
+}) {
+    return (
+        <div
+            style={{
+                width: "100%",
+                height: "100%",
+            }}
+        >
+            <h2
+                style={{
+                    marginTop: 0,
+                    marginBottom: "4px",
+                }}
+            >
+                {title}
+            </h2>
+
+            {description && (
+                <div
+                    style={{
+                        fontSize: "12px",
+                        opacity: 0.6,
+                        marginBottom: "10px",
+                    }}
+                >
+                    {description}
+                </div>
+            )}
+
+            {children}
+        </div>
+    );
 }
 
 export default function ReportWidget({
     reportId,
     title,
+    description,
 }: ReportWidgetProps) {
 
     const { filters } = useFilters();
@@ -67,13 +116,6 @@ export default function ReportWidget({
     useEffect(() => {
 
         if (!report) {
-
-            setUiState(UIState.ERROR);
-
-            setErrorMessage(
-                "Report not found."
-            );
-
             return;
         }
 
@@ -133,7 +175,8 @@ export default function ReportWidget({
                 }
 
                 if (
-                    response.rowsReturned === 0
+                    response.rowsReturned === 0 ||
+                    !response.data?.length
                 ) {
 
                     setUiState(
@@ -148,14 +191,16 @@ export default function ReportWidget({
                 );
 
             }
-            catch (error: any) {
+            catch (error: unknown) {
 
                 setUiState(
                     UIState.ERROR
                 );
 
                 setErrorMessage(
-                    error.message ||
+                    error instanceof Error
+                        ? error.message
+                        :
                     "Unexpected error occurred."
                 );
 
@@ -167,42 +212,62 @@ export default function ReportWidget({
 
     }, [report, filters, refreshKey]);
 
+    if (!report) {
+        return (
+            <ReportWidgetFrame
+                title={title}
+                description={description}
+            >
+                <ErrorState message="Report not found." />
+            </ReportWidgetFrame>
+        );
+    }
+
     if (uiState === UIState.LOADING) {
-        return <Loading />;
+        return (
+            <ReportWidgetFrame
+                title={title}
+                description={description}
+            >
+                <Loading />
+            </ReportWidgetFrame>
+        );
     }
 
     if (uiState === UIState.ERROR) {
         return (
-            <Error
-                message={errorMessage}
-            />
+            <ReportWidgetFrame
+                title={title}
+                description={description}
+            >
+                <ErrorState
+                    message={errorMessage}
+                />
+            </ReportWidgetFrame>
         );
     }
 
     if (uiState === UIState.EMPTY) {
-        return <Empty />;
+        return (
+            <ReportWidgetFrame
+                title={title}
+                description={description}
+            >
+                <Empty />
+            </ReportWidgetFrame>
+        );
     }
 
     return (
-
-        <div
-            style={{
-                width: "100%",
-                height: "100%",
-            }}
+        <ReportWidgetFrame
+            title={title}
+            description={description}
         >
-
-            <h2>
-                {title}
-            </h2>
-
             <ReportDataGrid
                 rows={rows}
-                columns={report!.columns}
-                gridConfig={report!.grid}
+                columns={report.columns}
+                gridConfig={report.grid}
             />
-
-        </div>
-
+        </ReportWidgetFrame>
     );
 }

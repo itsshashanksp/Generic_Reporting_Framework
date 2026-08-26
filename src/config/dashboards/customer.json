@@ -5,10 +5,15 @@
 
     "description": "Customer reporting dashboard.",
     
-    "layout": {
+    "layout": { 
     "columns": 12,
     "tabletColumns": 6,
     "mobileColumns": 1
+    },
+
+    "autoRefresh": {
+        "enabled": false,
+        "interval": 30000
     },
 
     "filters": [
@@ -25,17 +30,42 @@
     ],
 
     "widgets": [
+{
+    "id": "customer-table",
+    "type": "table",
+    "title": "Customer Details",
+    "description": "Customer records matching the selected filters.",
+    "pageSize": 10,
+    "width": 12,
+    "height": 400,
+    "visible": true,
+    "position": {
+        "x": 0,
+        "y": 1
+    },
+    "request": {
+        "controller": "Query",
+        "action": "select",
+        "table": "CustomerTable",
+        "columns": [
+            "Cust_Name",
+            "Cust_Add",
+            "Bill_Amt"
+        ]
+    }
+},
     {
         "id": "total-customers",
         "type": "stat",
         "title": "Total Customers",
+        "description": "Total number of customers matching the selected filters.",
         "format": "number",
         "width": 4,
         "height": 150,
         "visible": true,
         "position": {
             "x": 0,
-            "y": 1
+            "y": 2
         },
         "request": {
             "controller": "Query",
@@ -60,7 +90,7 @@
         "visible": true,
         "position": {
             "x": 4,
-            "y": 1
+            "y": 2
         },
         "request": {
             "controller": "Query",
@@ -85,7 +115,7 @@
         "visible": true,
         "position": {
             "x": 8,
-            "y": 1
+            "y": 2
         },
         "request": {
             "controller": "Query",
@@ -109,7 +139,7 @@
     "visible": true,
     "position": {
         "x": 0,
-        "y": 2
+        "y": 3
     },
     "format": "currency",
     "request": {
@@ -134,7 +164,7 @@
     "visible": true,
     "position": {
         "x": 4,
-        "y": 2
+        "y": 3
     },
     "format": "currency",
     "request": {
@@ -164,7 +194,7 @@
     "visible": true,
     "position": {
         "x": 0,
-        "y": 3
+        "y": 4
     },
     "xField": "Cust_Add",
     "yField": "CustomerCount",

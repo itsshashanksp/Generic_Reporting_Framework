@@ -10,28 +10,21 @@ import { executeRequest } from "../../api/request";
 
 import { useDashboard } from "../../engine/DashboardContext";
 
+import type { WidgetRequest } from "../../types/widget";
+
 interface StatWidgetProps {
     title: string;
 
-    request: {
-        controller: string;
-        action: string;
-        table: string;
-        columns: (
-            | string
-            | {
-                  function: string;
-                  column: string;
-                  alias?: string;
-              }
-        )[];
-    };
+    description?: string;
+
+    request: WidgetRequest;
 
     format?: "number" | "currency" | "decimal";
 }
 
 export default function StatWidget({
     title,
+    description,
     request,
     format,
 }: StatWidgetProps) {
@@ -45,6 +38,12 @@ export default function StatWidget({
     const [loading, setLoading] =
         useState(true);
 
+    const [error, setError] =
+        useState<string | null>(null);
+
+    const [empty, setEmpty] =
+        useState(false);
+
     useEffect(() => {
 
         const loadStat = async () => {
@@ -53,19 +52,21 @@ export default function StatWidget({
 
                 setLoading(true);
 
+                setError(null);
+
+                setEmpty(false);
+
                 const response =
                     await executeRequest({
+
                         ...request,
 
                         where: [
-                            ...(Array.isArray(
-                               (request as any).where
-                            )
-                                ? (request as any).where
-                                : []),
+                            ...(request.where ?? []),
 
                             ...buildWhere(filters),
                         ],
+
                     });
 
                 if (
@@ -87,6 +88,24 @@ export default function StatWidget({
                             | number
                     );
 
+                } else if (
+                    response.success &&
+                    !response.data?.length
+                ) {
+
+                    setEmpty(true);
+
+                    setValue("—");
+
+                } else {
+
+                    setError(
+                        response.message ||
+                        "Failed to load statistic."
+                    );
+
+                    setValue("—");
+
                 }
 
             }
@@ -95,6 +114,10 @@ export default function StatWidget({
                 console.error(
                     "Failed to load stat:",
                     error
+                );
+
+                setError(
+                    "Failed to load statistic."
                 );
 
                 setValue("—");
@@ -110,21 +133,29 @@ export default function StatWidget({
 
         loadStat();
 
-    }, [request, filters, refreshKey]);
+    }, [
+        request,
+        filters,
+        refreshKey,
+    ]);
 
     const formatValue = (
         value: string | number
     ) => {
 
-        const numericValue = Number(value);
+        const numericValue =
+            Number(value);
 
         if (Number.isNaN(numericValue)) {
+
             return value;
+
         }
 
         switch (format) {
 
             case "currency":
+
                 return numericValue.toLocaleString(
                     "en-IN",
                     {
@@ -136,6 +167,7 @@ export default function StatWidget({
                 );
 
             case "decimal":
+
                 return numericValue.toLocaleString(
                     "en-IN",
                     {
@@ -145,7 +177,13 @@ export default function StatWidget({
                 );
 
             case "number":
+
+                return numericValue.toLocaleString(
+                    "en-IN"
+                );
+
             default:
+
                 return numericValue.toLocaleString(
                     "en-IN"
                 );
@@ -164,11 +202,23 @@ export default function StatWidget({
                 style={{
                     fontSize: "14px",
                     opacity: 0.7,
-                    marginBottom: "8px",
+                    marginBottom: "4px",
                 }}
             >
                 {title}
             </div>
+
+            {description && (
+                <div
+                    style={{
+                        fontSize: "12px",
+                        opacity: 0.6,
+                        marginBottom: "8px",
+                    }}
+                >
+                    {description}
+                </div>
+            )}
 
             <div
                 style={{
@@ -176,10 +226,31 @@ export default function StatWidget({
                     fontWeight: 600,
                 }}
             >
+
                 {loading
                     ? "Loading..."
-                    : formatValue(value)}
+
+                    : error
+                        ? "Error"
+
+                        : empty
+                            ? "No Data"
+
+                            : formatValue(value)}
+
             </div>
+
+            {error && (
+                <div
+                    style={{
+                        fontSize: "12px",
+                        color: "red",
+                        marginTop: "6px",
+                    }}
+                >
+                    {error}
+                </div>
+            )}
 
         </div>
     );

@@ -1,4 +1,7 @@
 export {
     DashboardProvider,
-    useDashboard,
 } from "./dashboardContext";
+
+export {
+    useDashboard,
+} from "./useDashboard";

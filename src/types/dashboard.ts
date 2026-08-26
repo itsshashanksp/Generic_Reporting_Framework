@@ -16,5 +16,10 @@ export interface DashboardDefinition {
         mobileColumns?: number;
     };
 
+    autoRefresh?: {
+        enabled?: boolean;
+        interval?: number;
+    };
+
     widgets: DashboardWidget[];
 }

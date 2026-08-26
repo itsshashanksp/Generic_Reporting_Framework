@@ -1,9 +1,12 @@
 import GenericGrid from "../Grid/GenericGrid";
 
+import type { ColumnDefinition } from "../../types/column";
+import type { GridConfig } from "../../types/report";
+
 interface ReportDataGridProps {
-    rows: any[];
-    columns: any[];
-    gridConfig: any;
+    rows: Record<string, unknown>[];
+    columns: ColumnDefinition[];
+    gridConfig: GridConfig;
 }
 
 export default function ReportDataGrid({
