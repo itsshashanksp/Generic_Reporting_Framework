@@ -11,7 +11,7 @@
       {
         "id": "customer_report",
         "title": "Customer Report",
-        "reportId": "customer_report"
+        "reportId": "customer"
       }
     ]
   },

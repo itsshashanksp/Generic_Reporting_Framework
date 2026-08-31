@@ -4,7 +4,6 @@
   "description": "Displays all customers.",
 
   "toolbar": {
-    "search": true,
     "export": true,
     "refresh": true,
     "settings": false

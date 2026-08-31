@@ -1,9 +1,27 @@
-import type { GridApi } from "ag-grid-community";
+import * as XLSX from "xlsx";
 
-export function exportExcel(api: GridApi) {
+export function exportExcel(
+    rows: Record<string, unknown>[],
+    fileName = "Report.xlsx"
+) {
+    if (!rows.length) {
+        return;
+    }
 
-    api.exportDataAsExcel({
-        fileName: "Report.xlsx",
-    });
+    const worksheet =
+        XLSX.utils.json_to_sheet(rows);
 
+    const workbook =
+        XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(
+        workbook,
+        worksheet,
+        "Report"
+    );
+
+    XLSX.writeFile(
+        workbook,
+        fileName
+    );
 }

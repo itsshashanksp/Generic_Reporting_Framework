@@ -17,6 +17,7 @@
     "@mui/material": "^9.2.0",
     "@tanstack/react-query": "^5.101.4",
     "ag-grid-community": "^32.3.9",
+    "ag-grid-enterprise": "^32.3.9",
     "ag-grid-react": "^32.3.9",
     "axios": "^1.18.1",
     "clsx": "^2.1.1",
@@ -28,7 +29,8 @@
     "react-hook-form": "^7.83.0",
     "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.11.0",
-    "recharts": "^3.10.1"
+    "recharts": "^3.10.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -1,9 +1,41 @@
-import customerReport from "../../config/reports/customer.json";
+import type { ReportDefinition } from "../../types/report";
 
-const reports = {
-    customer_report: customerReport,
-};
+const reportFiles = import.meta.glob(
+    "../../config/reports/*.json",
+    {
+        eager: true,
+        import: "default",
+    }
+) as Record<string, ReportDefinition>;
 
-export function getReport(reportId: string) {
-    return reports[reportId as keyof typeof reports];
+
+const reports: Record<
+    string,
+    ReportDefinition
+> = {};
+
+
+for (const report of Object.values(
+    reportFiles
+)) {
+
+    if (
+        report &&
+        typeof report.id === "string" &&
+        report.id.trim() !== ""
+    ) {
+
+        reports[report.id] = report;
+
+    }
+
+}
+
+
+export function getReport(
+    reportId: string
+): ReportDefinition | undefined {
+
+    return reports[reportId];
+
 }

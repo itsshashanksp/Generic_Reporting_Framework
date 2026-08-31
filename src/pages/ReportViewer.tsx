@@ -4,6 +4,7 @@ import {
     useState,
     useCallback,
 } from "react";
+
 import { useParams } from "react-router-dom";
 
 import { getReport } from "../engine/ReportEngine/reportLoader";
@@ -35,30 +36,83 @@ import { useGrid } from "../engine/GridContext";
 
 import { saveSavedReport } from "../engine/SavedReportEngine";
 import SavedReports from "../components/SavedReports/SavedReports";
+
 import type { SavedReport } from "../types/savedReport";
+
+import { exportExcel } from "../engine/ExportEngine";
+
 
 export default function ReportViewer() {
 
     const { reportId } = useParams();
 
-    const rawReport = getReport(reportId || "");
+
+    const rawReport = getReport(
+        reportId || ""
+    );
+
 
     const report = useMemo(() => {
-        return rawReport ? loadDefinition(rawReport) : null;
+
+        return rawReport
+            ? loadDefinition(rawReport)
+            : null;
+
     }, [rawReport]);
+
+    if (!rawReport) {
+        return (
+            <Error
+                message={
+                    `Report "${reportId || ""}" was not found.`
+                }
+            />
+        );
+    }
 
     const {
         filters,
         clearFilters,
     } = useFilters();
 
-    const [result, setResult] = useState<ApiResponse | null>(null);
 
-    const [uiState, setUiState] = useState<UIState>(UIState.LOADING);
+    const [
+        result,
+        setResult,
+    ] = useState<ApiResponse | null>(null);
 
-    const [errorMessage, setErrorMessage] = useState("");
 
-    const [currentPage, setCurrentPage] = useState(1);
+    const [
+        uiState,
+        setUiState,
+    ] = useState<UIState>(
+        UIState.LOADING
+    );
+
+
+    const [
+        isGridLoading,
+        setIsGridLoading,
+    ] = useState(false);
+
+
+    const [
+        gridError,
+        setGridError,
+    ] = useState("");
+
+
+    const [
+        errorMessage,
+        setErrorMessage,
+    ] = useState("");
+
+
+    const [
+        currentPage,
+        setCurrentPage,
+    ] = useState(1);
+
 
     const { rows } = result
         ? parseResponse(result)
@@ -66,333 +120,510 @@ export default function ReportViewer() {
               rows: [],
           };
 
+
     const { api } = useGrid();
 
+
     const loadReport = useCallback(
-    async (
-        activeFilters = filters,
-        activePage = currentPage,
-        activePageSize = report?.grid.pagination.pageSize ?? 50
-    ) => {
+        async (
+            activeFilters = filters,
+            activePage = currentPage,
+            activePageSize =
+                report?.grid.pagination.pageSize ?? 50
+        ) => {
 
-        if (!report) {
+    if (!report) {
 
-            setUiState(UIState.ERROR);
-            setErrorMessage("Report not found.");
+        setUiState(
+            UIState.ERROR
+        );
 
-            return;
+        setErrorMessage(
+            `Report "${reportId || ""}" was not found.`
+        );
 
-        }
+        return;
+    }
 
-        setUiState(UIState.LOADING);
 
-        try {
+            /*
+             * After the report is already displayed,
+             * only the grid should enter the loading state.
+             */
+            setIsGridLoading(true);
 
-            const grouping = buildGrouping(
-                 report.grid.grouping
-            );
-            const requestColumns =
-                report.grid.grouping?.enabled
-                    ? grouping.columns
-                    : report.request.columns;
+            setGridError("");
 
-            const response = await executeRequest({
 
-                ...report.request,
+            try {
 
-                columns: requestColumns,
+                const grouping =
+                    buildGrouping(
+                        report.grid.grouping
+                    );
 
-                groupBy: grouping.groupBy,
 
-                where: [
-                    ...(Array.isArray(report.request.where)
-                    ? report.request.where
-                    : []),
+                const requestColumns =
+                    report.grid.grouping?.enabled
+                        ? grouping.columns
+                        : report.request.columns;
 
-                     ...buildWhere(activeFilters),
 
-                ],
+                const response =
+                    await executeRequest({
 
-                page: activePage,
+                        ...report.request,
 
-                pageSize: activePageSize,
+                        columns:
+                            requestColumns,
 
-            });
+                        groupBy:
+                            grouping.groupBy,
 
-            setResult(response);
+                        where: [
 
-            if (!response.success) {
+                            ...(Array.isArray(
+                                report.request.where
+                            )
+                                ? report.request.where
+                                : []),
 
-                setUiState(UIState.ERROR);
+                            ...buildWhere(
+                                activeFilters
+                            ),
 
-                setErrorMessage(
-                    response.message || "Failed to load report."
+                        ],
+
+                        page:
+                            activePage,
+
+                        pageSize:
+                            activePageSize,
+
+                    });
+
+
+                setResult(
+                    response
                 );
 
-                return;
+
+                /*
+                 * API errors stay inside the grid area.
+                 */
+                if (!response.success) {
+
+                    setGridError(
+                        response.message ||
+                        "Failed to load report."
+                    );
+
+                    return;
+                }
+
+
+                /*
+                 * Zero rows are handled by the grid
+                 * area instead of replacing the page.
+                 */
+                setUiState(
+                    UIState.SUCCESS
+                );
+
+            }
+            catch (err: any) {
+
+                /*
+                 * Runtime/API errors after the report
+                 * has loaded stay inside the grid.
+                 */
+                setGridError(
+                    err.message ||
+                    "Unexpected error occurred."
+                );
+
+            }
+            finally {
+
+                setIsGridLoading(
+                    false
+                );
 
             }
 
-            if (response.rowsReturned === 0) {
+        },
+        [
+            report,
+            reportId,
+            filters,
+            currentPage,
+        ]
+    );
 
-                setUiState(UIState.EMPTY);
-
-                return;
-
-            }
-
-            setUiState(UIState.SUCCESS);
-
-        }
-        catch (err: any) {
-
-            setUiState(UIState.ERROR);
-
-            setErrorMessage(
-                err.message || "Unexpected error occurred."
-            );
-
-        }
-
-    }, [report, filters, currentPage
-]);
 
     const handleSearch = () => {
 
-        console.log("Current Filters:", filters);
+        console.log(
+            "Current Filters:",
+            filters
+        );
 
-        console.log("Where:", buildWhere(filters));
+
+        console.log(
+            "Where:",
+            buildWhere(filters)
+        );
+
 
         setCurrentPage(1);
 
-        loadReport(filters, 1);
+
+        loadReport(
+            filters,
+            1
+        );
 
     };
+
 
     const handleClear = () => {
 
         clearFilters();
 
+
         setCurrentPage(1);
 
-        loadReport({}, 1);
+
+        loadReport(
+            {},
+            1
+        );
 
     };
 
-const handleSaveReport = () => {
 
-    if (!report) {
-        return;
-    }
+    const handleSaveReport = () => {
 
-    const now = new Date().toISOString();
+        if (!report) {
+            return;
+        }
 
-    const savedPage =
-        api
-            ? api.paginationGetCurrentPage() + 1
-            : currentPage;
 
-    const savedPageSize =
-        api
-            ? api.paginationGetPageSize()
-            : report.grid.pagination.pageSize;
+        const now =
+            new Date().toISOString();
 
-    saveSavedReport({
-        id: `${report.id}-${Date.now()}`,
 
-        reportId: report.id,
+        const savedPage =
+            api
+                ? api.paginationGetCurrentPage() + 1
+                : currentPage;
 
-        name: report.title,
 
-        createdAt: now,
+        const savedPageSize =
+            api
+                ? api.paginationGetPageSize()
+                : report.grid.pagination.pageSize;
 
-        updatedAt: now,
 
-        state: {
-            filters,
+        saveSavedReport({
 
-            sorting: [],
+            id:
+                `${report.id}-${Date.now()}`,
 
-            grouping: report.grid.grouping
-                ? {
-                      groups:
-                          report.grid.grouping.groups?.map(
-                              (group: any) => ({
-                                  field: group.field,
-                              })
-                          ) ?? [],
+            reportId:
+                report.id,
 
-                      aggregates:
-                          report.grid.grouping.aggregates?.map(
-                              (aggregate: any) => ({
-                                  field: aggregate.field,
-                                  function: aggregate.function,
-                                  alias: aggregate.alias,
-                              })
-                          ) ?? [],
-                  }
-                : undefined,
+            name:
+                report.title,
 
-            pagination: {
-                page: savedPage,
-                pageSize: savedPageSize,
+            createdAt:
+                now,
+
+            updatedAt:
+                now,
+
+            state: {
+
+                filters,
+
+                sorting: [],
+
+                grouping:
+                    report.grid.grouping
+                        ? {
+
+                              groups:
+                                  report.grid.grouping.groups?.map(
+                                      (
+                                          group: any
+                                      ) => ({
+
+                                          field:
+                                              group.field,
+
+                                      })
+                                  ) ?? [],
+
+
+                              aggregates:
+                                  report.grid.grouping.aggregates?.map(
+                                      (
+                                          aggregate: any
+                                      ) => ({
+
+                                          field:
+                                              aggregate.field,
+
+                                          function:
+                                              aggregate.function,
+
+                                          alias:
+                                              aggregate.alias,
+
+                                      })
+                                  ) ?? [],
+
+                          }
+                        : undefined,
+
+
+                pagination: {
+
+                    page:
+                        savedPage,
+
+                    pageSize:
+                        savedPageSize,
+
+                },
+
             },
-        },
-    });
 
-    console.log("Saved page:", savedPage);
-    console.log("Saved page size:", savedPageSize);
+        });
 
-    alert("Report saved successfully.");
-};
 
-const handleLoadSavedReport = async (
-    savedReport: SavedReport
-) => {
+        console.log(
+            "Saved page:",
+            savedPage
+        );
 
-    if (!report) {
-        return;
-    }
 
-    const savedPage =
-        savedReport.state.pagination?.page ?? 1;
-
-    const savedPageSize =
-        savedReport.state.pagination?.pageSize ??
-        report.grid.pagination.pageSize;
-
-    setCurrentPage(savedPage);
-
-    await loadReport(
-        savedReport.state.filters,
-        savedPage,
-        savedPageSize
-    );
-
-    if (api) {
-
-        api.setGridOption(
-            "paginationPageSize",
+        console.log(
+            "Saved page size:",
             savedPageSize
         );
 
-        api.paginationGoToPage(
-            savedPage - 1
+
+        alert(
+            "Report saved successfully."
         );
 
-    }
+    };
 
-};
 
-    const handleExportAll = async (
-    format: "csv" | "excel"
-) => {
+    const handleLoadSavedReport =
+        async (
+            savedReport: SavedReport
+        ) => {
 
-    if (!report || !api) {
-        return;
-    }
+            if (!report) {
+                return;
+            }
 
-    try {
 
-        const grouping = buildGrouping(
-            report.grid.grouping
-        );
+            const savedPage =
+                savedReport.state.pagination?.page ??
+                1;
 
-        const requestColumns =
-            report.grid.grouping?.enabled
-                ? grouping.columns
-                : report.request.columns;
 
-        const exportRequest = {
-            ...report.request,
+            const savedPageSize =
+                savedReport.state.pagination?.pageSize ??
+                report.grid.pagination.pageSize;
 
-            columns: requestColumns,
 
-            groupBy: grouping.groupBy,
+            setCurrentPage(
+                savedPage
+            );
 
-            where: [
-                ...(Array.isArray(report.request.where)
-                    ? report.request.where
-                    : []),
 
-                ...buildWhere(filters),
-            ],
+            await loadReport(
+                savedReport.state.filters,
+                savedPage,
+                savedPageSize
+            );
 
-            // Export All:
-            // do NOT send page/pageSize
+
+            if (api) {
+
+                api.setGridOption(
+                    "paginationPageSize",
+                    savedPageSize
+                );
+
+
+                api.paginationGoToPage(
+                    savedPage - 1
+                );
+
+            }
+
         };
 
-        const response = await executeRequest(
-            exportRequest
-        );
 
-        if (!response.success) {
+    const handleExportAll = async (
+        format: "csv" | "excel"
+    ) => {
+
+        if (!report || !api) {
+            return;
+        }
+
+
+        try {
+
+            const grouping =
+                buildGrouping(
+                    report.grid.grouping
+                );
+
+
+            const requestColumns =
+                report.grid.grouping?.enabled
+                    ? grouping.columns
+                    : report.request.columns;
+
+
+            const exportRequest = {
+
+                ...report.request,
+
+                columns:
+                    requestColumns,
+
+                groupBy:
+                    grouping.groupBy,
+
+                where: [
+
+                    ...(Array.isArray(
+                        report.request.where
+                    )
+                        ? report.request.where
+                        : []),
+
+                    ...buildWhere(
+                        filters
+                    ),
+
+                ],
+
+                /*
+                 * Export All intentionally does not
+                 * send page or pageSize.
+                 */
+
+            };
+
+
+            const response =
+                await executeRequest(
+                    exportRequest
+                );
+
+
+            if (!response.success) {
+
+                console.error(
+                    "Export All failed:",
+                    response.message
+                );
+
+                return;
+            }
+
+
+            const exportRows =
+                parseResponse(
+                    response
+                ).rows;
+
+
+            if (!exportRows.length) {
+
+                console.warn(
+                    "Export All: no rows returned."
+                );
+
+                return;
+            }
+
+
+            /*
+             * Export All CSV uses the AG Grid Community API.
+             */
+            if (format === "csv") {
+
+                api.setGridOption(
+                    "rowData",
+                    exportRows
+                );
+
+
+                api.exportDataAsCsv({
+
+                    fileName:
+                        report.export?.filename
+                            ? `${report.export.filename}.csv`
+                            : "report.csv",
+
+                });
+
+
+                /*
+                 * Restore the currently displayed rows.
+                 */
+                api.setGridOption(
+                    "rowData",
+                    rows
+                );
+
+            }
+
+
+            /*
+             * Export All Excel uses the open-source XLSX
+             * implementation. It does not touch the grid.
+             */
+            if (format === "excel") {
+
+                exportExcel(
+                    exportRows,
+                    report.export?.filename
+                        ? `${report.export.filename}.xlsx`
+                        : "report.xlsx"
+                );
+
+            }
+
+        }
+        catch (error) {
 
             console.error(
                 "Export All failed:",
-                response.message
+                error
             );
 
-            return;
         }
 
-        const exportRows = parseResponse(response).rows;
+    };
 
-        if (!exportRows.length) {
 
-            console.warn(
-                "Export All: no rows returned."
-            );
-
-            return;
-        }
-
-        const currentRows = rows;
-
-        api.setGridOption(
-            "rowData",
-            exportRows
-        );
-
-        if (format === "csv") {
-
-            api.exportDataAsCsv({
-                fileName:
-                    report.export?.filename
-                        ? `${report.export.filename}.csv`
-                        : "report.csv",
-            });
-
-        }
-
-        if (format === "excel") {
-
-            api.exportDataAsExcel({
-                fileName:
-                    report.export?.filename
-                        ? `${report.export.filename}.xlsx`
-                        : "report.xlsx",
-            });
-
-        }
-
-        api.setGridOption(
-            "rowData",
-            currentRows
-        );
-
-    }
-    catch (error) {
-
-        console.error(
-            "Export All failed:",
-            error
-        );
-
-    }
-
-};
-
+    /*
+     * Initial report load.
+     *
+     * The first request starts with UIState.LOADING,
+     * so the complete page can show the initial loader.
+     */
     useEffect(() => {
 
         if (report) {
@@ -403,40 +634,80 @@ const handleLoadSavedReport = async (
 
     }, [report]);
 
-    if (uiState === UIState.LOADING)
+
+    /*
+     * Report configuration/loading errors remain
+     * page-level errors.
+     */
+    if (
+        uiState === UIState.LOADING
+    ) {
+
         return <Loading />;
 
-    if (uiState === UIState.ERROR)
-        return <Error message={errorMessage} />;
+    }
 
-    if (uiState === UIState.EMPTY)
-        return <Empty />;
+
+    if (
+        uiState === UIState.ERROR
+    ) {
+
+        return (
+
+            <Error
+                message={
+                    errorMessage ||
+                    `Report "${reportId || ""}" was not found.`
+                }
+            />
+
+        );
+
+    }
+
 
     return (
 
         <div>
 
-            <h1>{report!.title}</h1>
+            <h1>
+                {report!.title}
+            </h1>
 
-            <h2>Request</h2>
 
-            <pre>
-                {JSON.stringify(report!.request, null, 4)}
-            </pre>
+            <h2>
+                Report Information
+            </h2>
 
-            <h2>Report Information</h2>
-
-            <p>
-                <strong>Rows Returned:</strong> {result?.rowsReturned}
-            </p>
 
             <p>
-                <strong>Execution Time:</strong> {result?.executionTime} ms
+
+                <strong>
+                    Rows Returned:
+                </strong>{" "}
+
+                {result?.rowsReturned}
+
             </p>
+
+
+            <p>
+
+                <strong>
+                    Execution Time:
+                </strong>{" "}
+
+                {result?.executionTime} ms
+
+            </p>
+
 
             <FilterRenderer
-                filters={report!.filters}
+                filters={
+                    report!.filters
+                }
             />
+
 
             <div
                 style={{
@@ -446,33 +717,126 @@ const handleLoadSavedReport = async (
                 }}
             >
 
-                <button onClick={handleSearch}>
+                <button
+                    onClick={
+                        handleSearch
+                    }
+                >
                     Search
                 </button>
 
-                <button onClick={handleClear}>
+
+                <button
+                    onClick={
+                        handleClear
+                    }
+                >
                     Clear
                 </button>
 
             </div>
 
+
             <SavedReports
-                reportId={report!.id}
-                onLoad={handleLoadSavedReport}
+                reportId={
+                    report!.id
+                }
+                onLoad={
+                    handleLoadSavedReport
+                }
             />
+
 
             <ReportToolbar
-                config={report!.toolbar}
-                exportConfig={report!.export}
-                onExportAll={handleExportAll}
-                onSaveReport={handleSaveReport}
+                config={
+                    report!.toolbar
+                }
+                exportConfig={
+                    report!.export
+                }
+                onExportAll={
+                    handleExportAll
+                }
+                onSaveReport={
+                    handleSaveReport
+                }
+                rows={
+                    rows
+                }
             />
 
-            <GenericGrid
-                rows={rows}
-                columns={report!.columns}
-                gridConfig={report!.grid}
-            />
+
+            <div
+                style={{
+                    position: "relative",
+                    minHeight: "200px",
+                }}
+            >
+
+                {isGridLoading && (
+
+                    <div
+                        style={{
+                            position: "absolute",
+                            inset: 0,
+                            background:
+                                "rgba(255, 255, 255, 0.7)",
+                            display: "flex",
+                            alignItems:
+                                "center",
+                            justifyContent:
+                                "center",
+                            zIndex: 10,
+                        }}
+                    >
+
+                        <Loading />
+
+                    </div>
+
+                )}
+
+
+                {!isGridLoading &&
+                    gridError && (
+
+                        <Error
+                            message={
+                                gridError
+                            }
+                        />
+
+                    )}
+
+
+                {!isGridLoading &&
+                    !gridError &&
+                    rows.length === 0 && (
+
+                        <Empty />
+
+                    )}
+
+
+                {!isGridLoading &&
+                    !gridError &&
+                    rows.length > 0 && (
+
+                        <GenericGrid
+                            rows={
+                                rows
+                            }
+                            columns={
+                                report!.columns
+                            }
+                            gridConfig={
+                                report!.grid
+                            }
+                        />
+
+                    )}
+
+            </div>
 
         </div>
 
