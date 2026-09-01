@@ -29,10 +29,15 @@ import { buildGrouping } from "../../engine/GroupingEngine";
 
 import { useDashboard } from "../../engine/DashboardContext";
 
+import type { FilterDefinition } from "../../types/filter";
+
+const EMPTY_FILTER_DEFINITIONS: FilterDefinition[] = [];
+
 interface ReportWidgetProps {
     reportId: string;
     title: string;
     description?: string;
+    filterDefinitions?: FilterDefinition[];
 }
 
 function ReportWidgetFrame({
@@ -81,6 +86,7 @@ export default function ReportWidget({
     reportId,
     title,
     description,
+    filterDefinitions = EMPTY_FILTER_DEFINITIONS,
 }: ReportWidgetProps) {
 
     const { filters } = useFilters();
@@ -153,7 +159,10 @@ export default function ReportWidget({
                                 ? report.request.where
                                 : []),
 
-                            ...buildWhere(filters),
+                            ...buildWhere(
+                                filters,
+                                filterDefinitions,
+                            ),
                         ],
 
                     });
@@ -210,7 +219,7 @@ export default function ReportWidget({
 
         loadWidget();
 
-    }, [report, filters, refreshKey]);
+    }, [report, filters, filterDefinitions, refreshKey]);
 
     if (!report) {
         return (

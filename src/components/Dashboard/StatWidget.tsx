@@ -1,5 +1,6 @@
 import { useFilters } from "../../engine/FilterContext";
 import { buildWhere } from "../../engine/FilterQueryBuilder";
+import type { FilterDefinition } from "../../types/filter";
 
 import {
     useEffect,
@@ -12,6 +13,8 @@ import { useDashboard } from "../../engine/DashboardContext";
 
 import type { WidgetRequest } from "../../types/widget";
 
+const EMPTY_FILTER_DEFINITIONS: FilterDefinition[] = [];
+
 interface StatWidgetProps {
     title: string;
 
@@ -20,6 +23,8 @@ interface StatWidgetProps {
     request: WidgetRequest;
 
     format?: "number" | "currency" | "decimal";
+
+    filterDefinitions?: FilterDefinition[];
 }
 
 export default function StatWidget({
@@ -27,6 +32,7 @@ export default function StatWidget({
     description,
     request,
     format,
+    filterDefinitions = EMPTY_FILTER_DEFINITIONS,
 }: StatWidgetProps) {
 
     const { filters } = useFilters();
@@ -64,7 +70,10 @@ export default function StatWidget({
                         where: [
                             ...(request.where ?? []),
 
-                            ...buildWhere(filters),
+                            ...buildWhere(
+                                filters,
+                                filterDefinitions,
+                            ),
                         ],
 
                     });
@@ -136,6 +145,7 @@ export default function StatWidget({
     }, [
         request,
         filters,
+        filterDefinitions,
         refreshKey,
     ]);
 

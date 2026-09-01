@@ -1,7 +1,8 @@
 import type { SortDefinition } from "./report";
+import type { FilterValues } from "../engine/FilterContext/FilterContext";
 
 export interface SavedReportState {
-    filters: Record<string, unknown>;
+    filters: FilterValues;
 
     sorting: SortDefinition[];
 

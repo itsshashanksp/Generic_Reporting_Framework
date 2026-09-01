@@ -1,15 +1,26 @@
 import {
     createContext,
+    useCallback,
     useContext,
+    useMemo,
     useState,
     type ReactNode,
 } from "react";
 
-type FilterValues = Record<string, any>;
+export type FilterValue =
+    | string
+    | number
+    | boolean
+    | null
+    | undefined
+    | (string | number)[];
+
+export type FilterValues = Record<string, FilterValue>;
 
 interface FilterContextType {
     filters: FilterValues;
-    setFilter: (field: string, value: any) => void;
+    setFilter: (field: string, value: FilterValue) => void;
+    replaceFilters: (filters: FilterValues) => void;
     clearFilters: () => void;
 }
 
@@ -23,29 +34,43 @@ export function FilterProvider({
 
     const [filters, setFilters] = useState<FilterValues>({});
 
-    const setFilter = (field: string, value: any) => {
+    const setFilter = useCallback((field: string, value: FilterValue) => {
 
         setFilters(prev => ({
             ...prev,
             [field]: value,
         }));
 
-    };
+    }, []);
 
-    const clearFilters = () => {
+    const clearFilters = useCallback(() => {
 
         setFilters({});
 
-    };
+    }, []);
+
+    const replaceFilters = useCallback((
+        nextFilters: FilterValues
+    ) => {
+
+        setFilters({ ...nextFilters });
+
+    }, []);
+
+    const contextValue = useMemo(
+        () => ({
+            filters,
+            setFilter,
+            replaceFilters,
+            clearFilters,
+        }),
+        [filters, setFilter, replaceFilters, clearFilters]
+    );
 
     return (
 
         <FilterContext.Provider
-            value={{
-                filters,
-                setFilter,
-                clearFilters,
-            }}
+            value={contextValue}
         >
 
             {children}
@@ -56,6 +81,7 @@ export function FilterProvider({
 
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useFilters() {
 
     const context = useContext(FilterContext);

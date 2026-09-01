@@ -1,4 +1,8 @@
-export function parseResponse(response: any) {
+import type { ApiResponse } from "../../types/api";
+
+export function parseResponse(
+    response: ApiResponse | null | undefined
+) {
 
     if (!response?.success) {
         return {

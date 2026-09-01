@@ -13,7 +13,7 @@ import {
 
 import type { DashboardDefinition } from "../types/dashboard";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
 import "./Dashboard.css";
 
@@ -27,8 +27,9 @@ export default function Dashboard({
     dashboardId?: string;
 }) {
 
-    const dashboardResult = getDashboard(
-        dashboardId
+    const dashboardResult = useMemo(
+        () => getDashboard(dashboardId),
+        [dashboardId]
     );
 
     if (
@@ -117,6 +118,12 @@ function DashboardContent({
         isRefreshing,
         finishRefresh,
     } = useDashboard();
+
+    useEffect(() => {
+
+        clearFilters();
+
+    }, [dashboard.id, clearFilters]);
 
     useEffect(() => {
 
@@ -345,6 +352,9 @@ function DashboardContent({
                                                 description={
                                                     widget.description
                                                 }
+                                                filterDefinitions={
+                                                    dashboard.filters ?? []
+                                                }
                                             />
                                         )}
 
@@ -363,6 +373,9 @@ function DashboardContent({
                                                 format={
                                                     widget.format
                                                 }
+                                                filterDefinitions={
+                                                    dashboard.filters ?? []
+                                                }
                                             />
                                         )}
 
@@ -380,6 +393,9 @@ function DashboardContent({
                                                 }
                                                 request={
                                                     widget.request
+                                                }
+                                                filterDefinitions={
+                                                    dashboard.filters ?? []
                                                 }
                                             />
                                         )}
@@ -418,6 +434,9 @@ function DashboardContent({
                                                 }
                                                 showLabels={
                                                     widget.showLabels
+                                                }
+                                                filterDefinitions={
+                                                    dashboard.filters ?? []
                                                 }
                                             />
                                         )}

@@ -3,6 +3,8 @@ import { buildWhere } from "../../engine/FilterQueryBuilder";
 
 import { useDashboard } from "../../engine/DashboardContext";
 
+import type { FilterDefinition } from "../../types/filter";
+
 import {
     useEffect,
     useState,
@@ -28,6 +30,8 @@ import { executeRequest } from "../../api/request";
 
 import type { WidgetRequest } from "../../types/widget";
 
+const EMPTY_FILTER_DEFINITIONS: FilterDefinition[] = [];
+
 interface ChartWidgetProps {
     title: string;
 
@@ -44,6 +48,8 @@ interface ChartWidgetProps {
     showTooltip?: boolean;
     showGrid?: boolean;
     showLabels?: boolean;
+
+    filterDefinitions?: FilterDefinition[];
 }
 
 export default function ChartWidget({
@@ -57,6 +63,7 @@ export default function ChartWidget({
     showTooltip = true,
     showGrid = true,
     showLabels = false,
+    filterDefinitions = EMPTY_FILTER_DEFINITIONS,
 }: ChartWidgetProps) {
 
     const { filters } = useFilters();
@@ -100,7 +107,10 @@ export default function ChartWidget({
                         where: [
                             ...(request.where ?? []),
 
-                            ...buildWhere(filters),
+                            ...buildWhere(
+                                filters,
+                                filterDefinitions,
+                            ),
                         ],
 
                     });
@@ -179,6 +189,7 @@ export default function ChartWidget({
         xField,
         yField,
         filters,
+        filterDefinitions,
         refreshKey,
     ]);
 

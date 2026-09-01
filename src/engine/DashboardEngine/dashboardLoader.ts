@@ -8,6 +8,7 @@ import {
 import type {
     DashboardValidationResult,
 } from "../DashboardValidator";
+import { loadFilters } from "../FilterEngine";
 
 export type DashboardLoadResult =
     | {
@@ -89,8 +90,12 @@ export function getDashboard(
 
     return {
         status: "valid",
-        dashboard:
-            dashboardConfiguration as DashboardDefinition,
+        dashboard: {
+            ...(dashboardConfiguration as DashboardDefinition),
+            filters: loadFilters(
+                (dashboardConfiguration as DashboardDefinition).filters ?? []
+            ),
+        },
         validation,
     };
 }

@@ -1,4 +1,8 @@
-import type { FilterDefinition } from "../../types/filter";
+import type {
+    FilterDefinition,
+    FilterOperator,
+    FilterType,
+} from "../../types/filter";
 
 export const defaultFilterDefinition: Partial<FilterDefinition> = {
 
@@ -8,4 +12,16 @@ export const defaultFilterDefinition: Partial<FilterDefinition> = {
 
     placeholder: "",
 
+};
+
+export const defaultFilterOperators: Record<
+    FilterType,
+    FilterOperator
+> = {
+    text: "contains",
+    number: "equals",
+    select: "equals",
+    multiselect: "in",
+    date: "equals",
+    daterange: "between",
 };

@@ -14,14 +14,16 @@ export default function FilterRenderer({
 
         <div>
 
-            {filters.map(filter => (
+            {filters
+                .filter(filter => filter.visible !== false)
+                .map(filter => (
 
                 <FilterField
                     key={filter.field}
                     filter={filter}
                 />
 
-            ))}
+                ))}
 
         </div>
 

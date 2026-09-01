@@ -34,7 +34,7 @@ export interface ReportRequest {
 
     groupBy?: string[];
 
-    where?: any[];
+    where?: unknown[];
 
     sort?: SortDefinition[];
 
@@ -42,7 +42,7 @@ export interface ReportRequest {
 
     pageSize?: number;
 
-    filters?: Record<string, any>;
+    filters?: Record<string, unknown>;
 }
 
 export interface ToolbarConfig {

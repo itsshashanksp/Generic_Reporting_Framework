@@ -12,6 +12,13 @@ export default function DateFilter({
 
     const { filters, setFilter } = useFilters();
 
+    const storedValue = filters[field];
+
+    const value =
+        typeof storedValue === "string"
+            ? storedValue
+            : "";
+
     return (
 
         <div>
@@ -20,7 +27,7 @@ export default function DateFilter({
 
             <input
                 type="date"
-                value={filters[field] || ""}
+                value={value}
                 onChange={(e) =>
                     setFilter(field, e.target.value)
                 }

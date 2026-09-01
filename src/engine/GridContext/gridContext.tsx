@@ -31,6 +31,7 @@ export function GridProvider({
 
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useGrid() {
 
     const context = useContext(GridContext);

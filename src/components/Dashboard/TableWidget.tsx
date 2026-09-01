@@ -3,6 +3,8 @@ import { buildWhere } from "../../engine/FilterQueryBuilder";
 
 import { useDashboard } from "../../engine/DashboardContext";
 
+import type { FilterDefinition } from "../../types/filter";
+
 import {
     useEffect,
     useState,
@@ -12,6 +14,8 @@ import { executeRequest } from "../../api/request";
 
 import type { WidgetRequest } from "../../types/widget";
 
+const EMPTY_FILTER_DEFINITIONS: FilterDefinition[] = [];
+
 interface TableWidgetProps {
     title: string;
 
@@ -20,6 +24,8 @@ interface TableWidgetProps {
     pageSize?: number;
 
     request: WidgetRequest;
+
+    filterDefinitions?: FilterDefinition[];
 }
 
 type SortDirection =
@@ -31,6 +37,7 @@ export default function TableWidget({
     description,
     pageSize = 10,
     request,
+    filterDefinitions = EMPTY_FILTER_DEFINITIONS,
 }: TableWidgetProps) {
 
     const { filters } =
@@ -88,7 +95,10 @@ export default function TableWidget({
                         where: [
                             ...(request.where ?? []),
 
-                            ...buildWhere(filters),
+                            ...buildWhere(
+                                filters,
+                                filterDefinitions,
+                            ),
                         ],
 
                     });
@@ -148,6 +158,7 @@ export default function TableWidget({
     }, [
         request,
         filters,
+        filterDefinitions,
         refreshKey,
     ]);
 

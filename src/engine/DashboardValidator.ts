@@ -1,4 +1,8 @@
 import type { DashboardWidget } from "../types/widget";
+import type { FilterDefinition } from "../types/filter";
+import {
+    validateFilters as validateFilterDefinitions,
+} from "./FilterEngine/validator";
 
 export interface DashboardValidationResult {
     valid: boolean;
@@ -216,6 +220,8 @@ function validateFilters(
         return;
     }
 
+    const initialErrorCount = errors.length;
+
     const filterFields =
         new Set<string>();
 
@@ -262,6 +268,20 @@ function validateFilters(
             );
         }
     });
+
+    if (errors.length === initialErrorCount) {
+        try {
+            validateFilterDefinitions(
+                filters as FilterDefinition[]
+            );
+        } catch (error) {
+            errors.push(
+                error instanceof Error
+                    ? error.message
+                    : "Dashboard filter configuration is invalid."
+            );
+        }
+    }
 }
 
 function validateWidget(

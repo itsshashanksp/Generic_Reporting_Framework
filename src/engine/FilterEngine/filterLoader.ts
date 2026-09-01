@@ -1,6 +1,9 @@
 import type { FilterDefinition } from "../../types/filter";
 
-import { defaultFilterDefinition } from "./defaults";
+import {
+    defaultFilterDefinition,
+    defaultFilterOperators,
+} from "./defaults";
 
 import { validateFilters } from "./validator";
 
@@ -13,6 +16,10 @@ export function loadFilters(
         ...defaultFilterDefinition,
 
         ...filter,
+
+        operator:
+            filter.operator ??
+            defaultFilterOperators[filter.type],
 
     }));
 

@@ -13,7 +13,7 @@ export default function Sidebar() {
             }}
         >
 
-            {menu.map((item: any) => (
+            {menu.map(item => (
 
                 <div key={item.id}>
 
@@ -31,7 +31,7 @@ export default function Sidebar() {
 
                             <h3>{item.title}</h3>
 
-                            {item.children.map((child: any) => (
+                            {item.children.map(child => (
 
                                 <div
                                     key={child.id}

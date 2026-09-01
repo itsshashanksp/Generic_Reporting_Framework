@@ -46,6 +46,12 @@ export default function ReportViewer() {
 
     const { reportId } = useParams();
 
+    const {
+        filters,
+        replaceFilters,
+        clearFilters,
+    } = useFilters();
+
 
     const rawReport = getReport(
         reportId || ""
@@ -59,22 +65,6 @@ export default function ReportViewer() {
             : null;
 
     }, [rawReport]);
-
-    if (!rawReport) {
-        return (
-            <Error
-                message={
-                    `Report "${reportId || ""}" was not found.`
-                }
-            />
-        );
-    }
-
-    const {
-        filters,
-        clearFilters,
-    } = useFilters();
-
 
     const [
         result,
@@ -126,8 +116,8 @@ export default function ReportViewer() {
 
     const loadReport = useCallback(
         async (
-            activeFilters = filters,
-            activePage = currentPage,
+            activeFilters: Record<string, unknown> = {},
+            activePage = 1,
             activePageSize =
                 report?.grid.pagination.pageSize ?? 50
         ) => {
@@ -189,7 +179,8 @@ export default function ReportViewer() {
                                 : []),
 
                             ...buildWhere(
-                                activeFilters
+                                activeFilters,
+                                report.filters ?? []
                             ),
 
                         ],
@@ -231,15 +222,16 @@ export default function ReportViewer() {
                 );
 
             }
-            catch (err: any) {
+            catch (err: unknown) {
 
                 /*
                  * Runtime/API errors after the report
                  * has loaded stay inside the grid.
                  */
                 setGridError(
-                    err.message ||
-                    "Unexpected error occurred."
+                    err instanceof globalThis.Error
+                        ? err.message
+                        : "Unexpected error occurred."
                 );
 
             }
@@ -255,26 +247,11 @@ export default function ReportViewer() {
         [
             report,
             reportId,
-            filters,
-            currentPage,
         ]
     );
 
 
     const handleSearch = () => {
-
-        console.log(
-            "Current Filters:",
-            filters
-        );
-
-
-        console.log(
-            "Where:",
-            buildWhere(filters)
-        );
-
-
         setCurrentPage(1);
 
 
@@ -354,9 +331,7 @@ export default function ReportViewer() {
 
                               groups:
                                   report.grid.grouping.groups?.map(
-                                      (
-                                          group: any
-                                      ) => ({
+                                      group => ({
 
                                           field:
                                               group.field,
@@ -367,9 +342,7 @@ export default function ReportViewer() {
 
                               aggregates:
                                   report.grid.grouping.aggregates?.map(
-                                      (
-                                          aggregate: any
-                                      ) => ({
+                                      aggregate => ({
 
                                           field:
                                               aggregate.field,
@@ -401,19 +374,6 @@ export default function ReportViewer() {
 
         });
 
-
-        console.log(
-            "Saved page:",
-            savedPage
-        );
-
-
-        console.log(
-            "Saved page size:",
-            savedPageSize
-        );
-
-
         alert(
             "Report saved successfully."
         );
@@ -439,6 +399,11 @@ export default function ReportViewer() {
             const savedPageSize =
                 savedReport.state.pagination?.pageSize ??
                 report.grid.pagination.pageSize;
+
+
+            replaceFilters(
+                savedReport.state.filters
+            );
 
 
             setCurrentPage(
@@ -512,7 +477,8 @@ export default function ReportViewer() {
                         : []),
 
                     ...buildWhere(
-                        filters
+                        filters,
+                        report.filters ?? []
                     ),
 
                 ],
@@ -628,11 +594,30 @@ export default function ReportViewer() {
 
         if (report) {
 
-            loadReport();
+            const timer = window.setTimeout(() => {
+
+                clearFilters();
+
+                void loadReport({}, 1);
+
+            }, 0);
+
+            return () => window.clearTimeout(timer);
 
         }
 
-    }, [report]);
+    }, [report, clearFilters, loadReport]);
+
+
+    if (!rawReport || !report) {
+        return (
+            <Error
+                message={
+                    `Report "${reportId || ""}" was not found.`
+                }
+            />
+        );
+    }
 
 
     /*
