@@ -1,0 +1,1 @@
+export { loadNavigation } from "./loader";

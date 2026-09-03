@@ -1,4 +1,5 @@
 import { useFilters } from "../../../engine/FilterContext";
+import { useId } from "react";
 
 import type { FilterOperator } from "../../../types/filter";
 
@@ -7,6 +8,7 @@ interface Props {
     label: string;
     operator?: FilterOperator;
     placeholder?: string;
+    required?: boolean;
 }
 
 export default function NumberFilter({
@@ -14,8 +16,12 @@ export default function NumberFilter({
     label,
     operator,
     placeholder,
+    required = false,
 }: Props) {
     const { filters, setFilter } = useFilters();
+    const inputId = useId();
+    const minimumId = useId();
+    const maximumId = useId();
 
     if (
         operator === "between" ||
@@ -26,13 +32,18 @@ export default function NumberFilter({
             : ["", ""];
 
         return (
-            <div>
-                <label>{label}</label>
-                <div style={{ display: "flex", gap: "8px" }}>
+            <fieldset className="filter-field">
+                <legend>
+                    {label}{required && <span className="filter-required" aria-hidden="true"> *</span>}
+                </legend>
+                <div className="filter-range">
+                    <label className="visually-hidden" htmlFor={minimumId}>{label} minimum</label>
                     <input
+                        id={minimumId}
                         type="number"
                         value={range[0] ?? ""}
                         placeholder="Minimum"
+                        required={required}
                         onChange={(event) =>
                             setFilter(field, [
                                 event.target.value,
@@ -40,11 +51,14 @@ export default function NumberFilter({
                             ])
                         }
                     />
-                    <span>to</span>
+                    <span className="filter-range__separator">to</span>
+                    <label className="visually-hidden" htmlFor={maximumId}>{label} maximum</label>
                     <input
+                        id={maximumId}
                         type="number"
                         value={range[1] ?? ""}
                         placeholder="Maximum"
+                        required={required}
                         onChange={(event) =>
                             setFilter(field, [
                                 range[0] ?? "",
@@ -53,16 +67,19 @@ export default function NumberFilter({
                         }
                     />
                 </div>
-            </div>
+            </fieldset>
         );
     }
 
     const value = filters[field];
 
     return (
-        <div>
-            <label>{label}</label>
+        <div className="filter-field">
+            <label htmlFor={inputId}>
+                {label}{required && <span className="filter-required" aria-hidden="true"> *</span>}
+            </label>
             <input
+                id={inputId}
                 type="number"
                 value={
                     typeof value === "number" ||
@@ -71,6 +88,7 @@ export default function NumberFilter({
                         : ""
                 }
                 placeholder={placeholder}
+                required={required}
                 onChange={(event) =>
                     setFilter(field, event.target.value)
                 }

@@ -3,11 +3,13 @@ import { useFilters } from "../../../engine/FilterContext";
 interface Props {
     field: string;
     label: string;
+    required?: boolean;
 }
 
 export default function NullFilter({
     field,
     label,
+    required = false,
 }: Props) {
 
     const {
@@ -19,13 +21,14 @@ export default function NullFilter({
         filters[field] === true;
 
     return (
-        <div>
+        <div className="filter-field">
 
-            <label>
+            <label className="filter-checkbox">
 
                 <input
                     type="checkbox"
                     checked={checked}
+                    required={required}
                     onChange={(e) =>
                         setFilter(
                             field,
@@ -36,7 +39,9 @@ export default function NullFilter({
                     }
                 />
 
-                {label}
+                <span>
+                    {label}{required && <span className="filter-required" aria-hidden="true"> *</span>}
+                </span>
 
             </label>
 

@@ -37,6 +37,15 @@ export interface WidgetRequest {
     groupBy?: string[];
 
     where?: WidgetWhereCondition[];
+
+    sort?: {
+        column: string;
+        direction: "ASC" | "DESC";
+    }[];
+
+    page?: number;
+
+    pageSize?: number;
 }
 
 export interface DashboardWidget {
@@ -73,6 +82,11 @@ export interface DashboardWidget {
 
     pageSize?: number;
 
+    /** Optional choices shown by a table widget's server-side page-size control. */
+    pageSizeOptions?: number[];
+
+    export?: ExportConfig;
+
     visible?: boolean;
 
     position?: {
@@ -80,3 +94,4 @@ export interface DashboardWidget {
         y: number;
     };
 }
+import type { ExportConfig } from "./export";

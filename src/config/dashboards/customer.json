@@ -1,11 +1,11 @@
 {
     "id": "customer-dashboard",
 
-    "title": "Customer Dashboard",
+    "title": "Item Dashboard",
 
-    "description": "Customer reporting dashboard.",
-    
-    "layout": { 
+    "description": "Item reporting dashboard.",
+
+    "layout": {
     "columns": 12,
     "tabletColumns": 6,
     "mobileColumns": 1
@@ -15,27 +15,34 @@
         "enabled": false,
         "interval": 30000
     },
-
     "filters": [
         {
-            "field": "Cust_Name",
-            "label": "Customer Name",
+            "field": "Item_Desc",
+            "label": "Item Name",
             "type": "text"
         },
         {
-            "field": "Cust_Add",
-            "label": "Address",
+            "field": "Std_Vat",
+            "label": "GST %",
             "type": "text"
         }
     ],
 
+
     "widgets": [
 {
-    "id": "customer-table",
+    "id": "item-table",
     "type": "table",
-    "title": "Customer Details",
-    "description": "Customer records matching the selected filters.",
+    "title": "Item Details",
+    "description": "Item records matching the selected filters.",
     "pageSize": 10,
+    "export": {
+        "enabled": true,
+        "formats": ["csv", "excel"],
+        "exportCurrentView": true,
+        "exportAll": true,
+        "filename": "item-details"
+    },
     "width": 12,
     "height": 400,
     "visible": true,
@@ -46,19 +53,21 @@
     "request": {
         "controller": "Query",
         "action": "select",
-        "table": "CustomerTable",
+        "table": "ItemMasterTable",
         "columns": [
-            "Cust_Name",
-            "Cust_Add",
-            "Bill_Amt"
+            "Item_Code",
+            "Item_Desc",
+            "Sale_Rate",
+			"Item_MRP",
+			"Std_Vat"
         ]
     }
 },
     {
-        "id": "total-customers",
+        "id": "total-Items",
         "type": "stat",
-        "title": "Total Customers",
-        "description": "Total number of customers matching the selected filters.",
+        "title": "Total Items",
+        "description": "Total number of Items matching the selected filters.",
         "format": "number",
         "width": 4,
         "height": 150,
@@ -70,20 +79,20 @@
         "request": {
             "controller": "Query",
             "action": "select",
-            "table": "CustomerTable",
+            "table": "ItemMasterTable",
             "columns": [
                 {
                     "function": "COUNT",
-                    "column": "Cust_Name",
-                    "alias": "TotalCustomers"
+                    "column": "Item_Code",
+                    "alias": "TotalItems"
                 }
             ]
         }
     },
     {
-        "id": "minimum-bill",
+        "id": "minimum-sp-item",
         "type": "stat",
-        "title": "Minimum Bill",
+        "title": "Minimum Sale Price",
         "format": "currency",
         "width": 4,
         "height": 150,
@@ -95,20 +104,20 @@
         "request": {
             "controller": "Query",
             "action": "select",
-            "table": "CustomerTable",
+            "table": "ItemMasterTable",
             "columns": [
                 {
                     "function": "MIN",
-                    "column": "Bill_Amt",
-                    "alias": "MinimumBill"
+                    "column": "Sale_Rate",
+                    "alias": "MinimumSP"
                 }
             ]
         }
     },
     {
-        "id": "maximum-bill",
+        "id": "maximum-sp-item",
         "type": "stat",
-        "title": "Maximum Bill",
+        "title": "Maximum Sale Price",
         "format": "currency",
         "width": 4,
         "height": 150,
@@ -120,20 +129,20 @@
         "request": {
             "controller": "Query",
             "action": "select",
-            "table": "CustomerTable",
+            "table": "ItemMasterTable",
             "columns": [
                 {
                     "function": "MAX",
-                    "column": "Bill_Amt",
-                    "alias": "MaximumBill"
+                    "column": "Sale_Rate",
+                    "alias": "MaximumSP"
                 }
             ]
         }
     },
-    {
-    "id": "total-billing",
+	{
+    "id": "total-value",
     "type": "stat",
-    "title": "Total Billing",
+    "title": "Total Value",
     "width": 4,
     "height": 150,
     "visible": true,
@@ -145,76 +154,16 @@
     "request": {
         "controller": "Query",
         "action": "select",
-        "table": "CustomerTable",
+        "table": "ItemMasterTable",
         "columns": [
             {
                 "function": "SUM",
-                "column": "Bill_Amt",
-                "alias": "TotalBilling"
+                "column": "Sale_Rate",
+                "alias": "TotalValue"
             }
-        ]
-    }
-},
-{
-    "id": "average-bill",
-    "type": "stat",
-    "title": "Average Bill",
-    "width": 4,
-    "height": 150,
-    "visible": true,
-    "position": {
-        "x": 4,
-        "y": 3
-    },
-    "format": "currency",
-    "request": {
-        "controller": "Query",
-        "action": "select",
-        "table": "CustomerTable",
-        "columns": [
-            {
-                "function": "AVG",
-                "column": "Bill_Amt",
-                "alias": "AverageBill"
-            }
-        ]
-    }
-},
-{
-    "id": "customer-chart",
-    "type": "chart",
-    "title": "Customers by Address",
-    "chartType": "bar",
-    "showLegend": true,
-    "showTooltip": true,
-    "showGrid": true,
-    "showLabels": false,
-    "width": 8,
-    "height": 400,
-    "visible": true,
-    "position": {
-        "x": 0,
-        "y": 4
-    },
-    "xField": "Cust_Add",
-    "yField": "CustomerCount",
-    "request": {
-        "controller": "Query",
-        "action": "select",
-        "table": "CustomerTable",
-        "columns": [
-            "Cust_Add",
-            {
-                "function": "COUNT",
-                "column": "Cust_Name",
-                "alias": "CustomerCount"
-            }
-        ],
-        "groupBy": [
-            "Cust_Add"
         ]
     }
 }
-    
+
     ]
 }

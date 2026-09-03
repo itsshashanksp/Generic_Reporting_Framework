@@ -1,55 +1,44 @@
-import { useFilters } from "../../engine/FilterContext";
-import { buildWhere } from "../../engine/FilterQueryBuilder";
-
-import { useDashboard } from "../../engine/DashboardContext";
-
-import type { FilterDefinition } from "../../types/filter";
-
+import { useMemo } from "react";
 import {
-    useEffect,
-    useState,
-} from "react";
-
-import {
-    BarChart,
     Bar,
-    LineChart,
-    Line,
-    PieChart,
-    Pie,
+    BarChart,
+    CartesianGrid,
     Cell,
+    Legend,
+    Line,
+    LineChart,
+    Pie,
+    PieChart,
+    ResponsiveContainer,
+    Tooltip,
     XAxis,
     YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-    ResponsiveContainer,
 } from "recharts";
 
-import { executeRequest } from "../../api/request";
-
+import type { FilterDefinition } from "../../types/filter";
 import type { WidgetRequest } from "../../types/widget";
+import Empty from "../Common/Empty";
+import ErrorState from "../Common/Error";
+import Loading from "../Common/Loading";
+import DashboardWidgetFrame from "./DashboardWidgetFrame";
+import { useDashboardWidgetRequest } from "./useDashboardWidgetRequest";
 
 const EMPTY_FILTER_DEFINITIONS: FilterDefinition[] = [];
+const CHART_COLORS = ["#2563eb", "#0d9488", "#7c3aed", "#ea580c", "#db2777"];
 
 interface ChartWidgetProps {
     title: string;
-
     description?: string;
-
     request: WidgetRequest;
-
     xField: string;
     yField: string;
-
     chartType?: "bar" | "line" | "pie";
-
     showLegend?: boolean;
     showTooltip?: boolean;
     showGrid?: boolean;
     showLabels?: boolean;
-
     filterDefinitions?: FilterDefinition[];
+    cacheScope?: string;
 }
 
 export default function ChartWidget({
@@ -64,452 +53,96 @@ export default function ChartWidget({
     showGrid = true,
     showLabels = false,
     filterDefinitions = EMPTY_FILTER_DEFINITIONS,
+    cacheScope,
 }: ChartWidgetProps) {
-
-    const { filters } = useFilters();
-
-    const { refreshKey } =
-        useDashboard();
-
-    const [data, setData] = useState<
-        {
-            name: string;
-            value: number;
-        }[]
-    >([]);
-
-    const [loading, setLoading] =
-        useState(true);
-
-    const [error, setError] =
-        useState<string | null>(null);
-
-    const [empty, setEmpty] =
-        useState(false);
-
-    useEffect(() => {
-
-        const loadChart = async () => {
-
-            try {
-
-                setLoading(true);
-
-                setError(null);
-
-                setEmpty(false);
-
-                const response =
-                    await executeRequest({
-
-                        ...request,
-
-                        where: [
-                            ...(request.where ?? []),
-
-                            ...buildWhere(
-                                filters,
-                                filterDefinitions,
-                            ),
-                        ],
-
-                    });
-
-                if (
-                    response.success &&
-                    response.data?.length
-                ) {
-
-                    const chartData =
-                        response.data.map(
-                            (row: Record<string, unknown>) => ({
-                                name:
-                                    String(
-                                        row[xField]
-                                        ?? ""
-                                    ),
-
-                                value:
-                                    Number(
-                                        row[yField]
-                                        ?? 0
-                                    ),
-                            })
-                        );
-
-                    setData(chartData);
-
-                } else if (
-                    response.success &&
-                    !response.data?.length
-                ) {
-
-                    setEmpty(true);
-
-                    setData([]);
-
-                } else {
-
-                    setError(
-                        response.message ||
-                        "Failed to load chart."
-                    );
-
-                    setData([]);
-
-                }
-
-            }
-            catch (error) {
-
-                console.error(
-                    "Failed to load chart:",
-                    error
-                );
-
-                setError(
-                    "Failed to load chart."
-                );
-
-                setData([]);
-
-            }
-            finally {
-
-                setLoading(false);
-
-            }
-
-        };
-
-        loadChart();
-
-    }, [
+    const { response, loading, error, retry } = useDashboardWidgetRequest(
         request,
-        xField,
-        yField,
-        filters,
         filterDefinitions,
-        refreshKey,
-    ]);
+        cacheScope
+    );
+    const data = useMemo(
+        () => response?.data?.map(row => {
+            const numericValue = Number(row[yField] ?? 0);
 
-    if (loading) {
-
-        return (
-            <div
-                style={{
-                    width: "100%",
-                    height: "100%",
-                }}
-            >
-                <h2
-                    style={{
-                        marginTop: 0,
-                        marginBottom: "4px",
-                    }}
-                >
-                    {title}
-                </h2>
-
-                {description && (
-                    <div
-                        style={{
-                            fontSize: "12px",
-                            opacity: 0.6,
-                            marginBottom: "8px",
-                        }}
-                    >
-                        {description}
-                    </div>
-                )}
-
-                <div>Loading...</div>
-            </div>
-        );
-
-    }
-
-    if (error) {
-
-        return (
-            <div
-                style={{
-                    width: "100%",
-                    height: "100%",
-                }}
-            >
-
-                <h2
-                    style={{
-                          marginTop: 0,
-                          marginBottom: "4px",
-                    }}
-                >
-                    {title}
-                </h2>
-
-                {description && (
-                    <div
-                        style={{
-                            fontSize: "12px",
-                            opacity: 0.6,
-                            marginBottom: "8px",
-                        }}
-                    >
-                        {description}
-                    </div>
-                )}
-
-                <div
-                    style={{
-                        padding: "20px",
-                        textAlign: "center",
-                        color: "red",
-                    }}
-                >
-
-                    <strong>
-                        Failed to load chart
-                    </strong>
-
-                    <div
-                        style={{
-                            fontSize: "12px",
-                            marginTop: "6px",
-                        }}
-                    >
-                        {error}
-                    </div>
-
-                </div>
-
-            </div>
-        );
-
-    }
-
-    if (empty) {
-
-        return (
-            <div
-                style={{
-                    width: "100%",
-                    height: "100%",
-                }}
-            >
-
-                <h2
-                    style={{
-                        marginTop: 0,
-                        marginBottom: "4px",
-                    }}
-                >
-                    {title}
-                </h2>
-
-                {description && (
-                    <div
-                        style={{
-                            fontSize: "12px",
-                            opacity: 0.6,
-                            marginBottom: "8px",
-                        }}
-                    >
-                        {description}
-                    </div>
-                )}
-
-                <div
-                    style={{
-                        padding: "20px",
-                        textAlign: "center",
-                    }}
-                >
-
-                    <strong>
-                        No Data
-                    </strong>
-
-                    <div
-                        style={{
-                            fontSize: "12px",
-                            marginTop: "6px",
-                            opacity: 0.7,
-                        }}
-                    >
-                        The query returned no data.
-                    </div>
-
-                </div>
-
-            </div>
-        );
-
-    }
+            return {
+                name: String(row[xField] ?? ""),
+                value: Number.isFinite(numericValue) ? numericValue : 0,
+            };
+        }) ?? [],
+        [response, xField, yField]
+    );
 
     return (
-        <div
-            style={{
-                width: "100%",
-                height: "100%",
-            }}
+        <DashboardWidgetFrame
+            title={title}
+            description={description}
+            refreshing={loading && data.length > 0}
         >
-
-            <h2
-                style={{
-                    marginTop: 0,
-                    marginBottom: "4px",
-                }}
-            >
-                {title}
-            </h2>
-
-            {description && (
-                <div
-                    style={{
-                        fontSize: "12px",
-                        opacity: 0.6,
-                        marginBottom: "8px",
-                    }}
-                >
-                    {description}
+            {loading && data.length === 0 && <Loading label="Loading chart…" compact />}
+            {!loading && error && data.length === 0 && (
+                <ErrorState title="Unable to load chart" message={error} onRetry={retry} compact />
+            )}
+            {!loading && error && data.length > 0 && (
+                <div className="dashboard-widget-inline-error" role="alert">
+                    <span>Refresh failed.</span>
+                    <button type="button" className="app-button" onClick={retry}>Retry</button>
                 </div>
             )}
-
-            <div
-                style={{
-                    width: "100%",
-                    height: "calc(100% - 40px)",
-                }}
-            >
-
-                <ResponsiveContainer
-                    width="100%"
-                    height="100%"
-                >
-
-                    {chartType === "line" ? (
-
-                        <LineChart
-                            data={data}
-                        >
-
-                            {showGrid && (
-                                <CartesianGrid
-                                    strokeDasharray="3 3"
+            {!loading && !error && data.length === 0 && (
+                <Empty title="No chart data" message="The current filters returned no data." compact />
+            )}
+            {data.length > 0 && (
+                <div className="dashboard-widget-content__chart">
+                    <ResponsiveContainer width="100%" height="100%">
+                        {chartType === "line" ? (
+                            <LineChart data={data}>
+                                {showGrid && <CartesianGrid strokeDasharray="3 3" />}
+                                <XAxis dataKey="name" />
+                                <YAxis />
+                                {showTooltip && <Tooltip />}
+                                {showLegend && <Legend />}
+                                <Line
+                                    type="monotone"
+                                    dataKey="value"
+                                    stroke={CHART_COLORS[0]}
+                                    strokeWidth={2}
+                                    label={showLabels}
                                 />
-                            )}
-
-                            <XAxis
-                                dataKey="name"
-                            />
-
-                            <YAxis />
-
-                            {showTooltip && (
-                                <Tooltip />
-                            )}
-
-                            {showLegend && (
-                                <Legend />
-                            )}
-
-                            <Line
-                                type="monotone"
-                                dataKey="value"
-                                stroke="currentColor"
-                                label={
-                                    showLabels
-                                        ? true
-                                        : false
-                                }
-                            />
-
-                        </LineChart>
-
-                    ) : chartType === "pie" ? (
-
-                        <PieChart>
-
-                            <Pie
-                                data={data}
-                                dataKey="value"
-                                nameKey="name"
-                                cx="50%"
-                                cy="50%"
-                                outerRadius="70%"
-                                label={
-                                    showLabels
-                                        ? true
-                                        : false
-                                }
-                            >
-
-                                {data.map(
-                                    (_, index) => (
+                            </LineChart>
+                        ) : chartType === "pie" ? (
+                            <PieChart>
+                                <Pie
+                                    data={data}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="50%"
+                                    outerRadius="70%"
+                                    label={showLabels}
+                                >
+                                    {data.map((entry, index) => (
                                         <Cell
-                                            key={
-                                                `cell-${index}`
-                                            }
+                                            key={`${entry.name}-${index}`}
+                                            fill={CHART_COLORS[index % CHART_COLORS.length]}
                                         />
-                                    )
-                                )}
-
-                            </Pie>
-
-                            {showTooltip && (
-                                <Tooltip />
-                            )}
-
-                            {showLegend && (
-                                <Legend />
-                            )}
-
-                        </PieChart>
-
-                    ) : (
-
-                        <BarChart
-                            data={data}
-                        >
-
-                            {showGrid && (
-                                <CartesianGrid
-                                    strokeDasharray="3 3"
-                                />
-                            )}
-
-                            <XAxis
-                                dataKey="name"
-                            />
-
-                            <YAxis />
-
-                            {showTooltip && (
-                                <Tooltip />
-                            )}
-
-                            {showLegend && (
-                                <Legend />
-                            )}
-
-                            <Bar
-                                dataKey="value"
-                                label={
-                                    showLabels
-                                        ? true
-                                        : false
-                                }
-                            />
-
-                        </BarChart>
-
-                    )}
-
-                </ResponsiveContainer>
-
-            </div>
-
-        </div>
+                                    ))}
+                                </Pie>
+                                {showTooltip && <Tooltip />}
+                                {showLegend && <Legend />}
+                            </PieChart>
+                        ) : (
+                            <BarChart data={data}>
+                                {showGrid && <CartesianGrid strokeDasharray="3 3" />}
+                                <XAxis dataKey="name" />
+                                <YAxis />
+                                {showTooltip && <Tooltip />}
+                                {showLegend && <Legend />}
+                                <Bar dataKey="value" fill={CHART_COLORS[0]} label={showLabels} />
+                            </BarChart>
+                        )}
+                    </ResponsiveContainer>
+                </div>
+            )}
+        </DashboardWidgetFrame>
     );
 }

@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 
 import { AgGridReact } from "ag-grid-react";
 
@@ -20,68 +20,68 @@ interface Props {
     rows: Record<string, unknown>[];
     columns: ColumnDefinition[];
     gridConfig: GridConfig;
+    height?: CSSProperties["height"];
 }
 
 export default function GenericGrid({
     rows,
     columns,
     gridConfig,
+    height,
 }: Props) {
 
     const { setApi } = useGrid();
 
     const gridRef = useRef<AgGridReact>(null);
 
-const groupedColumns =
-    gridConfig.grouping?.enabled
-        ? gridConfig.grouping.groups ?? []
-        : [];
+    useEffect(() => () => setApi(null), [setApi]);
 
-const aggregateColumns =
-    gridConfig.grouping?.enabled
-        ? gridConfig.grouping.aggregates ?? []
-        : [];
+    const columnDefs = useMemo(() => {
+        const groupedColumns = gridConfig.grouping?.enabled
+            ? gridConfig.grouping.groups ?? []
+            : [];
+        const aggregateColumns = gridConfig.grouping?.enabled
+            ? gridConfig.grouping.aggregates ?? []
+            : [];
 
-const columnDefs = gridConfig.grouping?.enabled
-    ? [
-        ...groupedColumns.map(group => ({
-            field: group.field,
-            headerName: group.header ?? group.field,
-            sortable: true,
-            filter: false,
-            width: 200,
-        })),
-
-        ...aggregateColumns.map(aggregate => ({
-            field:
-                aggregate.alias ??
-                `${aggregate.function}_${aggregate.field}`,
-
-            headerName:
-                aggregate.header ??
-                aggregate.alias ??
-                `${aggregate.function} ${aggregate.field}`,
-
-            sortable: true,
-            filter: false,
-            width: 180,
-        })),
-    ]
-    : columns
-        .filter(column => column.visible)
-        .map(column => ({
-            field: column.field,
-            headerName: column.header,
-            sortable: column.sortable,
-            filter: false,
-            width: column.width,
-        }));
+        return gridConfig.grouping?.enabled
+            ? [
+                ...groupedColumns.map(group => ({
+                    field: group.field,
+                    headerName: group.header ?? group.field,
+                    sortable: true,
+                    filter: false,
+                    width: 200,
+                })),
+                ...aggregateColumns.map(aggregate => ({
+                    field: aggregate.alias ?? `${aggregate.function}_${aggregate.field}`,
+                    headerName: aggregate.header
+                        ?? aggregate.alias
+                        ?? `${aggregate.function} ${aggregate.field}`,
+                    sortable: true,
+                    filter: false,
+                    width: 180,
+                })),
+            ]
+            : columns
+                .filter(column => column.visible)
+                .map(column => ({
+                    field: column.field,
+                    headerName: column.header,
+                    sortable: column.sortable,
+                    filter: false,
+                    width: column.width,
+                }));
+    }, [columns, gridConfig.grouping]);
 
     return (
 
         <div
             className={gridTheme.className}
-            style={gridTheme.style}
+            style={{
+                ...gridTheme.style,
+                ...(height !== undefined ? { height } : {}),
+            }}
         >
 
             <AgGridReact

@@ -1,0 +1,243 @@
+.dashboard-table {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    color: #1f2937;
+}
+
+.dashboard-table__header {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.dashboard-table__heading {
+    min-width: 0;
+}
+
+.dashboard-table__header-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 10px;
+}
+
+.dashboard-table__heading h2 {
+    margin: 0;
+    overflow: hidden;
+    font-size: 18px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dashboard-table__heading p {
+    margin: 3px 0 0;
+    color: #6b7280;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.dashboard-table__refreshing {
+    flex: 0 0 auto;
+    color: #2563eb;
+    font-size: 12px;
+}
+
+.dashboard-table__state {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 120px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 7px;
+    padding: 20px;
+    color: #6b7280;
+    text-align: center;
+}
+
+.dashboard-table__state--error {
+    color: #b91c1c;
+}
+
+.dashboard-table__state span {
+    font-size: 12px;
+}
+
+.dashboard-table__viewport {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+}
+
+.dashboard-table__inline-error {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 7px 9px;
+    border-radius: 5px;
+    background: #fef2f2;
+    color: #991b1b;
+    font-size: 12px;
+}
+
+.dashboard-table__inline-error button {
+    min-height: 28px;
+    padding: 3px 8px;
+}
+
+.dashboard-table table {
+    width: max-content;
+    min-width: 100%;
+    border-spacing: 0;
+    table-layout: fixed;
+    font-size: 13px;
+}
+
+.dashboard-table th {
+    position: sticky;
+    z-index: 1;
+    top: 0;
+    padding: 0;
+    border-bottom: 1px solid #d1d5db;
+    background: #f8fafc;
+    color: #374151;
+    text-align: left;
+}
+
+.dashboard-table__sort {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+    text-align: left;
+}
+
+.dashboard-table__sort:hover,
+.dashboard-table__sort:focus-visible {
+    background: #eef2f7;
+}
+
+.dashboard-table td {
+    overflow: hidden;
+    padding: 9px 12px;
+    border-bottom: 1px solid #eef0f3;
+    color: #374151;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dashboard-table tbody tr:nth-child(even) {
+    background: #fafafa;
+}
+
+.dashboard-table tbody tr:hover {
+    background: #f3f7fb;
+}
+
+.dashboard-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.dashboard-table__pagination {
+    display: flex;
+    flex: 0 0 auto;
+    min-width: 0;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    padding-top: 10px;
+    color: #4b5563;
+    font-size: 12px;
+}
+
+.dashboard-table__range {
+    margin-right: auto;
+}
+
+.dashboard-table__pagination label,
+.dashboard-table__page-buttons {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.dashboard-table__pagination select,
+.dashboard-table__pagination button {
+    min-height: 30px;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    background: #fff;
+    color: #374151;
+}
+
+.dashboard-table__pagination select {
+    padding: 3px 24px 3px 7px;
+}
+
+.dashboard-table__pagination button {
+    min-width: 32px;
+    padding: 3px 9px;
+    cursor: pointer;
+    font-size: 17px;
+    line-height: 1;
+}
+
+.dashboard-table__pagination button:hover:not(:disabled) {
+    border-color: #9ca3af;
+    background: #f8fafc;
+}
+
+.dashboard-table__pagination button:disabled,
+.dashboard-table__pagination select:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+@media (max-width: 640px) {
+    .dashboard-table__header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .dashboard-table__heading h2 {
+        overflow: visible;
+        white-space: normal;
+    }
+
+    .dashboard-table__header-actions {
+        justify-content: space-between;
+    }
+
+    .dashboard-table__pagination {
+        justify-content: space-between;
+    }
+
+    .dashboard-table__range {
+        width: 100%;
+    }
+}

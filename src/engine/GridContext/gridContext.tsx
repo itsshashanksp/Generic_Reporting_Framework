@@ -10,7 +10,7 @@ import type { GridApi } from "ag-grid-community";
 
 interface GridContextType {
     api: GridApi | null;
-    setApi: (api: GridApi) => void;
+    setApi: (api: GridApi | null) => void;
 }
 
 const GridContext = createContext<GridContextType | undefined>(undefined);

@@ -1,4 +1,5 @@
 import ToolbarButton from "./ToolbarButton";
+import ExportMenu, { type ExportMenuOption } from "../Common/ExportMenu";
 
 import { useGrid } from "../../engine/GridContext";
 
@@ -6,16 +7,14 @@ import {
     exportCSV,
     exportExcel,
 } from "../../engine/ExportEngine";
+import type { ToolbarConfig } from "../../types/report";
+
+import "./Toolbar.css";
 
 
 interface ReportToolbarProps {
 
-    config: {
-        search: boolean;
-        export: boolean;
-        refresh: boolean;
-        settings: boolean;
-    };
+    config: ToolbarConfig;
 
     exportConfig?: {
         enabled: boolean;
@@ -32,6 +31,9 @@ interface ReportToolbarProps {
     ) => void;
 
     onSaveReport?: () => void;
+    onRefresh?: () => void;
+    isRefreshing?: boolean;
+    isExporting?: boolean;
 }
 
 
@@ -41,6 +43,9 @@ export default function ReportToolbar({
     rows = [],
     onExportAll,
     onSaveReport,
+    onRefresh,
+    isRefreshing = false,
+    isExporting = false,
 }: ReportToolbarProps) {
 
     const {
@@ -54,7 +59,12 @@ export default function ReportToolbar({
             return;
         }
 
-        exportCSV(api);
+        exportCSV(
+            api,
+            exportConfig?.filename
+                ? `${exportConfig.filename}.csv`
+                : "report.csv"
+        );
 
     };
 
@@ -70,99 +80,68 @@ export default function ReportToolbar({
 
     };
 
+    const exportOptions: ExportMenuOption[] = [];
+    if (config.export && exportConfig?.enabled) {
+        if (exportConfig.exportCurrentView !== false) {
+            if (exportConfig.formats.includes("csv")) exportOptions.push({
+                id: "current-csv",
+                label: "Current view — CSV",
+                onSelect: handleCSVExport,
+                disabled: !api || !rows.length,
+            });
+            if (exportConfig.formats.includes("excel")) exportOptions.push({
+                id: "current-excel",
+                label: "Current view — Excel",
+                onSelect: handleExcelExport,
+                disabled: !rows.length,
+            });
+        }
+        if (exportConfig.exportAll && onExportAll) {
+            if (exportConfig.formats.includes("csv")) exportOptions.push({
+                id: "all-csv",
+                label: "All rows — CSV",
+                onSelect: () => onExportAll("csv"),
+            });
+            if (exportConfig.formats.includes("excel")) exportOptions.push({
+                id: "all-excel",
+                label: "All rows — Excel",
+                onSelect: () => onExportAll("excel"),
+            });
+        }
+    }
+
 
     return (
 
         <div
-            style={{
-                display: "flex",
-                justifyContent: "flex-start",
-                alignItems: "center",
-                marginBottom: "20px",
-            }}
+            className="report-toolbar"
+            role="toolbar"
+            aria-label="Report actions"
         >
 
-            <div>
+            <div className="report-toolbar__actions">
 
                 {config.refresh && (
                     <ToolbarButton
                         label="Refresh"
-                        onClick={() =>
-                            window.location.reload()
-                        }
+                        onClick={onRefresh}
+                        disabled={isRefreshing}
+                        title="Refresh report data"
                     />
                 )}
 
 
-                {config.export &&
-                    exportConfig?.enabled &&
-                    exportConfig.formats.includes("csv") &&
-                    exportConfig.exportCurrentView && (
-
-                        <ToolbarButton
-                            label="Export CSV"
-                            onClick={
-                                handleCSVExport
-                            }
-                        />
-
-                    )}
+                <ExportMenu options={exportOptions} disabled={isRefreshing} busy={isExporting} />
 
 
-                {config.export &&
-                    exportConfig?.enabled &&
-                    exportConfig.formats.includes("excel") &&
-                    exportConfig.exportCurrentView && (
-
-                        <ToolbarButton
-                            label="Export Excel"
-                            onClick={
-                                handleExcelExport
-                            }
-                        />
-
-                    )}
-
-
-                {config.export &&
-                    exportConfig?.enabled &&
-                    exportConfig.exportAll &&
-                    exportConfig.formats.includes("csv") &&
-                    onExportAll && (
-
-                        <ToolbarButton
-                            label="Export All CSV"
-                            onClick={() =>
-                                onExportAll("csv")
-                            }
-                        />
-
-                    )}
-
-
-                {config.export &&
-                    exportConfig?.enabled &&
-                    exportConfig.exportAll &&
-                    exportConfig.formats.includes("excel") &&
-                    onExportAll && (
-
-                        <ToolbarButton
-                            label="Export All Excel"
-                            onClick={() =>
-                                onExportAll("excel")
-                            }
-                        />
-
-                    )}
-
-
-                {onSaveReport && (
+                {config.saveReport !== false && onSaveReport && (
 
                     <ToolbarButton
                         label="Save Report"
                         onClick={
                             onSaveReport
                         }
+                        disabled={isRefreshing || isExporting}
                     />
 
                 )}
@@ -172,6 +151,7 @@ export default function ReportToolbar({
 
                     <ToolbarButton
                         label="Settings"
+                        title="Report settings are not available yet"
                     />
 
                 )}

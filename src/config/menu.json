@@ -2,15 +2,21 @@
   {
     "id": "dashboard",
     "title": "Dashboard",
+    "icon": "dashboard",
+    "visible": true,
     "route": "/"
   },
   {
     "id": "reports",
     "title": "Reports",
+    "icon": "reports",
+    "visible": true,
     "children": [
       {
         "id": "customer_report",
         "title": "Customer Report",
+        "icon": "report",
+        "visible": true,
         "reportId": "customer"
       }
     ]

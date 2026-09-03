@@ -1,8 +1,13 @@
-export default function Loading() {
-    return (
-        <div style={{ padding: "40px", textAlign: "center" }}>
-            <h2>Loading Report...</h2>
-            <p>Please wait while data is being fetched.</p>
-        </div>
-    );
+import LoadingSpinner from "./LoadingSpinner";
+
+interface LoadingProps {
+    label?: string;
+    compact?: boolean;
+}
+
+export default function Loading({
+    label = "Loading report data…",
+    compact = false,
+}: LoadingProps) {
+    return <LoadingSpinner label={label} compact={compact} />;
 }

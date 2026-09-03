@@ -1,4 +1,5 @@
 import { useFilters } from "../../../engine/FilterContext";
+import { useId } from "react";
 
 interface Option {
     label: string;
@@ -9,12 +10,14 @@ interface Props {
     field: string;
     label: string;
     options?: Option[];
+    required?: boolean;
 }
 
 export default function MultiSelectFilter({
     field,
     label,
     options = [],
+    required = false,
 }: Props) {
 
     const {
@@ -26,6 +29,7 @@ export default function MultiSelectFilter({
         Array.isArray(filters[field])
             ? filters[field]
             : [];
+    const selectId = useId();
 
     const handleChange = (
         event: React.ChangeEvent<HTMLSelectElement>
@@ -49,12 +53,16 @@ export default function MultiSelectFilter({
 
     return (
 
-        <div>
+        <div className="filter-field">
 
-            <label>{label}</label>
+            <label htmlFor={selectId}>
+                {label}{required && <span className="filter-required" aria-hidden="true"> *</span>}
+            </label>
 
             <select
+                id={selectId}
                 multiple
+                required={required}
                 value={selectedValues.map(
                     String
                 )}

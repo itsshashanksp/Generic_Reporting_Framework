@@ -15,14 +15,14 @@ export default function AppRouter() {
 
             <Routes>
 
-                <Route
-                    path="/dashboard/:dashboardId"
-                    element={<DashboardViewer />}
-                />
-
                 <Route element={<Layout />}>
 
                     <Route path="/" element={<Dashboard />} />
+
+                    <Route
+                        path="/dashboard/:dashboardId"
+                        element={<DashboardViewer />}
+                    />
 
                     <Route
                         path="/report/:reportId"

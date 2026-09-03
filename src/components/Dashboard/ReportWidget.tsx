@@ -1,35 +1,15 @@
-import { useFilters } from "../../engine/FilterContext";
-import { buildWhere } from "../../engine/FilterQueryBuilder";
-
-import {
-    useEffect,
-    useMemo,
-    useState,
-    type ReactNode,
-} from "react";
+import { useMemo } from "react";
 
 import { getReport } from "../../engine/ReportEngine/reportLoader";
 import { loadDefinition } from "../../engine/ReportDefinitionEngine";
-
-import { executeRequest } from "../../api/request";
-
-import type { ApiResponse } from "../../types/api";
-
-import { parseResponse } from "../../engine/ResponseEngine/responseParser";
-
-import ReportDataGrid from "./ReportDataGrid";
-
-import Loading from "../Common/Loading";
-import ErrorState from "../Common/Error";
-import Empty from "../Common/Empty";
-
-import { UIState } from "../../engine/UIStateEngine";
-
 import { buildGrouping } from "../../engine/GroupingEngine";
-
-import { useDashboard } from "../../engine/DashboardContext";
-
 import type { FilterDefinition } from "../../types/filter";
+import Empty from "../Common/Empty";
+import ErrorState from "../Common/Error";
+import Loading from "../Common/Loading";
+import DashboardWidgetFrame from "./DashboardWidgetFrame";
+import ReportDataGrid from "./ReportDataGrid";
+import { useDashboardWidgetRequest } from "./useDashboardWidgetRequest";
 
 const EMPTY_FILTER_DEFINITIONS: FilterDefinition[] = [];
 
@@ -38,48 +18,7 @@ interface ReportWidgetProps {
     title: string;
     description?: string;
     filterDefinitions?: FilterDefinition[];
-}
-
-function ReportWidgetFrame({
-    title,
-    description,
-    children,
-}: {
-    title: string;
-    description?: string;
-    children: ReactNode;
-}) {
-    return (
-        <div
-            style={{
-                width: "100%",
-                height: "100%",
-            }}
-        >
-            <h2
-                style={{
-                    marginTop: 0,
-                    marginBottom: "4px",
-                }}
-            >
-                {title}
-            </h2>
-
-            {description && (
-                <div
-                    style={{
-                        fontSize: "12px",
-                        opacity: 0.6,
-                        marginBottom: "10px",
-                    }}
-                >
-                    {description}
-                </div>
-            )}
-
-            {children}
-        </div>
-    );
+    cacheScope?: string;
 }
 
 export default function ReportWidget({
@@ -87,196 +26,64 @@ export default function ReportWidget({
     title,
     description,
     filterDefinitions = EMPTY_FILTER_DEFINITIONS,
+    cacheScope,
 }: ReportWidgetProps) {
-
-    const { filters } = useFilters();
-    const { refreshKey } = useDashboard();
-
     const rawReport = getReport(reportId);
-
-    const report = useMemo(() => {
-
-        return rawReport
-            ? loadDefinition(rawReport)
-            : null;
-
-    }, [rawReport]);
-
-    const [result, setResult] =
-        useState<ApiResponse | null>(null);
-
-    const [uiState, setUiState] =
-        useState<UIState>(UIState.LOADING);
-
-    const [errorMessage, setErrorMessage] =
-        useState("");
-
-    const {
-        rows,
-    } = result
-        ? parseResponse(result)
-        : {
-            rows: [],
-        };
-
-    useEffect(() => {
-
+    const report = useMemo(
+        () => rawReport ? loadDefinition(rawReport) : null,
+        [rawReport]
+    );
+    const reportRequest = useMemo(() => {
         if (!report) {
-            return;
+            return null;
         }
 
-        const loadWidget = async () => {
+        const grouping = buildGrouping(report.grid.grouping);
 
-            setUiState(UIState.LOADING);
-
-            try {
-
-                const grouping =
-                    buildGrouping(
-                        report.grid.grouping
-                    );
-
-                const requestColumns =
-                    report.grid.grouping?.enabled
-                        ? grouping.columns
-                        : report.request.columns;
-
-                const response =
-                    await executeRequest({
-
-                        ...report.request,
-
-                        columns:
-                            requestColumns,
-
-                        groupBy:
-                            grouping.groupBy,
-
-                        where: [
-                            ...(Array.isArray(
-                                report.request.where
-                            )
-                                ? report.request.where
-                                : []),
-
-                            ...buildWhere(
-                                filters,
-                                filterDefinitions,
-                            ),
-                        ],
-
-                    });
-
-                setResult(response);
-
-                if (!response.success) {
-
-                    setUiState(
-                        UIState.ERROR
-                    );
-
-                    setErrorMessage(
-                        response.message ||
-                        "Failed to load report."
-                    );
-
-                    return;
-                }
-
-                if (
-                    response.rowsReturned === 0 ||
-                    !response.data?.length
-                ) {
-
-                    setUiState(
-                        UIState.EMPTY
-                    );
-
-                    return;
-                }
-
-                setUiState(
-                    UIState.SUCCESS
-                );
-
-            }
-            catch (error: unknown) {
-
-                setUiState(
-                    UIState.ERROR
-                );
-
-                setErrorMessage(
-                    error instanceof Error
-                        ? error.message
-                        :
-                    "Unexpected error occurred."
-                );
-
-            }
-
+        return {
+            ...report.request,
+            columns: report.grid.grouping?.enabled
+                ? grouping.columns
+                : report.request.columns,
+            groupBy: grouping.groupBy,
         };
-
-        loadWidget();
-
-    }, [report, filters, filterDefinitions, refreshKey]);
-
-    if (!report) {
-        return (
-            <ReportWidgetFrame
-                title={title}
-                description={description}
-            >
-                <ErrorState message="Report not found." />
-            </ReportWidgetFrame>
-        );
-    }
-
-    if (uiState === UIState.LOADING) {
-        return (
-            <ReportWidgetFrame
-                title={title}
-                description={description}
-            >
-                <Loading />
-            </ReportWidgetFrame>
-        );
-    }
-
-    if (uiState === UIState.ERROR) {
-        return (
-            <ReportWidgetFrame
-                title={title}
-                description={description}
-            >
-                <ErrorState
-                    message={errorMessage}
-                />
-            </ReportWidgetFrame>
-        );
-    }
-
-    if (uiState === UIState.EMPTY) {
-        return (
-            <ReportWidgetFrame
-                title={title}
-                description={description}
-            >
-                <Empty />
-            </ReportWidgetFrame>
-        );
-    }
+    }, [report]);
+    const { response, loading, error, retry } = useDashboardWidgetRequest(
+        reportRequest,
+        filterDefinitions,
+        cacheScope
+    );
+    const rows = response?.data ?? [];
 
     return (
-        <ReportWidgetFrame
+        <DashboardWidgetFrame
             title={title}
             description={description}
+            refreshing={loading && rows.length > 0}
         >
-            <ReportDataGrid
-                rows={rows}
-                columns={report.columns}
-                gridConfig={report.grid}
-            />
-        </ReportWidgetFrame>
+            {!report && (
+                <ErrorState title="Report unavailable" message="The configured report was not found." compact />
+            )}
+            {report && loading && rows.length === 0 && (
+                <Loading label="Loading report widget…" compact />
+            )}
+            {report && !loading && error && rows.length === 0 && (
+                <ErrorState title="Unable to load report widget" message={error} onRetry={retry} compact />
+            )}
+            {report && !loading && error && rows.length > 0 && (
+                <div className="dashboard-widget-inline-error" role="alert">
+                    <span>Refresh failed.</span>
+                    <button type="button" className="app-button" onClick={retry}>Retry</button>
+                </div>
+            )}
+            {report && !loading && !error && rows.length === 0 && (
+                <Empty title="No records found" message="The current filters returned no data." compact />
+            )}
+            {report && rows.length > 0 && (
+                <div className="dashboard-widget-content__grid">
+                    <ReportDataGrid rows={rows} columns={report.columns} gridConfig={report.grid} />
+                </div>
+            )}
+        </DashboardWidgetFrame>
     );
 }

@@ -50,6 +50,7 @@ export interface ToolbarConfig {
     export: boolean;
     refresh: boolean;
     settings: boolean;
+    saveReport?: boolean;
 }
 
 export interface GridConfig {

@@ -28,6 +28,7 @@ export default function FilterField({
                 <NullFilter
                     field={filter.field}
                     label={filter.label}
+                    required={filter.required}
                 />
             );
 
@@ -43,6 +44,7 @@ export default function FilterField({
                     label={filter.label}
                     operator={filter.operator}
                     placeholder={filter.placeholder}
+                    required={filter.required}
                 />
             );
 
@@ -54,6 +56,7 @@ export default function FilterField({
                     label={filter.label}
                     operator={filter.operator}
                     placeholder={filter.placeholder}
+                    required={filter.required}
                 />
             );
 
@@ -64,6 +67,7 @@ export default function FilterField({
                     field={filter.field}
                     label={filter.label}
                     options={filter.options}
+                    required={filter.required}
                 />
             );
 
@@ -74,6 +78,7 @@ export default function FilterField({
                    field={filter.field}
                    label={filter.label}
                    options={filter.options}
+                   required={filter.required}
                />
            );
 
@@ -83,6 +88,7 @@ export default function FilterField({
                 <DateFilter
                     field={filter.field}
                     label={filter.label}
+                    required={filter.required}
                 />
             )
 
@@ -92,6 +98,7 @@ export default function FilterField({
                <DateRangeFilter
                    field={filter.field}
                    label={filter.label}
+                   required={filter.required}
                />
            );
 

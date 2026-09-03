@@ -1,10 +1,12 @@
 import { useFilters } from "../../../engine/FilterContext";
+import { useId } from "react";
 
 interface Props {
     field: string;
     label: string;
     operator?: string;
     placeholder?: string;
+    required?: boolean;
 }
 
 export default function TextFilter({
@@ -12,6 +14,7 @@ export default function TextFilter({
     label,
     operator,
     placeholder,
+    required = false,
 }: Props) {
 
     const {
@@ -25,6 +28,7 @@ export default function TextFilter({
         typeof storedValue === "string"
             ? storedValue
             : "";
+    const inputId = useId();
 
     const getPlaceholder = () => {
 
@@ -51,17 +55,21 @@ export default function TextFilter({
 
     return (
 
-        <div>
+        <div className="filter-field">
 
-            <label>{label}</label>
+            <label htmlFor={inputId}>
+                {label}{required && <span className="filter-required" aria-hidden="true"> *</span>}
+            </label>
 
             <input
+                id={inputId}
                 type="text"
                 value={value}
                 placeholder={
                     placeholder ||
                     getPlaceholder()
                 }
+                required={required}
                 onChange={(e) =>
                     setFilter(
                         field,

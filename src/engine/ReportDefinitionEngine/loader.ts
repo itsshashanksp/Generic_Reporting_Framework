@@ -13,6 +13,20 @@ export function loadDefinition(
 
         ...report,
 
+        toolbar: {
+            ...defaultReportDefinition.toolbar,
+            ...report.toolbar,
+        },
+
+        grid: {
+            ...defaultReportDefinition.grid,
+            ...report.grid,
+            pagination: {
+                ...defaultReportDefinition.grid?.pagination,
+                ...report.grid?.pagination,
+            },
+        },
+
         columns: loadColumns(report.columns || []),
 
         filters: loadFilters(report.filters || [])

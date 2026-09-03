@@ -1,13 +1,16 @@
 import { useFilters } from "../../../engine/FilterContext";
+import { useId } from "react";
 
 interface Props {
     field: string;
     label: string;
+    required?: boolean;
 }
 
 export default function DateRangeFilter({
     field,
     label,
+    required = false,
 }: Props) {
 
     const { filters, setFilter } =
@@ -23,6 +26,8 @@ export default function DateRangeFilter({
 
     const endDate =
         value[1] || "";
+    const startId = useId();
+    const endId = useId();
 
     const handleStartChange = (
         newValue: string
@@ -53,20 +58,20 @@ export default function DateRangeFilter({
     };
 
     return (
-        <div>
+        <fieldset className="filter-field">
 
-            <label>{label}</label>
+            <legend>
+                {label}{required && <span className="filter-required" aria-hidden="true"> *</span>}
+            </legend>
 
-            <div
-                style={{
-                    display: "flex",
-                    gap: "8px",
-                }}
-            >
+            <div className="filter-range">
 
+                <label className="visually-hidden" htmlFor={startId}>{label} start</label>
                 <input
+                    id={startId}
                     type="date"
                     value={startDate}
+                    required={required}
                     onChange={(e) =>
                         handleStartChange(
                             e.target.value
@@ -74,13 +79,16 @@ export default function DateRangeFilter({
                     }
                 />
 
-                <span>
+                <span className="filter-range__separator">
                     to
                 </span>
 
+                <label className="visually-hidden" htmlFor={endId}>{label} end</label>
                 <input
+                    id={endId}
                     type="date"
                     value={endDate}
+                    required={required}
                     onChange={(e) =>
                         handleEndChange(
                             e.target.value
@@ -90,6 +98,6 @@ export default function DateRangeFilter({
 
             </div>
 
-        </div>
+        </fieldset>
     );
 }

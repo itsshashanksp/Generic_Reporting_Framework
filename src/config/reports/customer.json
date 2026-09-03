@@ -81,28 +81,7 @@
   {
     "field": "Cust_Name",
     "label": "Customer",
-    "type": "multiselect",
-    "operator": "in",
-    "options": [
-      {
-        "label": "7019901585",
-        "value": "7019901585"
-      },
-      {
-        "label": "7259381613",
-        "value": "7259381613"
-      },
-      {
-        "label": "7349488617",
-        "value": "7349488617"
-      }
-    ]
-  },
-  {
-    "field": "Cust_Add",
-    "label": "Address",
-    "type": "text",
-    "operator": "endsWith"
+    "type": "text"
   },
   {
     "field": "StDate",

@@ -419,6 +419,36 @@ function validateWidget(
         );
     }
 
+    if (
+        widget.type === "table" &&
+        widget.pageSizeOptions !== undefined
+    ) {
+        if (
+            !Array.isArray(widget.pageSizeOptions) ||
+            widget.pageSizeOptions.length === 0
+        ) {
+            errors.push(
+                `Table widget "${String(widget.id ?? "")}" pageSizeOptions must be a non-empty array.`
+            );
+        } else {
+            widget.pageSizeOptions.forEach((option, optionIndex) => {
+                validatePositiveInteger(
+                    option,
+                    `Table widget "${String(widget.id ?? "")}" pageSizeOptions[${optionIndex}]`,
+                    errors
+                );
+            });
+        }
+    }
+
+    if (widget.type === "table") {
+        validateExportConfig(
+            widget.export,
+            `Table widget "${String(widget.id ?? "")}" export`,
+            errors
+        );
+    }
+
     if (widget.type === "stat") {
         if (widget.format === undefined) {
             warnings.push(
@@ -434,6 +464,32 @@ function validateWidget(
                 `Stat widget "${String(widget.id ?? "")}" has invalid format.`
             );
         }
+    }
+}
+
+function validateExportConfig(config: unknown, label: string, errors: string[]) {
+    if (config === undefined) return;
+    if (!isRecord(config)) {
+        errors.push(`${label} must be an object.`);
+        return;
+    }
+    if (typeof config.enabled !== "boolean") {
+        errors.push(`${label} enabled must be a boolean.`);
+    }
+    if (
+        !Array.isArray(config.formats)
+        || !config.formats.length
+        || config.formats.some(format => format !== "csv" && format !== "excel")
+    ) {
+        errors.push(`${label} formats must contain csv or excel.`);
+    }
+    for (const field of ["exportAll", "exportCurrentView"]) {
+        if (config[field] !== undefined && typeof config[field] !== "boolean") {
+            errors.push(`${label} ${field} must be a boolean.`);
+        }
+    }
+    if (config.filename !== undefined && !isNonEmptyString(config.filename)) {
+        errors.push(`${label} filename must be a non-empty string.`);
     }
 }
 

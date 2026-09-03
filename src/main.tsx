@@ -5,6 +5,7 @@ import App from "./App";
 import { SearchProvider } from "./engine/SearchEngine";
 import { GridProvider } from "./engine/GridContext";
 import { FilterProvider } from "./engine/FilterContext";
+import "./styles/global.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

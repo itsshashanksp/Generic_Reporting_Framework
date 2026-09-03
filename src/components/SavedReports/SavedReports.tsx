@@ -7,6 +7,8 @@ import {
     deleteSavedReport,
 } from "../../engine/SavedReportEngine";
 
+import "./SavedReports.css";
+
 interface SavedReportsProps {
     reportId: string;
 
@@ -20,62 +22,38 @@ export default function SavedReports({
     onLoad,
 }: SavedReportsProps) {
 
-    const [reports, setReports] = useState<SavedReport[]>(
-        () =>
-            loadSavedReports().filter(
-                report => report.reportId === reportId
-            )
-    );
+    const [, setLocalRevision] = useState(0);
+    const reports = loadSavedReports().filter(report => report.reportId === reportId);
 
     const handleDelete = (id: string) => {
 
         deleteSavedReport(id);
 
-        setReports(
-            loadSavedReports().filter(
-                report => report.reportId === reportId
-            )
-        );
+        setLocalRevision(previous => previous + 1);
     };
 
     if (reports.length === 0) {
         return (
-            <div
-                style={{
-                    marginTop: "20px",
-                }}
-            >
+            <section className="saved-reports">
                 <strong>Saved Reports</strong>
 
                 <p>
                     No saved reports found.
                 </p>
-            </div>
+            </section>
         );
     }
 
     return (
-        <div
-            style={{
-                marginTop: "20px",
-            }}
-        >
+        <section className="saved-reports">
 
             <h3>Saved Reports</h3>
 
             {reports.map(report => (
 
-                <div
+                <article
                     key={report.id}
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "10px",
-                        marginBottom: "8px",
-                        border: "1px solid #ddd",
-                        borderRadius: "6px",
-                    }}
+                    className="saved-reports__item"
                 >
 
                     <div>
@@ -84,12 +62,7 @@ export default function SavedReports({
                             {report.name}
                         </strong>
 
-                        <div
-                            style={{
-                                fontSize: "12px",
-                                opacity: 0.7,
-                            }}
-                        >
+                        <div className="saved-reports__date">
                             Updated:{" "}
                             {new Date(
                                 report.updatedAt
@@ -98,14 +71,11 @@ export default function SavedReports({
 
                     </div>
 
-                    <div
-                        style={{
-                            display: "flex",
-                            gap: "8px",
-                        }}
-                    >
+                    <div className="saved-reports__actions">
 
                         <button
+                            type="button"
+                            className="app-button"
                             onClick={() =>
                                 onLoad(report)
                             }
@@ -114,6 +84,8 @@ export default function SavedReports({
                         </button>
 
                         <button
+                            type="button"
+                            className="app-button"
                             onClick={() =>
                                 handleDelete(report.id)
                             }
@@ -123,10 +95,10 @@ export default function SavedReports({
 
                     </div>
 
-                </div>
+                </article>
 
             ))}
 
-        </div>
+        </section>
     );
 }

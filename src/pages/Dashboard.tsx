@@ -20,6 +20,7 @@ import "./Dashboard.css";
 import type { CSSProperties } from "react";
 
 import TableWidget from "../components/Dashboard/TableWidget";
+import ErrorState from "../components/Common/Error";
 
 export default function Dashboard({
     dashboardId = "customer-dashboard",
@@ -37,9 +38,10 @@ export default function Dashboard({
         "not-found"
     ) {
         return (
-            <div>
-                <h1>Dashboard Not Found</h1>
-            </div>
+            <ErrorState
+                title="Dashboard not found"
+                message={`Dashboard "${dashboardId}" was not found.`}
+            />
         );
     }
 
@@ -79,6 +81,7 @@ export default function Dashboard({
 
     return (
         <DashboardProvider
+            key={dashboard.id}
             autoRefresh={dashboard.autoRefresh}
         >
             <DashboardContent
@@ -110,6 +113,7 @@ function DashboardContent({
         );
 
     const {
+        filters,
         clearFilters,
     } = useFilters();
 
@@ -117,6 +121,7 @@ function DashboardContent({
         refreshDashboard,
         isRefreshing,
         finishRefresh,
+        applyFilters,
     } = useDashboard();
 
     useEffect(() => {
@@ -124,6 +129,15 @@ function DashboardContent({
         clearFilters();
 
     }, [dashboard.id, clearFilters]);
+
+    const handleSearch = () => {
+        applyFilters(filters);
+    };
+
+    const handleClearFilters = () => {
+        clearFilters();
+        applyFilters({});
+    };
 
     useEffect(() => {
 
@@ -147,60 +161,55 @@ function DashboardContent({
     ]);
 
     return (
-        <div
-            style={{
-                padding: "20px",
-            }}
-        >
+        <main className="dashboard-page">
 
-            <h1>
-                {dashboard.title}
-            </h1>
-
-            {dashboard.description && (
-                <p>
-                    {dashboard.description}
-                </p>
-            )}
+            <header className="dashboard-header">
+                <div>
+                    <h1>{dashboard.title}</h1>
+                    {dashboard.description && <p>{dashboard.description}</p>}
+                </div>
+                <button
+                    type="button"
+                    className="app-button app-button--primary"
+                    onClick={refreshDashboard}
+                    disabled={isRefreshing}
+                    title="Refresh dashboard data"
+                >
+                    {isRefreshing ? "Refreshing…" : "Refresh"}
+                </button>
+            </header>
 
             {dashboard.filters &&
                 dashboard.filters.length > 0 && (
-                    <div
-                        style={{
-                            marginBottom: "20px",
-                        }}
-                    >
+                    <section className="dashboard-filters" aria-labelledby="dashboard-filters-title">
+
+                        <h2 id="dashboard-filters-title">Filters</h2>
 
                         <FilterRenderer
                             filters={dashboard.filters}
                         />
 
-                        <div
-                            style={{
-                                display: "flex",
-                                gap: "10px",
-                                marginTop: "10px",
-                            }}
-                        >
+                        <div className="dashboard-filter-actions">
 
                             <button
-                                onClick={clearFilters}
+                                type="button"
+                                className="app-button app-button--primary"
+                                onClick={handleSearch}
+                            >
+                                Search
+                            </button>
+
+                            <button
+                                type="button"
+                                className="app-button"
+                                onClick={handleClearFilters}
                             >
                                 Clear Filters
                             </button>
 
-                            <button
-                                onClick={refreshDashboard}
-                                disabled={isRefreshing}
-                            >
-                                {isRefreshing
-                                    ? "Refreshing..."
-                                    : "Refresh"}
-                            </button>
-
                         </div>
 
-                    </div>
+                    </section>
                 )}
 
             {visibleWidgets.length === 0 ? (
@@ -323,15 +332,6 @@ function DashboardContent({
                                                 ? `${widget.height}px`
                                                 : "auto",
 
-                                        border:
-                                            "1px solid #ddd",
-
-                                        borderRadius:
-                                            "8px",
-
-                                        padding:
-                                            "16px",
-
                                         "--dashboard-tablet-widget-width":
                                             tabletWidgetWidth,
 
@@ -355,6 +355,7 @@ function DashboardContent({
                                                 filterDefinitions={
                                                     dashboard.filters ?? []
                                                 }
+                                                cacheScope={`${dashboard.id}:${widget.id}`}
                                             />
                                         )}
 
@@ -376,6 +377,7 @@ function DashboardContent({
                                                 filterDefinitions={
                                                     dashboard.filters ?? []
                                                 }
+                                                cacheScope={`${dashboard.id}:${widget.id}`}
                                             />
                                         )}
 
@@ -391,12 +393,17 @@ function DashboardContent({
                                                 pageSize={
                                                     widget.pageSize
                                                 }
+                                                pageSizeOptions={
+                                                    widget.pageSizeOptions
+                                                }
                                                 request={
                                                     widget.request
                                                 }
                                                 filterDefinitions={
                                                     dashboard.filters ?? []
                                                 }
+                                                cacheScope={`${dashboard.id}:${widget.id}`}
+                                                exportConfig={widget.export}
                                             />
                                         )}
 
@@ -438,6 +445,7 @@ function DashboardContent({
                                                 filterDefinitions={
                                                     dashboard.filters ?? []
                                                 }
+                                                cacheScope={`${dashboard.id}:${widget.id}`}
                                             />
                                         )}
 
@@ -449,7 +457,7 @@ function DashboardContent({
                 </div>
             )}
 
-        </div>
+        </main>
     );
 }
 

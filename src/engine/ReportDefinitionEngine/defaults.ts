@@ -12,6 +12,8 @@ export const defaultReportDefinition: Partial<ReportDefinition> = {
 
         settings: true,
 
+        saveReport: true,
+
     },
 
 grid: {

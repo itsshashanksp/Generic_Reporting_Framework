@@ -20,6 +20,7 @@ export default function ReportDataGrid({
             rows={rows}
             columns={columns}
             gridConfig={gridConfig}
+            height="100%"
         />
     );
 }

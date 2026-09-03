@@ -1,30 +1,51 @@
-import { useFilters } from "../../engine/FilterContext";
-import { buildWhere } from "../../engine/FilterQueryBuilder";
+import { useMemo } from "react";
+
 import type { FilterDefinition } from "../../types/filter";
-
-import {
-    useEffect,
-    useState,
-} from "react";
-
-import { executeRequest } from "../../api/request";
-
-import { useDashboard } from "../../engine/DashboardContext";
-
 import type { WidgetRequest } from "../../types/widget";
+import Empty from "../Common/Empty";
+import ErrorState from "../Common/Error";
+import Loading from "../Common/Loading";
+import DashboardWidgetFrame from "./DashboardWidgetFrame";
+import { useDashboardWidgetRequest } from "./useDashboardWidgetRequest";
 
 const EMPTY_FILTER_DEFINITIONS: FilterDefinition[] = [];
 
 interface StatWidgetProps {
     title: string;
-
     description?: string;
-
     request: WidgetRequest;
-
     format?: "number" | "currency" | "decimal";
-
     filterDefinitions?: FilterDefinition[];
+    cacheScope?: string;
+}
+
+function formatValue(
+    value: unknown,
+    format: StatWidgetProps["format"]
+) {
+    const numericValue = Number(value);
+
+    if (Number.isNaN(numericValue)) {
+        return String(value ?? "—");
+    }
+
+    if (format === "currency") {
+        return numericValue.toLocaleString("en-IN", {
+            style: "currency",
+            currency: "INR",
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+    }
+
+    if (format === "decimal") {
+        return numericValue.toLocaleString("en-IN", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+    }
+
+    return numericValue.toLocaleString("en-IN");
 }
 
 export default function StatWidget({
@@ -33,235 +54,45 @@ export default function StatWidget({
     request,
     format,
     filterDefinitions = EMPTY_FILTER_DEFINITIONS,
+    cacheScope,
 }: StatWidgetProps) {
-
-    const { filters } = useFilters();
-    const { refreshKey } = useDashboard();
-
-    const [value, setValue] =
-        useState<string | number>("—");
-
-    const [loading, setLoading] =
-        useState(true);
-
-    const [error, setError] =
-        useState<string | null>(null);
-
-    const [empty, setEmpty] =
-        useState(false);
-
-    useEffect(() => {
-
-        const loadStat = async () => {
-
-            try {
-
-                setLoading(true);
-
-                setError(null);
-
-                setEmpty(false);
-
-                const response =
-                    await executeRequest({
-
-                        ...request,
-
-                        where: [
-                            ...(request.where ?? []),
-
-                            ...buildWhere(
-                                filters,
-                                filterDefinitions,
-                            ),
-                        ],
-
-                    });
-
-                if (
-                    response.success &&
-                    response.data?.length
-                ) {
-
-                    const firstRow =
-                        response.data[0];
-
-                    const firstValue =
-                        Object.values(
-                            firstRow
-                        )[0];
-
-                    setValue(
-                        firstValue as
-                            | string
-                            | number
-                    );
-
-                } else if (
-                    response.success &&
-                    !response.data?.length
-                ) {
-
-                    setEmpty(true);
-
-                    setValue("—");
-
-                } else {
-
-                    setError(
-                        response.message ||
-                        "Failed to load statistic."
-                    );
-
-                    setValue("—");
-
-                }
-
-            }
-            catch (error) {
-
-                console.error(
-                    "Failed to load stat:",
-                    error
-                );
-
-                setError(
-                    "Failed to load statistic."
-                );
-
-                setValue("—");
-
-            }
-            finally {
-
-                setLoading(false);
-
-            }
-
-        };
-
-        loadStat();
-
-    }, [
+    const { response, loading, error, retry } = useDashboardWidgetRequest(
         request,
-        filters,
         filterDefinitions,
-        refreshKey,
-    ]);
-
-    const formatValue = (
-        value: string | number
-    ) => {
-
-        const numericValue =
-            Number(value);
-
-        if (Number.isNaN(numericValue)) {
-
-            return value;
-
-        }
-
-        switch (format) {
-
-            case "currency":
-
-                return numericValue.toLocaleString(
-                    "en-IN",
-                    {
-                        style: "currency",
-                        currency: "INR",
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                    }
-                );
-
-            case "decimal":
-
-                return numericValue.toLocaleString(
-                    "en-IN",
-                    {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                    }
-                );
-
-            case "number":
-
-                return numericValue.toLocaleString(
-                    "en-IN"
-                );
-
-            default:
-
-                return numericValue.toLocaleString(
-                    "en-IN"
-                );
-        }
-    };
+        cacheScope
+    );
+    const value = useMemo(() => {
+        const firstRow = response?.data?.[0];
+        return firstRow ? Object.values(firstRow)[0] : undefined;
+    }, [response]);
+    const hasValue = value !== undefined && value !== null;
 
     return (
-        <div
-            style={{
-                width: "100%",
-                height: "100%",
-            }}
+        <DashboardWidgetFrame
+            title={title}
+            description={description}
+            refreshing={loading && hasValue}
+            variant="stat"
         >
-
-            <div
-                style={{
-                    fontSize: "14px",
-                    opacity: 0.7,
-                    marginBottom: "4px",
-                }}
-            >
-                {title}
-            </div>
-
-            {description && (
-                <div
-                    style={{
-                        fontSize: "12px",
-                        opacity: 0.6,
-                        marginBottom: "8px",
-                    }}
-                >
-                    {description}
+            {loading && !hasValue && <Loading label="Loading statistic…" compact />}
+            {!loading && error && !hasValue && (
+                <ErrorState
+                    title="Unable to load statistic"
+                    message={error}
+                    onRetry={retry}
+                    compact
+                />
+            )}
+            {!loading && error && hasValue && (
+                <div className="dashboard-widget-inline-error" role="alert">
+                    <span>Refresh failed.</span>
+                    <button type="button" className="app-button" onClick={retry}>Retry</button>
                 </div>
             )}
-
-            <div
-                style={{
-                    fontSize: "32px",
-                    fontWeight: 600,
-                }}
-            >
-
-                {loading
-                    ? "Loading..."
-
-                    : error
-                        ? "Error"
-
-                        : empty
-                            ? "No Data"
-
-                            : formatValue(value)}
-
-            </div>
-
-            {error && (
-                <div
-                    style={{
-                        fontSize: "12px",
-                        color: "red",
-                        marginTop: "6px",
-                    }}
-                >
-                    {error}
-                </div>
+            {!loading && !error && !hasValue && (
+                <Empty title="No data" message="No statistic is available." compact />
             )}
-
-        </div>
+            {hasValue && <div className="dashboard-stat-value">{formatValue(value, format)}</div>}
+        </DashboardWidgetFrame>
     );
 }

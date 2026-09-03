@@ -1,4 +1,5 @@
 import { useFilters } from "../../../engine/FilterContext";
+import { useId } from "react";
 
 interface Option {
     label: string;
@@ -9,24 +10,31 @@ interface Props {
     field: string;
     label: string;
     options?: Option[];
+    required?: boolean;
 }
 
 export default function SelectFilter({
     field,
     label,
     options = [],
+    required = false,
 }: Props) {
 
     const { filters, setFilter } =
         useFilters();
+    const selectId = useId();
 
     return (
 
-        <div>
+        <div className="filter-field">
 
-            <label>{label}</label>
+            <label htmlFor={selectId}>
+                {label}{required && <span className="filter-required" aria-hidden="true"> *</span>}
+            </label>
 
             <select
+                id={selectId}
+                required={required}
                 value={
                     filters[field] === undefined ||
                     filters[field] === null
