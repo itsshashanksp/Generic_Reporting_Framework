@@ -1,4 +1,4 @@
-export type NavigationIcon = "dashboard" | "reports" | "report";
+export type NavigationIcon = "dashboard" | "reports" | "report" | "settings" | "user";
 
 export interface NavigationItem {
     id: string;
@@ -7,5 +7,6 @@ export interface NavigationItem {
     visible?: boolean;
     route?: string;
     reportId?: string;
+    dashboardId?: string;
     children?: NavigationItem[];
 }

@@ -1,6 +1,6 @@
 import type { NavigationIcon, NavigationItem } from "../../types/navigation";
 
-const icons: NavigationIcon[] = ["dashboard", "reports", "report"];
+const icons: NavigationIcon[] = ["dashboard", "reports", "report", "settings", "user"];
 
 export function loadNavigation(value: unknown): NavigationItem[] {
     if (!Array.isArray(value)) throw new Error("Navigation configuration must be an array.");
@@ -23,6 +23,7 @@ function loadItem(value: unknown, label: string): NavigationItem {
     }
     if (item.route !== undefined && typeof item.route !== "string") throw new Error(`${label} route must be a string.`);
     if (item.reportId !== undefined && typeof item.reportId !== "string") throw new Error(`${label} reportId must be a string.`);
+    if (item.dashboardId !== undefined && typeof item.dashboardId !== "string") throw new Error(`${label} dashboardId must be a string.`);
 
     return {
         id: item.id,
@@ -31,6 +32,7 @@ function loadItem(value: unknown, label: string): NavigationItem {
         visible: item.visible as boolean | undefined,
         route: item.route as string | undefined,
         reportId: item.reportId as string | undefined,
+        dashboardId: item.dashboardId as string | undefined,
         children: item.children === undefined ? undefined : loadNavigation(item.children),
     };
 }

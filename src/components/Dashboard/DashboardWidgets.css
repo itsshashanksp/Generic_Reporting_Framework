@@ -66,6 +66,10 @@
     min-height: 0;
 }
 
+.dashboard-widget-content__chart {
+    min-height: 260px;
+}
+
 .dashboard-stat-value {
     overflow: hidden;
     color: #111827;

@@ -13,8 +13,8 @@ import {
 } from "../../api/request";
 import { useDashboard } from "../../engine/DashboardContext";
 import { buildWhere } from "../../engine/FilterQueryBuilder";
-import { createRequestCacheKey, getCachedResponse, setCachedResponse } from "../../engine/RequestCache";
-import { exportExcel, exportRowsCSV } from "../../engine/ExportEngine";
+import { createRequestCacheKey, getCachedResponse, getOrCreateInFlightRequest, setCachedResponse } from "../../engine/RequestCache";
+import { exportExcel, exportRowsCSV, fetchAllRowsForExport } from "../../engine/ExportEngine";
 
 import type { ExportConfig, ExportFormat } from "../../types/export";
 import type { FilterDefinition } from "../../types/filter";
@@ -23,6 +23,7 @@ import ExportMenu, { type ExportMenuOption } from "../Common/ExportMenu";
 import Loading from "../Common/Loading";
 
 import "./TableWidget.css";
+import "../Grid/GenericGrid.css";
 
 const EMPTY_FILTER_DEFINITIONS: FilterDefinition[] = [];
 const DEFAULT_PAGE_SIZE = 10;
@@ -123,7 +124,8 @@ export default function TableWidget({
     const previousRetryKey = useRef(retryKey);
     const [exportController, setExportController] = useState<AbortController | null>(null);
     const [exporting, setExporting] = useState(false);
-    const [exportStatus, setExportStatus] = useState("");
+    const [exportProgress, setExportProgress] = useState("");
+    const [exportError, setExportError] = useState("");
 
     const dashboardWhere = useMemo(
         () => buildWhere(appliedFilters, filterDefinitions),
@@ -198,9 +200,10 @@ export default function TableWidget({
             setError(null);
 
             try {
-                const response = await executeRequest(
-                    requestPayload,
-                    { signal: controller.signal }
+                const response = await getOrCreateInFlightRequest(
+                    cacheKey,
+                    signal => executeRequest(requestPayload, { signal }),
+                    controller.signal
                 );
 
                 if (requestId !== latestRequest.current) {
@@ -298,13 +301,15 @@ export default function TableWidget({
     );
 
     const handleSort = (column: string) => {
-        setSort(previous => ({
-            column,
-            direction:
-                previous?.column === column && previous.direction === "ASC"
-                    ? "DESC"
-                    : "ASC",
-        }));
+        setSort(previous => {
+            if (previous?.column !== column) {
+                return { column, direction: "ASC" };
+            }
+            if (previous.direction === "ASC") {
+                return { column, direction: "DESC" };
+            }
+            return null;
+        });
         setPageState({ queryKey, page: 1 });
     };
 
@@ -323,14 +328,17 @@ export default function TableWidget({
     }, [exportFileName]);
 
     const handleExportAll = useCallback(async (format: ExportFormat) => {
-        exportController?.abort();
         const controller = new AbortController();
-        setExportController(controller);
+        setExportController(previous => {
+            previous?.abort();
+            return controller;
+        });
         setExporting(true);
-        setExportStatus("Preparing export…");
+        setExportProgress("Preparing export…");
+        setExportError("");
 
         try {
-            const response = await executeRequest({
+            const data = await fetchAllRowsForExport({
                 ...request,
                 page: undefined,
                 pageSize: undefined,
@@ -339,28 +347,30 @@ export default function TableWidget({
                     ...dashboardWhere,
                 ],
                 ...(sort ? { sort: [sort] } : {}),
-            }, { signal: controller.signal });
-
-            if (!response.success) {
-                setExportStatus(response.message || "Unable to prepare the table export.");
-                return;
-            }
-            const data = response.data ?? [];
+            }, {
+                signal: controller.signal,
+                onProgress: (loadedRows, totalRowsForExport) => {
+                    setExportProgress(totalRowsForExport === null
+                        ? `Preparing export… ${loadedRows.toLocaleString()} rows`
+                        : `Preparing export… ${loadedRows.toLocaleString()} of ${totalRowsForExport.toLocaleString()} rows`);
+                },
+            });
             if (!data.length) {
-                setExportStatus("There are no rows to export.");
+                setExportError("Export failed: there are no matching rows to export.");
                 return;
             }
             exportRows(data, format);
-            setExportStatus("");
         } catch (caughtError: unknown) {
             if (!isRequestAbort(caughtError)) {
-                setExportStatus(getRequestErrorMessage(caughtError, "Unable to prepare the table export."));
+                const message = getRequestErrorMessage(caughtError, "Unable to prepare the table export.");
+                setExportError(`Export failed: ${message}`);
             }
         } finally {
-            setExportController(null);
+            setExportController(previous => previous === controller ? null : previous);
+            setExportProgress("");
             setExporting(false);
         }
-    }, [request, dashboardWhere, sort, exportRows, exportController]);
+    }, [request, dashboardWhere, sort, exportRows]);
 
     const exportOptions: ExportMenuOption[] = [];
     if (exportConfig?.enabled) {
@@ -391,7 +401,7 @@ export default function TableWidget({
 
     return (
         <section
-            className="dashboard-table"
+            className="dashboard-table universal-grid"
             aria-busy={loading || tableState === "loading"}
         >
             <header className="dashboard-table__header">
@@ -408,8 +418,12 @@ export default function TableWidget({
                 </div>
             </header>
 
-            {exportStatus && exportStatus !== "Preparing export…" && (
-                <div className="dashboard-table__inline-error" role="status">{exportStatus}</div>
+            {exportProgress && (
+                <div className="dashboard-table__export-progress" role="status">{exportProgress}</div>
+            )}
+
+            {exportError && (
+                <div className="dashboard-table__inline-error" role="alert">{exportError}</div>
             )}
 
             {tableState === "loading" && (
@@ -468,7 +482,13 @@ export default function TableWidget({
                                         const activeSort = sort?.column === column;
 
                                         return (
-                                            <th key={column} scope="col">
+                                            <th
+                                                key={column}
+                                                scope="col"
+                                                aria-sort={activeSort
+                                                    ? sort.direction === "ASC" ? "ascending" : "descending"
+                                                    : "none"}
+                                            >
                                                 <button
                                                     type="button"
                                                     className="dashboard-table__sort"
@@ -476,7 +496,7 @@ export default function TableWidget({
                                                     aria-label={`Sort by ${formatHeader(column)}`}
                                                 >
                                                     <span>{formatHeader(column)}</span>
-                                                    <span aria-hidden="true">
+                                                    <span className="universal-grid__sort-indicator" aria-hidden="true">
                                                         {activeSort
                                                             ? sort.direction === "ASC" ? "↑" : "↓"
                                                             : "↕"}
@@ -505,8 +525,8 @@ export default function TableWidget({
                         </table>
                     </div>
 
-                    <footer className="dashboard-table__pagination">
-                        <div className="dashboard-table__range">
+                    <footer className="dashboard-table__pagination universal-grid__pagination">
+                        <div className="dashboard-table__range universal-grid__range">
                             Showing {visibleStart}–{visibleEnd} of {visibleTotalRows}
                         </div>
 
@@ -524,7 +544,15 @@ export default function TableWidget({
                             </select>
                         </label>
 
-                        <div className="dashboard-table__page-buttons">
+                        <div className="dashboard-table__page-buttons universal-grid__page-buttons">
+                            <button
+                                type="button"
+                                onClick={() => setPageState({ queryKey, page: 1 })}
+                                disabled={loading || currentPage <= 1}
+                                aria-label="First page"
+                            >
+                                «
+                            </button>
                             <button
                                 type="button"
                                 onClick={() => setPageState({
@@ -547,6 +575,14 @@ export default function TableWidget({
                                 aria-label="Next page"
                             >
                                 ›
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setPageState({ queryKey, page: totalPages })}
+                                disabled={loading || currentPage >= totalPages}
+                                aria-label="Last page"
+                            >
+                                »
                             </button>
                         </div>
                     </footer>

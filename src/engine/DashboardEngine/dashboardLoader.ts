@@ -1,7 +1,5 @@
 import type { DashboardDefinition } from "../../types/dashboard";
 
-import customerDashboard from "../../config/dashboards/customer.json";
-
 import {
     validateDashboard,
 } from "../DashboardValidator";
@@ -27,15 +25,12 @@ export type DashboardLoadResult =
           validation: null;
       };
 
-const dashboards: Record<
-    string,
-    unknown
-> = {
-    [getDashboardId(
-        customerDashboard,
-        "customer-dashboard"
-    )]: customerDashboard,
-};
+const dashboardModules = import.meta.glob(
+    "../../config/dashboards/*.json",
+    { eager: true, import: "default" }
+) as Record<string, unknown>;
+
+const dashboards = buildDashboardRegistry(dashboardModules);
 
 export function getDashboard(
     dashboardId: string
@@ -100,19 +95,22 @@ export function getDashboard(
     };
 }
 
-function getDashboardId(
-    dashboard: unknown,
-    fallbackId: string
-) {
-    if (
-        typeof dashboard === "object" &&
-        dashboard !== null &&
-        "id" in dashboard &&
-        typeof dashboard.id === "string" &&
-        dashboard.id.length > 0
-    ) {
-        return dashboard.id;
-    }
+export function buildDashboardRegistry(
+    modules: Record<string, unknown>
+): Record<string, unknown> {
+    const registry: Record<string, unknown> = {};
 
-    return fallbackId;
+    Object.values(modules).forEach(dashboard => {
+        if (
+            typeof dashboard === "object" &&
+            dashboard !== null &&
+            "id" in dashboard &&
+            typeof dashboard.id === "string" &&
+            dashboard.id.trim().length > 0
+        ) {
+            registry[dashboard.id] = dashboard;
+        }
+    });
+
+    return registry;
 }

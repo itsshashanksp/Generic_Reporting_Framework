@@ -202,15 +202,28 @@ export function buildWhere(
                 operator === "notBetween"
             ) {
 
+                const start = Array.isArray(value) ? value[0] : undefined;
+                const end = Array.isArray(value) ? value[1] : undefined;
+                const hasStart = start !== undefined && start !== null && start !== "";
+                const hasEnd = end !== undefined && end !== null && end !== "";
+
+                if (definition?.type === "daterange" && operator === "between") {
+                    if (hasStart && !hasEnd) {
+                        where.push({ column, operator: ">=", value: start });
+                        return;
+                    }
+
+                    if (!hasStart && hasEnd) {
+                        where.push({ column, operator: "<=", value: end });
+                        return;
+                    }
+                }
+
                 if (
                     !Array.isArray(value) ||
                     value.length !== 2 ||
-                    value[0] === undefined ||
-                    value[0] === null ||
-                    value[0] === "" ||
-                    value[1] === undefined ||
-                    value[1] === null ||
-                    value[1] === ""
+                    !hasStart ||
+                    !hasEnd
                 ) {
 
                     return;

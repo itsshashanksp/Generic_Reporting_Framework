@@ -43,8 +43,6 @@
         "exportAll": true,
         "filename": "item-details"
     },
-    "width": 12,
-    "height": 400,
     "visible": true,
     "position": {
         "x": 0,

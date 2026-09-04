@@ -327,7 +327,7 @@ function DashboardContent({
                                                 ? `${positionY}`
                                                 : "auto",
 
-                                        height:
+                                        minHeight:
                                             widget.height !== undefined
                                                 ? `${widget.height}px`
                                                 : "auto",

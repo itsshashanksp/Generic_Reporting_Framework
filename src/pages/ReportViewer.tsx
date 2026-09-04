@@ -19,7 +19,7 @@ import { useGrid } from "../engine/GridContext";
 import { buildGrouping } from "../engine/GroupingEngine";
 import { loadDefinition } from "../engine/ReportDefinitionEngine";
 import { getReport } from "../engine/ReportEngine/reportLoader";
-import { createRequestCacheKey, getCachedResponse, setCachedResponse } from "../engine/RequestCache";
+import { createRequestCacheKey, getCachedResponse, getOrCreateInFlightRequest, setCachedResponse } from "../engine/RequestCache";
 import { saveSavedReport } from "../engine/SavedReportEngine";
 import { exportExcel, exportRowsCSV } from "../engine/ExportEngine";
 import type { ApiResponse } from "../types/api";
@@ -56,6 +56,9 @@ export default function ReportViewer() {
     const [filterError, setFilterError] = useState("");
     const [exportStatus, setExportStatus] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
+    const [currentPageSize, setCurrentPageSize] = useState(report?.grid.pagination.pageSize ?? 50);
+    const [currentSorting, setCurrentSorting] = useState<SortDefinition[]>(report?.request.sort ?? []);
+    const [appliedFilters, setAppliedFilters] = useState<Record<string, FilterValue>>({});
     const [savedReportsRevision, setSavedReportsRevision] = useState(0);
     const requestSequence = useRef(0);
     const activeController = useRef<AbortController | null>(null);
@@ -96,6 +99,8 @@ export default function ReportViewer() {
                 setResult(cachedResponse);
                 setLoadedReportId(report.id);
                 setCurrentPage(activePage);
+                setCurrentPageSize(activePageSize);
+                setCurrentSorting(activeSorting);
                 setGridError("");
                 setIsGridLoading(false);
                 return;
@@ -108,9 +113,10 @@ export default function ReportViewer() {
         setGridError("");
 
         try {
-            const response = await executeRequest(
-                requestPayload,
-                { signal: controller.signal }
+            const response = await getOrCreateInFlightRequest(
+                cacheKey,
+                signal => executeRequest(requestPayload, { signal }),
+                controller.signal
             );
 
             if (sequence !== requestSequence.current) {
@@ -126,6 +132,8 @@ export default function ReportViewer() {
             setCachedResponse(cacheKey, response);
             setLoadedReportId(report.id);
             setCurrentPage(activePage);
+            setCurrentPageSize(activePageSize);
+            setCurrentSorting(activeSorting);
         } catch (error: unknown) {
             if (isRequestAbort(error) || sequence !== requestSequence.current) {
                 return;
@@ -150,6 +158,7 @@ export default function ReportViewer() {
 
         const timer = window.setTimeout(() => {
             clearFilters();
+            setAppliedFilters({});
             void loadReport({}, 1, report.grid.pagination.pageSize, report.request.sort ?? []);
         }, 0);
 
@@ -187,6 +196,7 @@ export default function ReportViewer() {
         }
 
         setCurrentPage(1);
+        setAppliedFilters({ ...filters });
         void loadReport(filters, 1, undefined, getGridSorting());
     };
 
@@ -194,15 +204,12 @@ export default function ReportViewer() {
         clearFilters();
         setFilterError("");
         setCurrentPage(1);
+        setAppliedFilters({});
         void loadReport({}, 1, undefined, getGridSorting());
     };
 
     const handleRefresh = () => {
-        const activePageSize = api
-            ? api.paginationGetPageSize()
-            : report?.grid.pagination.pageSize;
-
-        void loadReport(filters, currentPage, activePageSize, getGridSorting(), true);
+        void loadReport(appliedFilters, currentPage, currentPageSize, currentSorting, true);
     };
 
     const handleSaveReport = () => {
@@ -212,15 +219,8 @@ export default function ReportViewer() {
 
         const now = new Date().toISOString();
         const savedPage = currentPage;
-        const savedPageSize = api
-            ? api.paginationGetPageSize()
-            : report.grid.pagination.pageSize;
-        const sorting = api?.getColumnState()
-            .filter(column => column.sort === "asc" || column.sort === "desc")
-            .map(column => ({
-                column: column.colId,
-                direction: column.sort === "desc" ? "DESC" as const : "ASC" as const,
-            })) ?? [];
+        const savedPageSize = currentPageSize;
+        const sorting = currentSorting;
 
         saveSavedReport({
             id: `${report.id}-${Date.now()}`,
@@ -229,7 +229,7 @@ export default function ReportViewer() {
             createdAt: now,
             updatedAt: now,
             state: {
-                filters,
+                filters: appliedFilters,
                 sorting,
                 grouping: report.grid.grouping ? {
                     groups: report.grid.grouping.groups?.map(group => ({ field: group.field })) ?? [],
@@ -256,6 +256,7 @@ export default function ReportViewer() {
         const savedPageSize = savedReport.state.pagination?.pageSize
             ?? report.grid.pagination.pageSize;
         replaceFilters(savedReport.state.filters);
+        setAppliedFilters({ ...savedReport.state.filters });
         setFilterError("");
         setCurrentPage(savedPage);
         await loadReport(savedReport.state.filters, savedPage, savedPageSize, savedReport.state.sorting);
@@ -287,6 +288,8 @@ export default function ReportViewer() {
             const response = await executeRequest(
                 {
                     ...report.request,
+                    page: undefined,
+                    pageSize: undefined,
                     columns: report.grid.grouping?.enabled
                         ? grouping.columns
                         : report.request.columns,
@@ -295,9 +298,9 @@ export default function ReportViewer() {
                         ...(Array.isArray(report.request.where)
                             ? report.request.where
                             : []),
-                        ...buildWhere(filters, report.filters ?? []),
+                        ...buildWhere(appliedFilters, report.filters ?? []),
                     ],
-                    sort: getGridSorting(),
+                    sort: currentSorting,
                 },
                 { signal: controller.signal }
             );
@@ -413,11 +416,23 @@ export default function ReportViewer() {
                 )}
 
                 {rows.length > 0 && (
-                    <GenericGrid rows={rows} columns={report.columns} gridConfig={report.grid} />
+                    <GenericGrid
+                        rows={rows}
+                        columns={report.columns}
+                        gridConfig={report.grid}
+                        serverPagination={{
+                            page: currentPage,
+                            pageSize: currentPageSize,
+                            totalRows: result?.totalRows ?? result?.rowsReturned ?? rows.length,
+                            onPageChange: page => void loadReport(appliedFilters, page, currentPageSize, currentSorting),
+                            onPageSizeChange: pageSize => void loadReport(appliedFilters, 1, pageSize, currentSorting),
+                        }}
+                        onSortChange={sorting => void loadReport(appliedFilters, 1, currentPageSize, sorting)}
+                    />
                 )}
 
                 {!isGridLoading && gridError && rows.length === 0 && (
-                    <ErrorState message={gridError} onRetry={() => void loadReport(filters, currentPage, undefined, getGridSorting(), true)} />
+                    <ErrorState message={gridError} onRetry={() => void loadReport(appliedFilters, currentPage, currentPageSize, currentSorting, true)} />
                 )}
 
                 {!isGridLoading && !gridError && rows.length === 0 && <Empty />}

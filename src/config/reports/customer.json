@@ -6,13 +6,14 @@
   "toolbar": {
     "export": true,
     "refresh": true,
-    "settings": false
+    "settings": false,
+    "saveReport": false
   },
 
   "grid": {
     "pagination": {
       "enabled": true,
-      "pageSize": 50,
+      "pageSize": 25,
       "pageSizeOptions": [25, 50, 100]
     },
 
@@ -27,7 +28,7 @@
           "header": "Customer Name"
         }
       ],
- 
+
       "aggregates": [
         {
           "field": "Cust_Name",
@@ -53,14 +54,11 @@
 
   "export": {
     "enabled": true,
-    "formats": [
-        "csv",
-        "excel"
-    ],
+    "formats": ["csv", "excel"],
     "filename": "customer-report",
     "exportAll": true,
     "exportCurrentView": true
-},
+  },
 
   "columns": [
     {
@@ -77,20 +75,19 @@
     }
   ],
 
-"filters": [
-  {
-    "field": "Cust_Name",
-    "label": "Customer",
-    "type": "text"
-  },
-  {
-    "field": "StDate",
-    "label": "Start Date",
-    "type": "daterange",
-    "operator": "between",
-    "format": "YYYYMMDD"
-  }
-],
+  "filters": [
+    {
+      "field": "Cust_Name",
+      "label": "Customer",
+      "type": "text"
+    },
+    {
+      "field": "StDate",
+      "label": "Start Date",
+      "type": "daterange",
+      "operator": "between"
+    }
+  ],
 
   "request": {
     "controller": "Query",

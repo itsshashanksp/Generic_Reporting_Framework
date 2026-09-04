@@ -4,7 +4,7 @@
     "title": "Dashboard",
     "icon": "dashboard",
     "visible": true,
-    "route": "/"
+    "dashboardId": "customer-dashboard"
   },
   {
     "id": "reports",
@@ -20,5 +20,12 @@
         "reportId": "customer"
       }
     ]
+  },
+  {
+    "id": "settings",
+    "title": "Settings",
+    "icon": "settings",
+    "visible": false,
+    "route": "/settings"
   }
 ]

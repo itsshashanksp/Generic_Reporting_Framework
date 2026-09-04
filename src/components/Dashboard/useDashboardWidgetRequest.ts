@@ -10,6 +10,7 @@ import { buildWhere } from "../../engine/FilterQueryBuilder";
 import {
     createRequestCacheKey,
     getCachedResponse,
+    getOrCreateInFlightRequest,
     setCachedResponse,
 } from "../../engine/RequestCache";
 import type { ApiResponse } from "../../types/api";
@@ -102,9 +103,10 @@ export function useDashboardWidgetRequest(
             }));
 
             try {
-                const response = await executeRequest(
-                    requestPayload!,
-                    { signal: controller.signal }
+                const response = await getOrCreateInFlightRequest(
+                    cacheKey,
+                    signal => executeRequest(requestPayload!, { signal }),
+                    controller.signal
                 );
 
                 if (sequence !== requestSequence.current) {

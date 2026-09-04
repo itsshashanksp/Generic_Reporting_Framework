@@ -4,7 +4,6 @@ export const gridTheme = {
 
     style: {
         width: "100%",
-        height: "650px",
     },
 
 };
