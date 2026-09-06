@@ -1,6 +1,7 @@
 export {
     getDashboard,
     getDashboardIds,
+    resolveDashboardWidgetColumns,
     resolveDashboardWidgetRequest,
 } from "./dashboardLoader";
 

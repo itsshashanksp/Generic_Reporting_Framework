@@ -1,11 +1,16 @@
 import FilterRenderer from "../components/Filters/FilterRenderer";
-import { getDashboard, resolveDashboardWidgetRequest } from "../engine/DashboardEngine";
+import {
+    getDashboard,
+    resolveDashboardWidgetColumns,
+    resolveDashboardWidgetRequest,
+} from "../engine/DashboardEngine";
 
 import ReportWidget from "../components/Dashboard/ReportWidget";
 import StatWidget from "../components/Dashboard/StatWidget";
 import ChartWidget from "../components/Dashboard/ChartWidget";
 
 import { useFilters } from "../engine/FilterContext";
+import { isEmptyFilterValue } from "../engine/FilterEngine";
 import {
     useDashboard,
     DashboardProvider,
@@ -135,15 +140,7 @@ function DashboardContent({
     const handleSearch = () => {
         const missing = (dashboard.filters ?? []).filter(filter => {
             const value = filters[filter.field];
-            return filter.required && (
-                value === undefined ||
-                value === null ||
-                value === "" ||
-                (Array.isArray(value) && (
-                    value.length === 0 ||
-                    value.some(item => item === "" || item === null || item === undefined)
-                ))
-            );
+            return filter.required && isEmptyFilterValue(value);
         });
 
         if (missing.length > 0) {
@@ -268,6 +265,8 @@ function DashboardContent({
 
                             const widgetRequest =
                                 resolveDashboardWidgetRequest(widget);
+                            const widgetColumns =
+                                resolveDashboardWidgetColumns(widget);
 
                             /*
                              * Keep widget width
@@ -426,6 +425,9 @@ function DashboardContent({
                                                 }
                                                 request={
                                                     widgetRequest
+                                                }
+                                                columns={
+                                                    widgetColumns
                                                 }
                                                 filterDefinitions={
                                                     dashboard.filters ?? []

@@ -15,6 +15,7 @@ import SavedReports from "../components/SavedReports/SavedReports";
 import { ReportToolbar } from "../components/Toolbar";
 import { useFilters } from "../engine/FilterContext";
 import { buildFilters } from "../engine/FilterQueryBuilder";
+import { isEmptyFilterValue } from "../engine/FilterEngine";
 import { useGrid } from "../engine/GridContext";
 import { getReportPaginationParameters, isSavedReportsEnabled } from "../engine/ReportDefinitionEngine";
 import { getReport, getReportError } from "../engine/ReportEngine/reportLoader";
@@ -28,31 +29,41 @@ import type { SortDefinition } from "../types/report";
 
 import "./ReportViewer.css";
 
-function isEmptyFilterValue(value: FilterValue) {
-    return value === undefined
-        || value === null
-        || value === ""
-        || (Array.isArray(value) && (
-            value.length === 0
-            || value.some(item => item === "" || item === null || item === undefined)
-        ));
-}
-
 export default function ReportViewer() {
     const { reportId } = useParams();
     const { filters, replaceFilters, clearFilters } = useFilters();
     const { api } = useGrid();
     const report = getReport(reportId || "") ?? null;
     const reportConfigurationError = getReportError(reportId || "");
+    const [initialRequestState] = useState(() => {
+        if (!report) {
+            return { response: null, pageSize: 50 };
+        }
 
-    const [result, setResult] = useState<ApiResponse | null>(null);
-    const [loadedReportId, setLoadedReportId] = useState("");
-    const [isGridLoading, setIsGridLoading] = useState(true);
+        const pageSize = report.grid.pagination.pageSize;
+        const requestPayload = {
+            ...report.request,
+            filters: Array.isArray(report.request.filters) ? report.request.filters : [],
+            sort: report.request.sort ?? [],
+            ...getReportPaginationParameters(report.grid.pagination, 1, pageSize),
+        };
+
+        return {
+            response: getCachedResponse(createRequestCacheKey(`report:${report.id}`, requestPayload)),
+            pageSize,
+        };
+    });
+
+    const [result, setResult] = useState<ApiResponse | null>(initialRequestState.response);
+    const [loadedReportId, setLoadedReportId] = useState(
+        initialRequestState.response && report ? report.id : ""
+    );
+    const [isGridLoading, setIsGridLoading] = useState(!initialRequestState.response);
     const [gridError, setGridError] = useState("");
     const [filterError, setFilterError] = useState("");
     const [exportStatus, setExportStatus] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    const [currentPageSize, setCurrentPageSize] = useState(report?.grid.pagination.pageSize ?? 50);
+    const [currentPageSize, setCurrentPageSize] = useState(initialRequestState.pageSize);
     const [currentSorting, setCurrentSorting] = useState<SortDefinition[]>(report?.request.sort ?? []);
     const [appliedFilters, setAppliedFilters] = useState<Record<string, FilterValue>>({});
     const [savedReportsRevision, setSavedReportsRevision] = useState(0);
@@ -381,60 +392,68 @@ export default function ReportViewer() {
                 />
             )}
 
-            <ReportToolbar
-                config={report.toolbar}
-                exportConfig={report.export}
-                onRefresh={handleRefresh}
-                isRefreshing={isGridLoading}
-                isExporting={exportStatus === "Preparing export…"}
-                onExportAll={handleExportAll}
-                onSaveReport={handleSaveReport}
-                rows={rows}
-            />
-            {exportStatus && (
-                <p
-                    className={exportStatus === "Preparing export…" ? "report-status" : "form-error"}
-                    role="status"
-                >
-                    {exportStatus}
-                </p>
-            )}
-
             <section className="report-grid-card" aria-label="Report results" aria-busy={isGridLoading}>
-                {gridError && rows.length > 0 && (
-                    <div className="report-inline-error" role="alert">
-                        <span>{gridError}</span>
-                    <button type="button" className="app-button" onClick={handleRefresh}>Try again</button>
+                <div className="report-grid-card__toolbar">
+                    <h2>Report results</h2>
+                    <div className="report-grid-card__actions">
+                        {exportStatus && (
+                            <p
+                                className={exportStatus === "Preparing export…" ? "report-status" : "form-error"}
+                                role="status"
+                            >
+                                {exportStatus}
+                            </p>
+                        )}
+                        <ReportToolbar
+                            config={report.toolbar}
+                            exportConfig={report.export}
+                            onRefresh={handleRefresh}
+                            isRefreshing={isGridLoading}
+                            isExporting={exportStatus === "Preparing export…"}
+                            onExportAll={handleExportAll}
+                            onSaveReport={handleSaveReport}
+                            rows={rows}
+                        />
                     </div>
-                )}
+                </div>
 
-                {rows.length > 0 && (
-                    <GenericGrid
-                        rows={rows}
-                        columns={report.columns}
-                        gridConfig={report.grid}
-                        serverPagination={{
-                            page: currentPage,
-                            pageSize: currentPageSize,
-                            totalRows: result?.meta?.totalRows ?? result?.meta?.rowsReturned ?? rows.length,
-                            onPageChange: page => void loadReport(appliedFilters, page, currentPageSize, currentSorting),
-                            onPageSizeChange: pageSize => void loadReport(appliedFilters, 1, pageSize, currentSorting),
-                        }}
-                        onSortChange={sorting => void loadReport(appliedFilters, 1, currentPageSize, sorting)}
-                    />
-                )}
+                <div className="report-grid-card__body">
+                    {gridError && rows.length > 0 && (
+                        <div className="report-inline-error" role="alert">
+                            <span>{gridError}</span>
+                            <button type="button" className="app-button" onClick={handleRefresh}>Try again</button>
+                        </div>
+                    )}
 
-                {!isGridLoading && gridError && rows.length === 0 && (
-                    <ErrorState message={gridError} onRetry={() => void loadReport(appliedFilters, currentPage, currentPageSize, currentSorting, true)} />
-                )}
+                    {rows.length > 0 && (
+                        <GenericGrid
+                            rows={rows}
+                            columns={report.columns}
+                            gridConfig={report.grid}
+                            serverPagination={{
+                                page: currentPage,
+                                pageSize: currentPageSize,
+                                totalRows: result?.meta?.totalRows ?? result?.meta?.rowsReturned ?? rows.length,
+                                disabled: isGridLoading,
+                                onPageChange: page => void loadReport(appliedFilters, page, currentPageSize, currentSorting),
+                                onPageSizeChange: pageSize => void loadReport(appliedFilters, 1, pageSize, currentSorting),
+                            }}
+                            onSortChange={sorting => void loadReport(appliedFilters, 1, currentPageSize, sorting)}
+                        />
+                    )}
 
-                {!isGridLoading && !gridError && rows.length === 0 && <Empty />}
+                    {!isGridLoading && gridError && rows.length === 0 && (
+                        <ErrorState message={gridError} onRetry={() => void loadReport(appliedFilters, currentPage, currentPageSize, currentSorting, true)} />
+                    )}
 
-                {isGridLoading && (
-                    <div className="report-grid-card__loading">
-                        <Loading label={rows.length ? "Refreshing report data…" : "Loading report data…"} compact />
-                    </div>
-                )}
+                    {!isGridLoading && !gridError && rows.length === 0 && <Empty />}
+
+                    {isGridLoading && (
+                        <div className="report-grid-card__loading">
+                            <Loading label={rows.length ? "Refreshing report data…" : "Loading report data…"} compact />
+                        </div>
+                    )}
+                </div>
             </section>
         </main>
     );

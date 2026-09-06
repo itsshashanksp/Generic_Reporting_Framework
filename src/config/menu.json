@@ -33,6 +33,6 @@
     "title": "Settings",
     "icon": "settings",
     "route": "/settings",
-    "visible": false
+    "visible": true
   }
 ]

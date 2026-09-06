@@ -65,6 +65,10 @@ export function useDashboardWidgetRequest(
         error: null,
         loading: request !== null,
     });
+    const cachedResponse = useMemo(
+        () => cacheKey ? getCachedResponse(cacheKey) : null,
+        [cacheKey]
+    );
 
     useEffect(() => {
         if (!request) {
@@ -150,11 +154,12 @@ export function useDashboardWidgetRequest(
         setRetryKey(previous => previous + 1);
     }, []);
     const queryMatches = state.queryKey === queryKey;
+    const canShowCachedResponse = !queryMatches && cachedResponse !== null;
 
     return {
-        response: queryMatches ? state.response : null,
+        response: queryMatches ? state.response : cachedResponse,
         error: queryMatches ? state.error : null,
-        loading: !queryMatches || state.loading,
+        loading: canShowCachedResponse ? false : !queryMatches || state.loading,
         retry,
     };
 }

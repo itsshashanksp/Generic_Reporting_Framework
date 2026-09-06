@@ -95,11 +95,9 @@ export default function Sidebar({ items = configuredItems }: { items?: Navigatio
         <nav className="app-sidebar" data-collapsed={collapsed} aria-label="Primary navigation">
 
             <div className="app-sidebar__header">
-                {!collapsed && (
-                    <div className="app-sidebar__brand">
-                        <span className="app-sidebar__brand-name"><strong>Generic Reporting Framework</strong></span>
-                    </div>
-                )}
+                <div className="app-sidebar__brand" aria-hidden={collapsed || undefined}>
+                    <span className="app-sidebar__brand-name"><strong>Generic Reporting Framework</strong></span>
+                </div>
 
                 <button
                     type="button"
@@ -121,6 +119,7 @@ export default function Sidebar({ items = configuredItems }: { items?: Navigatio
                 const childRoutes = visibleChildren.map(getNavigationRoute);
                 const activeChild = childRoutes.includes(location.pathname);
                 const groupExpanded = expandedGroups[item.id] ?? activeChild;
+                const showChildren = !collapsed && groupExpanded;
                 const route = getNavigationRoute(item);
 
                 return <div key={item.id} className="app-sidebar__section">
@@ -133,7 +132,7 @@ export default function Sidebar({ items = configuredItems }: { items?: Navigatio
                             className={({ isActive }) => isActive ? "is-active" : undefined}
                         >
                             <Icon aria-hidden="true" />
-                            <span aria-hidden={collapsed || undefined}>{item.title}</span>
+                            <span className="app-sidebar__label" aria-hidden={collapsed || undefined}>{item.title}</span>
                         </NavLink>
                     )}
 
@@ -150,29 +149,36 @@ export default function Sidebar({ items = configuredItems }: { items?: Navigatio
                                 onClick={() => activateGroup(item.id, activeChild)}
                             >
                                 <Icon aria-hidden="true" />
-                                <span aria-hidden={collapsed || undefined}>{item.title}</span>
+                                <span className="app-sidebar__label" aria-hidden={collapsed || undefined}>{item.title}</span>
                                 {groupExpanded
                                     ? <ChevronDown className="app-sidebar__chevron" aria-hidden="true" />
                                     : <ChevronRight className="app-sidebar__chevron" aria-hidden="true" />}
                             </button>
 
-                            {!collapsed && groupExpanded && <div className="app-sidebar__children" id={`navigation-group-${item.id}`}>
-                            {visibleChildren.map(child => {
-                                const ChildIcon = icons[child.icon];
-                                const childRoute = getNavigationRoute(child);
+                            <div
+                                className="app-sidebar__children-shell"
+                                id={`navigation-group-${item.id}`}
+                                data-expanded={showChildren}
+                                aria-hidden={!showChildren}
+                            >
+                                <div className="app-sidebar__children">
+                                {visibleChildren.map(child => {
+                                    const ChildIcon = icons[child.icon];
+                                    const childRoute = getNavigationRoute(child);
 
-                                return childRoute ? <NavLink
-                                        key={child.id}
-                                        to={childRoute}
-                                        title={collapsed ? child.title : undefined}
-                                        className={({ isActive }) => isActive ? "is-active app-sidebar__child" : "app-sidebar__child"}
-                                    >
-                                        <ChildIcon aria-hidden="true" />
-                                        <span>{child.title}</span>
-                                    </NavLink> : null;
+                                    return childRoute ? <NavLink
+                                            key={child.id}
+                                            to={childRoute}
+                                            tabIndex={showChildren ? undefined : -1}
+                                            className={({ isActive }) => isActive ? "is-active app-sidebar__child" : "app-sidebar__child"}
+                                        >
+                                            <ChildIcon aria-hidden="true" />
+                                            <span className="app-sidebar__label">{child.title}</span>
+                                        </NavLink> : null;
 
-                            })}
-                            </div>}
+                                })}
+                                </div>
+                            </div>
 
                         </>
 

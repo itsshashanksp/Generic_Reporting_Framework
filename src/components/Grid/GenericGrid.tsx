@@ -26,6 +26,7 @@ interface Props {
         page: number;
         pageSize: number;
         totalRows: number;
+        disabled?: boolean;
         onPageChange: (page: number) => void;
         onPageSizeChange: (pageSize: number) => void;
     };
@@ -149,15 +150,16 @@ export default function GenericGrid({
             </div>
 
             {serverPagination && gridConfig.pagination.enabled && (
-                <footer className="universal-grid__pagination" aria-label="Report pagination">
+                <footer className="universal-grid__pagination" aria-label="Grid pagination">
                     <span className="universal-grid__range">
                         Showing {rangeStart}–{Math.max(rangeStart, rangeEnd)} of {serverPagination.totalRows}
                     </span>
-                    <label>
-                        Rows
+                    <label className="universal-grid__page-size">
+                        <span>Rows per page</span>
                         <select
                             aria-label="Rows per page"
                             value={serverPagination.pageSize}
+                            disabled={serverPagination.disabled}
                             onChange={event => serverPagination.onPageSizeChange(Number(event.target.value))}
                         >
                             {[...new Set([
@@ -168,12 +170,12 @@ export default function GenericGrid({
                             ))}
                         </select>
                     </label>
-                    <div className="universal-grid__page-buttons">
-                        <button type="button" aria-label="First page" disabled={serverPagination.page <= 1} onClick={() => serverPagination.onPageChange(1)}>«</button>
-                        <button type="button" aria-label="Previous page" disabled={serverPagination.page <= 1} onClick={() => serverPagination.onPageChange(serverPagination.page - 1)}>‹</button>
-                        <span>Page {serverPagination.page} of {totalPages}</span>
-                        <button type="button" aria-label="Next page" disabled={serverPagination.page >= totalPages} onClick={() => serverPagination.onPageChange(serverPagination.page + 1)}>›</button>
-                        <button type="button" aria-label="Last page" disabled={serverPagination.page >= totalPages} onClick={() => serverPagination.onPageChange(totalPages)}>»</button>
+                    <div className="universal-grid__page-buttons" role="group" aria-label="Page navigation">
+                        <button type="button" aria-label="First page" title="First page" disabled={serverPagination.disabled || serverPagination.page <= 1} onClick={() => serverPagination.onPageChange(1)}>«</button>
+                        <button type="button" aria-label="Previous page" title="Previous page" disabled={serverPagination.disabled || serverPagination.page <= 1} onClick={() => serverPagination.onPageChange(serverPagination.page - 1)}>‹</button>
+                        <span className="universal-grid__page-indicator">Page <strong>{serverPagination.page}</strong> of {totalPages}</span>
+                        <button type="button" aria-label="Next page" title="Next page" disabled={serverPagination.disabled || serverPagination.page >= totalPages} onClick={() => serverPagination.onPageChange(serverPagination.page + 1)}>›</button>
+                        <button type="button" aria-label="Last page" title="Last page" disabled={serverPagination.disabled || serverPagination.page >= totalPages} onClick={() => serverPagination.onPageChange(totalPages)}>»</button>
                     </div>
                 </footer>
             )}

@@ -18,12 +18,14 @@ import { exportExcel, exportRowsCSV, fetchAllRowsForExport } from "../../engine/
 
 import type { ExportConfig, ExportFormat } from "../../types/export";
 import type { FilterDefinition } from "../../types/filter";
+import type { ColumnDefinition } from "../../types/column";
+import type { GridConfig } from "../../types/report";
 import type { WidgetRequest } from "../../types/widget";
 import ExportMenu, { type ExportMenuOption } from "../Common/ExportMenu";
 import Loading from "../Common/Loading";
+import GenericGrid from "../Grid/GenericGrid";
 
 import "./TableWidget.css";
-import "../Grid/GenericGrid.css";
 
 const EMPTY_FILTER_DEFINITIONS: FilterDefinition[] = [];
 const DEFAULT_PAGE_SIZE = 10;
@@ -35,6 +37,7 @@ interface TableWidgetProps {
     pageSize?: number;
     pageSizeOptions?: number[];
     request: WidgetRequest;
+    columns?: ColumnDefinition[];
     filterDefinitions?: FilterDefinition[];
     cacheScope?: string;
     exportConfig?: ExportConfig;
@@ -93,6 +96,7 @@ export default function TableWidget({
     pageSize,
     pageSizeOptions,
     request,
+    columns: configuredColumns,
     filterDefinitions = EMPTY_FILTER_DEFINITIONS,
     cacheScope = title,
     exportConfig,
@@ -161,6 +165,10 @@ export default function TableWidget({
         () => createRequestCacheKey(`dashboard:${cacheScope}`, requestPayload),
         [cacheScope, requestPayload]
     );
+    const cachedResponse = useMemo(
+        () => getCachedResponse(cacheKey),
+        [cacheKey]
+    );
 
     const sizeOptions = useMemo(() => {
         const configured = pageSizeOptions?.filter(
@@ -170,6 +178,14 @@ export default function TableWidget({
         return [...new Set([...configured, activePageSize])]
             .sort((a, b) => a - b);
     }, [pageSizeOptions, activePageSize]);
+    const gridConfig = useMemo<GridConfig>(() => ({
+        pagination: {
+            enabled: true,
+            pageSize: activePageSize,
+            pageSizeOptions: sizeOptions,
+        },
+        rowSelection: "multiple",
+    }), [activePageSize, sizeOptions]);
 
     useEffect(() => {
         const forceRefresh = previousRefreshKey.current !== refreshKey
@@ -282,33 +298,45 @@ export default function TableWidget({
     useEffect(() => () => exportController?.abort(), [exportController]);
 
     const resultMatchesView = resultViewKey === viewKey;
-    const visibleRows = resultMatchesView ? rows : [];
-    const visibleTotalRows = resultMatchesView ? totalRows : 0;
-    const columns = visibleRows.length > 0
-        ? Object.keys(visibleRows[0])
-        : [];
-    const totalPages = Math.max(
-        1,
-        Math.ceil(visibleTotalRows / activePageSize)
+    const canShowCachedResponse = !resultMatchesView && cachedResponse !== null;
+    const cachedRows = cachedResponse?.data ?? [];
+    const visibleRows = resultMatchesView ? rows : cachedRows;
+    const visibleTotalRows = resultMatchesView
+        ? totalRows
+        : cachedResponse?.meta?.totalRows
+            ?? cachedResponse?.meta?.rowsReturned
+            ?? cachedRows.length;
+    const isViewLoading = canShowCachedResponse ? false : loading;
+    const configuredGridColumns = useMemo<ColumnDefinition[]>(
+        () => configuredColumns?.map(column => ({
+            ...column,
+            visible: column.visible !== false,
+            sortable: column.sortable !== false,
+        })) ?? [],
+        [configuredColumns]
     );
-    const visibleStart = visibleTotalRows === 0
-        ? 0
-        : (currentPage - 1) * activePageSize + 1;
-    const visibleEnd = Math.min(
-        visibleStart + visibleRows.length - 1,
-        visibleTotalRows
+    const inferredGridColumns = useMemo<ColumnDefinition[]>(
+        () => visibleRows.length > 0
+            ? Object.keys(visibleRows[0]).map(field => ({
+                field,
+                header: formatHeader(field),
+                visible: true,
+                sortable: true,
+                width: getColumnWidth(field, visibleRows),
+            }))
+            : [],
+        [visibleRows]
     );
+    const columns = configuredGridColumns.length > 0
+        ? configuredGridColumns
+        : inferredGridColumns;
+    const handleSort = (sorting: SortState[]) => {
+        const nextSort = sorting[0] ?? null;
+        if (sort?.field === nextSort?.field && sort?.direction === nextSort?.direction) {
+            return;
+        }
 
-    const handleSort = (column: string) => {
-        setSort(previous => {
-            if (previous?.field !== column) {
-                return { field: column, direction: "ASC" };
-            }
-            if (previous.direction === "ASC") {
-                return { field: column, direction: "DESC" };
-            }
-            return null;
-        });
+        setSort(nextSort);
         setPageState({ queryKey, page: 1 });
     };
 
@@ -389,7 +417,7 @@ export default function TableWidget({
         }
     }
 
-    const tableState = !resultMatchesView || (loading && visibleRows.length === 0)
+    const tableState = (!resultMatchesView && !canShowCachedResponse) || (isViewLoading && visibleRows.length === 0)
         ? "loading"
         : error && visibleRows.length === 0
             ? "error"
@@ -399,8 +427,8 @@ export default function TableWidget({
 
     return (
         <section
-            className="dashboard-table universal-grid"
-            aria-busy={loading || tableState === "loading"}
+            className="dashboard-table"
+            aria-busy={isViewLoading || tableState === "loading"}
         >
             <header className="dashboard-table__header">
                 <div className="dashboard-table__heading">
@@ -409,10 +437,10 @@ export default function TableWidget({
                 </div>
 
                 <div className="dashboard-table__header-actions">
-                    {loading && visibleRows.length > 0 && (
+                    {isViewLoading && visibleRows.length > 0 && (
                         <span className="dashboard-table__refreshing" role="status">Refreshing…</span>
                     )}
-                    <ExportMenu options={exportOptions} disabled={loading && !visibleRows.length} busy={exporting} />
+                    <ExportMenu options={exportOptions} disabled={isViewLoading && !visibleRows.length} busy={exporting} />
                 </div>
             </header>
 
@@ -464,126 +492,20 @@ export default function TableWidget({
                             </button>
                         </div>
                     )}
-                    <div className="dashboard-table__viewport">
-                        <table>
-                            <colgroup>
-                                {columns.map(column => (
-                                    <col
-                                        key={column}
-                                        style={{ width: getColumnWidth(column, visibleRows) }}
-                                    />
-                                ))}
-                            </colgroup>
-                            <thead>
-                                <tr>
-                                    {columns.map(column => {
-                                        const activeSort = sort?.field === column;
-
-                                        return (
-                                            <th
-                                                key={column}
-                                                scope="col"
-                                                aria-sort={activeSort
-                                                    ? sort.direction === "ASC" ? "ascending" : "descending"
-                                                    : "none"}
-                                            >
-                                                <button
-                                                    type="button"
-                                                    className="dashboard-table__sort"
-                                                    onClick={() => handleSort(column)}
-                                                    aria-label={`Sort by ${formatHeader(column)}`}
-                                                >
-                                                    <span>{formatHeader(column)}</span>
-                                                    <span className="universal-grid__sort-indicator" aria-hidden="true">
-                                                        {activeSort
-                                                            ? sort.direction === "ASC" ? "↑" : "↓"
-                                                            : "↕"}
-                                                    </span>
-                                                </button>
-                                            </th>
-                                        );
-                                    })}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {visibleRows.map((row, rowIndex) => (
-                                    <tr key={`${currentPage}-${rowIndex}`}>
-                                        {columns.map(column => {
-                                            const value = String(row[column] ?? "");
-
-                                            return (
-                                                <td key={column} title={value}>
-                                                    {value || <span aria-label="Empty value">—</span>}
-                                                </td>
-                                            );
-                                        })}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <footer className="dashboard-table__pagination universal-grid__pagination">
-                        <div className="dashboard-table__range universal-grid__range">
-                            Showing {visibleStart}–{visibleEnd} of {visibleTotalRows}
-                        </div>
-
-                        <label>
-                            Rows
-                            <select
-                                value={activePageSize}
-                                onChange={event => handlePageSize(Number(event.target.value))}
-                                disabled={loading}
-                                aria-label="Rows per page"
-                            >
-                                {sizeOptions.map(option => (
-                                    <option key={option} value={option}>{option}</option>
-                                ))}
-                            </select>
-                        </label>
-
-                        <div className="dashboard-table__page-buttons universal-grid__page-buttons">
-                            <button
-                                type="button"
-                                onClick={() => setPageState({ queryKey, page: 1 })}
-                                disabled={loading || currentPage <= 1}
-                                aria-label="First page"
-                            >
-                                «
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setPageState({
-                                    queryKey,
-                                    page: Math.max(1, currentPage - 1),
-                                })}
-                                disabled={loading || currentPage <= 1}
-                                aria-label="Previous page"
-                            >
-                                ‹
-                            </button>
-                            <span>Page {currentPage} of {totalPages}</span>
-                            <button
-                                type="button"
-                                onClick={() => setPageState({
-                                    queryKey,
-                                    page: Math.min(totalPages, currentPage + 1),
-                                })}
-                                disabled={loading || currentPage >= totalPages}
-                                aria-label="Next page"
-                            >
-                                ›
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setPageState({ queryKey, page: totalPages })}
-                                disabled={loading || currentPage >= totalPages}
-                                aria-label="Last page"
-                            >
-                                »
-                            </button>
-                        </div>
-                    </footer>
+                    <GenericGrid
+                        rows={visibleRows}
+                        columns={columns}
+                        gridConfig={gridConfig}
+                        serverPagination={{
+                            page: currentPage,
+                            pageSize: activePageSize,
+                            totalRows: visibleTotalRows,
+                            disabled: isViewLoading,
+                            onPageChange: page => setPageState({ queryKey, page }),
+                            onPageSizeChange: handlePageSize,
+                        }}
+                        onSortChange={handleSort}
+                    />
                 </>
             )}
         </section>

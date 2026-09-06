@@ -9,6 +9,7 @@ import type {
 import { loadFilters } from "../FilterEngine";
 import { getReport, getReportIds } from "../ReportEngine/reportLoader";
 import type { DashboardWidget, WidgetRequest } from "../../types/widget";
+import type { ColumnDefinition } from "../../types/column";
 import {
     getWidgetDefinition,
     getWidgetDefinitionIds,
@@ -146,4 +147,19 @@ export function resolveDashboardWidgetRequest(
     }
 
     return widget.request;
+}
+
+/** Resolves optional table presentation columns without changing widget query data. */
+export function resolveDashboardWidgetColumns(
+    widget: DashboardWidget
+): ColumnDefinition[] | undefined {
+    if (widget.reportId) {
+        return getReport(widget.reportId)?.columns;
+    }
+
+    if (widget.widgetId) {
+        return getWidgetDefinition(widget.widgetId)?.columns;
+    }
+
+    return undefined;
 }

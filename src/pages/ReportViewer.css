@@ -79,10 +79,47 @@
 }
 
 .report-grid-card {
-    position: relative;
     min-width: 0;
     min-height: 200px;
     overflow: hidden;
+}
+
+.report-grid-card__toolbar {
+    display: flex;
+    min-height: 58px;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #fff;
+}
+
+.report-grid-card__toolbar h2 {
+    margin: 0;
+    color: #1f2937;
+    font-size: 18px;
+    line-height: 1.35;
+}
+
+.report-grid-card__actions {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+}
+
+.report-grid-card__toolbar .report-status,
+.report-grid-card__toolbar .form-error {
+    margin: 0;
+}
+
+.report-grid-card__body {
+    position: relative;
+    min-height: 140px;
 }
 
 .report-grid-card__loading {

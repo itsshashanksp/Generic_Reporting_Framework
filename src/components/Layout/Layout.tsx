@@ -1,8 +1,9 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import "./Layout.css";
 
 export default function Layout() {
+    const location = useLocation();
 
     return (
 
@@ -11,7 +12,9 @@ export default function Layout() {
             <Sidebar />
 
             <div className="app-main">
-                <Outlet />
+                <div key={location.pathname} className="app-page-transition">
+                    <Outlet />
+                </div>
             </div>
 
         </div>

@@ -71,7 +71,7 @@ export default function DateRangeFilter({
                     id={startId}
                     type="date"
                     value={startDate}
-                    required={required}
+                    aria-required={required}
                     onChange={(e) =>
                         handleStartChange(
                             e.target.value
@@ -88,7 +88,7 @@ export default function DateRangeFilter({
                     id={endId}
                     type="date"
                     value={endDate}
-                    required={required}
+                    aria-required={required}
                     onChange={(e) =>
                         handleEndChange(
                             e.target.value
