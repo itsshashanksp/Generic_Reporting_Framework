@@ -10,8 +10,6 @@ export const defaultFilterDefinition: Partial<FilterDefinition> = {
 
     required: false,
 
-    placeholder: "",
-
 };
 
 export const defaultFilterOperators: Record<

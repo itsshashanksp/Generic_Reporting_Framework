@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import {
@@ -14,10 +14,10 @@ import GenericGrid from "../components/Grid/GenericGrid";
 import SavedReports from "../components/SavedReports/SavedReports";
 import { ReportToolbar } from "../components/Toolbar";
 import { useFilters } from "../engine/FilterContext";
-import { buildWhere } from "../engine/FilterQueryBuilder";
+import { buildFilters } from "../engine/FilterQueryBuilder";
 import { useGrid } from "../engine/GridContext";
 import { buildGrouping } from "../engine/GroupingEngine";
-import { loadDefinition } from "../engine/ReportDefinitionEngine";
+import { getReportPaginationParameters, isSavedReportsEnabled } from "../engine/ReportDefinitionEngine";
 import { getReport } from "../engine/ReportEngine/reportLoader";
 import { createRequestCacheKey, getCachedResponse, getOrCreateInFlightRequest, setCachedResponse } from "../engine/RequestCache";
 import { saveSavedReport } from "../engine/SavedReportEngine";
@@ -43,11 +43,7 @@ export default function ReportViewer() {
     const { reportId } = useParams();
     const { filters, replaceFilters, clearFilters } = useFilters();
     const { api } = useGrid();
-    const rawReport = getReport(reportId || "");
-    const report = useMemo(
-        () => rawReport ? loadDefinition(rawReport) : null,
-        [rawReport]
-    );
+    const report = getReport(reportId || "") ?? null;
 
     const [result, setResult] = useState<ApiResponse | null>(null);
     const [loadedReportId, setLoadedReportId] = useState("");
@@ -79,17 +75,22 @@ export default function ReportViewer() {
         activeController.current?.abort();
         const sequence = ++requestSequence.current;
         const grouping = buildGrouping(report.grid.grouping);
+        const pagination = getReportPaginationParameters(
+            report.grid.pagination,
+            activePage,
+            activePageSize
+        );
         const requestPayload = {
             ...report.request,
-            columns: report.grid.grouping?.enabled ? grouping.columns : report.request.columns,
-            groupBy: grouping.groupBy,
-            where: [
-                ...(Array.isArray(report.request.where) ? report.request.where : []),
-                ...buildWhere(activeFilters, report.filters ?? []),
+            ...(report.grid.grouping?.enabled
+                ? { fields: grouping.fields, groupBy: grouping.groupBy }
+                : {}),
+            filters: [
+                ...(Array.isArray(report.request.filters) ? report.request.filters : []),
+                ...buildFilters(activeFilters, report.filters ?? []),
             ],
             sort: activeSorting,
-            page: activePage,
-            pageSize: activePageSize,
+            ...pagination,
         };
         const cacheKey = createRequestCacheKey(`report:${report.id}`, requestPayload);
 
@@ -186,7 +187,7 @@ export default function ReportViewer() {
     const getGridSorting = (): SortDefinition[] => api?.getColumnState()
         .filter(column => column.sort === "asc" || column.sort === "desc")
         .map(column => ({
-            column: column.colId,
+            field: column.colId,
             direction: column.sort === "desc" ? "DESC" : "ASC",
         })) ?? report?.request.sort ?? [];
 
@@ -265,7 +266,7 @@ export default function ReportViewer() {
             api.setGridOption("paginationPageSize", savedPageSize);
             api.applyColumnState({
                 state: savedReport.state.sorting.map(sort => ({
-                    colId: sort.column,
+                    colId: sort.field,
                     sort: sort.direction.toLowerCase() as "asc" | "desc",
                 })),
                 defaultState: { sort: null },
@@ -288,17 +289,15 @@ export default function ReportViewer() {
             const response = await executeRequest(
                 {
                     ...report.request,
-                    page: undefined,
-                    pageSize: undefined,
-                    columns: report.grid.grouping?.enabled
-                        ? grouping.columns
-                        : report.request.columns,
-                    groupBy: grouping.groupBy,
-                    where: [
-                        ...(Array.isArray(report.request.where)
-                            ? report.request.where
+                    pagination: undefined,
+                    ...(report.grid.grouping?.enabled
+                        ? { fields: grouping.fields, groupBy: grouping.groupBy }
+                        : {}),
+                    filters: [
+                        ...(Array.isArray(report.request.filters)
+                            ? report.request.filters
                             : []),
-                        ...buildWhere(appliedFilters, report.filters ?? []),
+                        ...buildFilters(appliedFilters, report.filters ?? []),
                     ],
                     sort: currentSorting,
                 },
@@ -338,7 +337,7 @@ export default function ReportViewer() {
         }
     };
 
-    if (!rawReport || !report) {
+    if (!report) {
         return (
             <ErrorState
                 title="Report not found"
@@ -357,11 +356,11 @@ export default function ReportViewer() {
                 <dl className="report-metrics" aria-label="Report request information">
                     <div>
                         <dt>Rows returned</dt>
-                        <dd>{result?.rowsReturned ?? rows.length}</dd>
+                        <dd>{result?.meta?.rowsReturned ?? rows.length}</dd>
                     </div>
                     <div>
                         <dt>Execution time</dt>
-                        <dd>{result?.executionTime ?? "—"}{result?.executionTime !== undefined ? " ms" : ""}</dd>
+                        <dd>{result?.meta?.executionTime ?? "—"}{result?.meta?.executionTime != null ? " ms" : ""}</dd>
                     </div>
                 </dl>
             </header>
@@ -382,11 +381,13 @@ export default function ReportViewer() {
                 </section>
             )}
 
-            <SavedReports
-                key={`${report.id}-${savedReportsRevision}`}
-                reportId={report.id}
-                onLoad={handleLoadSavedReport}
-            />
+            {isSavedReportsEnabled(report.toolbar) && (
+                <SavedReports
+                    key={`${report.id}-${savedReportsRevision}`}
+                    reportId={report.id}
+                    onLoad={handleLoadSavedReport}
+                />
+            )}
 
             <ReportToolbar
                 config={report.toolbar}
@@ -423,7 +424,7 @@ export default function ReportViewer() {
                         serverPagination={{
                             page: currentPage,
                             pageSize: currentPageSize,
-                            totalRows: result?.totalRows ?? result?.rowsReturned ?? rows.length,
+                            totalRows: result?.meta?.totalRows ?? result?.meta?.rowsReturned ?? rows.length,
                             onPageChange: page => void loadReport(appliedFilters, page, currentPageSize, currentSorting),
                             onPageSizeChange: pageSize => void loadReport(appliedFilters, 1, pageSize, currentSorting),
                         }}

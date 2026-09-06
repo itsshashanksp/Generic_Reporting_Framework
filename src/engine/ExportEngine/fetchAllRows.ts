@@ -30,7 +30,7 @@ export async function fetchAllRowsForExport(
 
     while (totalRows === null || rows.length < totalRows) {
         const response = await execute(
-            { ...request, page, pageSize: batchSize },
+            { ...request, pagination: { page, pageSize: batchSize } },
             { signal }
         );
 
@@ -40,7 +40,7 @@ export async function fetchAllRowsForExport(
 
         const pageRows = response.data ?? [];
         rows.push(...pageRows);
-        totalRows = response.totalRows ?? totalRows;
+        totalRows = response.meta?.totalRows ?? totalRows;
         onProgress?.(rows.length, totalRows);
 
         if (pageRows.length === 0) {

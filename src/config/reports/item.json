@@ -1,0 +1,71 @@
+{
+  "id": "item",
+  "title": "Item Report",
+  "description": "Displays all items.",
+  "request": {
+    "action": "select",
+    "source": {
+      "table": "ItemMasterTable"
+    },
+    "fields": [
+      "*"
+    ]
+  },
+  "columns": [
+    {
+      "field": "Item_Code",
+      "header": "Item Code"
+    },
+    {
+      "field": "Item_Desc",
+      "header": "Item Description"
+    },
+    {
+      "field": "Item_MRP",
+      "header": "Item MRP"
+    }
+  ],
+  "filters": [
+    {
+      "field": "Item_Code",
+      "label": "Item Code",
+      "type": "text"
+    },
+    {
+      "field": "Item_Desc",
+      "label": "Item Description",
+      "type": "text"
+    }
+  ],
+  "grid": {
+    "pagination": {
+      "enabled": true,
+      "pageSize": 25,
+      "pageSizeOptions": [
+        25,
+        50,
+        100
+      ]
+    },
+    "rowSelection": "multiple",
+    "grouping": {
+      "enabled": false
+    }
+  },
+  "toolbar": {
+    "export": true,
+    "refresh": true,
+    "settings": false,
+    "saveReport": false
+  },
+  "export": {
+    "enabled": true,
+    "formats": [
+      "csv",
+      "excel"
+    ],
+    "filename": "item-report",
+    "exportAll": true,
+    "exportCurrentView": true
+  }
+}

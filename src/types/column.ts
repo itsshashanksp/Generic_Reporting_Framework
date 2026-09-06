@@ -6,11 +6,5 @@ export interface ColumnDefinition {
 
     sortable?: boolean;
 
-    filterable?: boolean;
-
-    exportable?: boolean;
-
     width?: number;
-
-    type?: "text" | "number" | "date" | "boolean";
 }

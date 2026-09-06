@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 
 import { getReport } from "../../engine/ReportEngine/reportLoader";
-import { loadDefinition } from "../../engine/ReportDefinitionEngine";
 import { buildGrouping } from "../../engine/GroupingEngine";
 import type { FilterDefinition } from "../../types/filter";
 import Empty from "../Common/Empty";
@@ -28,11 +27,7 @@ export default function ReportWidget({
     filterDefinitions = EMPTY_FILTER_DEFINITIONS,
     cacheScope,
 }: ReportWidgetProps) {
-    const rawReport = getReport(reportId);
-    const report = useMemo(
-        () => rawReport ? loadDefinition(rawReport) : null,
-        [rawReport]
-    );
+    const report = getReport(reportId) ?? null;
     const reportRequest = useMemo(() => {
         if (!report) {
             return null;
@@ -42,10 +37,9 @@ export default function ReportWidget({
 
         return {
             ...report.request,
-            columns: report.grid.grouping?.enabled
-                ? grouping.columns
-                : report.request.columns,
-            groupBy: grouping.groupBy,
+            ...(report.grid.grouping?.enabled
+                ? { fields: grouping.fields, groupBy: grouping.groupBy }
+                : {}),
         };
     }, [report]);
     const { response, loading, error, retry } = useDashboardWidgetRequest(

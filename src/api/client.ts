@@ -45,6 +45,10 @@ export async function apiClient(
         || payload === null
         || !("success" in payload)
         || typeof payload.success !== "boolean"
+        || !("message" in payload)
+        || typeof payload.message !== "string"
+        || !("data" in payload)
+        || !Array.isArray(payload.data)
     ) {
         throw new Error("The API returned an unexpected response format.");
     }
@@ -52,15 +56,33 @@ export async function apiClient(
     if (
         payload.success
         && (
-            !("data" in payload)
-            || !Array.isArray(payload.data)
-            || !payload.data.every(
+            !payload.data.every(
                 row => typeof row === "object" && row !== null && !Array.isArray(row)
             )
+            || !("meta" in payload)
+            || !isApiMeta(payload.meta)
         )
     ) {
         throw new Error("The API returned an unexpected data format.");
     }
 
+    if (!payload.success) {
+        throw new Error(payload.message);
+    }
+
     return payload as ApiResponse;
+}
+
+function isApiMeta(value: unknown): boolean {
+    if (typeof value !== "object" || value === null) return false;
+    const meta = value as Record<string, unknown>;
+    return (meta.page === null || isNonNegativeNumber(meta.page))
+        && (meta.pageSize === null || isNonNegativeNumber(meta.pageSize))
+        && isNonNegativeNumber(meta.totalRows)
+        && isNonNegativeNumber(meta.rowsReturned)
+        && (meta.executionTime === null || isNonNegativeNumber(meta.executionTime));
+}
+
+function isNonNegativeNumber(value: unknown): value is number {
+    return typeof value === "number" && Number.isFinite(value) && value >= 0;
 }

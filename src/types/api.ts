@@ -1,8 +1,70 @@
+export interface ApiMeta {
+    page: number | null;
+    pageSize: number | null;
+    totalRows: number;
+    rowsReturned: number;
+    executionTime: number | null;
+}
+
+export interface ApiError {
+    code: string;
+    details: Array<{ path?: string; message?: string } | string>;
+}
+
 export interface ApiResponse {
     success: boolean;
     message: string;
-    executionTime?: number;
-    rowsReturned?: number;
-    totalRows?: number;
-    data?: Record<string, unknown>[];
+    data: Record<string, unknown>[];
+    meta?: ApiMeta;
+    error?: ApiError;
+}
+
+export interface QuerySort {
+    field: string;
+    direction: "ASC" | "DESC";
+}
+
+export interface QueryFilter {
+    field?: string;
+    operator: string;
+    value?: unknown;
+    query?: Omit<UniversalQueryRequest, "action">;
+}
+
+export type QueryField = string | {
+    field?: string;
+    fields?: string[];
+    function?: string;
+    alias?: string;
+    sort?: QuerySort[];
+    [key: string]: unknown;
+};
+
+export interface QueryJoin {
+    type: "INNER" | "LEFT" | "RIGHT";
+    source: { table: string; alias?: string };
+    on: { left: string; operator: "="; right: string };
+}
+
+export interface HavingCondition {
+    function: "COUNT" | "SUM" | "AVG" | "MIN" | "MAX" | "STRING_AGG";
+    field: string;
+    operator: "=" | "!=" | "<>" | ">" | "<" | ">=" | "<=";
+    value: unknown;
+}
+
+export interface UniversalQueryRequest {
+    action: "select";
+    source: { table: string; alias?: string };
+    fields: QueryField[];
+    filters?: QueryFilter[];
+    joins?: QueryJoin[];
+    groupBy?: string[];
+    having?: HavingCondition[];
+    sort?: QuerySort[];
+    pagination?: { page: number; pageSize: number };
+    distinct?: boolean;
+    limit?: number;
+    filterLogic?: "AND" | "OR";
+    with?: unknown;
 }

@@ -29,7 +29,7 @@ interface Props {
         onPageChange: (page: number) => void;
         onPageSizeChange: (pageSize: number) => void;
     };
-    onSortChange?: (sort: Array<{ column: string; direction: "ASC" | "DESC" }>) => void;
+    onSortChange?: (sort: Array<{ field: string; direction: "ASC" | "DESC" }>) => void;
 }
 
 export default function GenericGrid({
@@ -137,7 +137,7 @@ export default function GenericGrid({
                     onSortChange(event.api.getColumnState()
                         .filter(column => column.sort === "asc" || column.sort === "desc")
                         .map(column => ({
-                            column: column.colId,
+                            field: column.colId,
                             direction: column.sort === "desc" ? "DESC" : "ASC",
                         })));
                 } : undefined}

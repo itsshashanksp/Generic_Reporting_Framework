@@ -4,9 +4,9 @@ import type {
 } from "../../types/filter";
 
 
-export interface WhereCondition {
+export interface FilterCondition {
 
-    column: string;
+    field: string;
 
     operator: string;
 
@@ -111,16 +111,16 @@ function formatValue(
 }
 
 
-export function buildWhere(
-    filters: Record<string, unknown>,
+export function buildFilters(
+    filterValues: Record<string, unknown>,
     definitions: FilterDefinition[] = []
-): WhereCondition[] {
+): FilterCondition[] {
 
-    const where: WhereCondition[] = [];
+    const filters: FilterCondition[] = [];
 
 
-    Object.entries(filters).forEach(
-        ([column, value]) => {
+    Object.entries(filterValues).forEach(
+        ([field, value]) => {
 
             /*
              * Find the configuration for this
@@ -129,7 +129,7 @@ export function buildWhere(
             const definition =
                 definitions.find(
                     filter =>
-                        filter.field === column
+                        filter.field === field
                 );
 
 
@@ -161,9 +161,9 @@ export function buildWhere(
                 }
 
 
-                where.push({
+                filters.push({
 
-                    column,
+                    field,
 
                     operator:
                         getSqlOperator(
@@ -209,12 +209,12 @@ export function buildWhere(
 
                 if (definition?.type === "daterange" && operator === "between") {
                     if (hasStart && !hasEnd) {
-                        where.push({ column, operator: ">=", value: start });
+                        filters.push({ field, operator: ">=", value: start });
                         return;
                     }
 
                     if (!hasStart && hasEnd) {
-                        where.push({ column, operator: "<=", value: end });
+                        filters.push({ field, operator: "<=", value: end });
                         return;
                     }
                 }
@@ -231,9 +231,9 @@ export function buildWhere(
                 }
 
 
-                where.push({
+                filters.push({
 
-                    column,
+                    field,
 
                     operator:
                         getSqlOperator(
@@ -277,9 +277,9 @@ export function buildWhere(
                 }
 
 
-                where.push({
+                filters.push({
 
-                    column,
+                    field,
 
                     operator:
                         getSqlOperator(
@@ -298,9 +298,9 @@ export function buildWhere(
             /*
              * Normal single-value filters.
              */
-            where.push({
+            filters.push({
 
-                column,
+                field,
 
                 operator:
                     getSqlOperator(
@@ -319,6 +319,6 @@ export function buildWhere(
     );
 
 
-    return where;
+    return filters;
 
 }

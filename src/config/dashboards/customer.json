@@ -1,167 +1,168 @@
 {
-    "id": "customer-dashboard",
-
-    "title": "Item Dashboard",
-
-    "description": "Item reporting dashboard.",
-
-    "layout": {
+  "id": "customer-dashboard",
+  "title": "Item Dashboard",
+  "description": "Item reporting dashboard.",
+  "layout": {
     "columns": 12,
     "tabletColumns": 6,
     "mobileColumns": 1
+  },
+  "autoRefresh": {
+    "enabled": false,
+    "interval": 30000
+  },
+  "filters": [
+    {
+      "field": "Item_Desc",
+      "label": "Item Name",
+      "type": "text"
     },
-
-    "autoRefresh": {
-        "enabled": false,
-        "interval": 30000
-    },
-    "filters": [
-        {
-            "field": "Item_Desc",
-            "label": "Item Name",
-            "type": "text"
-        },
-        {
-            "field": "Std_Vat",
-            "label": "GST %",
-            "type": "text"
-        }
-    ],
-
-
-    "widgets": [
-{
-    "id": "item-table",
-    "type": "table",
-    "title": "Item Details",
-    "description": "Item records matching the selected filters.",
-    "pageSize": 10,
-    "export": {
-        "enabled": true,
-        "formats": ["csv", "excel"],
-        "exportCurrentView": true,
-        "exportAll": true,
-        "filename": "item-details"
-    },
-    "visible": true,
-    "position": {
+    {
+      "field": "Std_Vat",
+      "label": "GST %",
+      "type": "text"
+    }
+  ],
+  "widgets": [
+    {
+      "id": "item-table",
+      "type": "table",
+      "title": "Item Details",
+      "description": "Item records matching the selected filters.",
+      "visible": true,
+      "position": {
         "x": 0,
         "y": 1
-    },
-    "request": {
-        "controller": "Query",
+      },
+      "request": {
         "action": "select",
-        "table": "ItemMasterTable",
-        "columns": [
-            "Item_Code",
-            "Item_Desc",
-            "Sale_Rate",
-			"Item_MRP",
-			"Std_Vat"
+        "source": {
+          "table": "ItemMasterTable"
+        },
+        "fields": [
+          "Item_Code",
+          "Item_Desc",
+          "Sale_Rate",
+          "Item_MRP",
+          "Std_Vat"
         ]
-    }
-},
-    {
-        "id": "total-Items",
-        "type": "stat",
-        "title": "Total Items",
-        "description": "Total number of Items matching the selected filters.",
-        "format": "number",
-        "width": 4,
-        "height": 150,
-        "visible": true,
-        "position": {
-            "x": 0,
-            "y": 2
-        },
-        "request": {
-            "controller": "Query",
-            "action": "select",
-            "table": "ItemMasterTable",
-            "columns": [
-                {
-                    "function": "COUNT",
-                    "column": "Item_Code",
-                    "alias": "TotalItems"
-                }
-            ]
-        }
+      },
+      "pageSize": 10,
+      "export": {
+        "enabled": true,
+        "formats": [
+          "csv",
+          "excel"
+        ],
+        "filename": "item-details",
+        "exportAll": true,
+        "exportCurrentView": true
+      }
     },
     {
-        "id": "minimum-sp-item",
-        "type": "stat",
-        "title": "Minimum Sale Price",
-        "format": "currency",
-        "width": 4,
-        "height": 150,
-        "visible": true,
-        "position": {
-            "x": 4,
-            "y": 2
+      "id": "total-Items",
+      "type": "stat",
+      "title": "Total Items",
+      "description": "Total number of Items matching the selected filters.",
+      "width": 4,
+      "height": 175,
+      "visible": true,
+      "position": {
+        "x": 0,
+        "y": 2
+      },
+      "request": {
+        "action": "select",
+        "source": {
+          "table": "ItemMasterTable"
         },
-        "request": {
-            "controller": "Query",
-            "action": "select",
-            "table": "ItemMasterTable",
-            "columns": [
-                {
-                    "function": "MIN",
-                    "column": "Sale_Rate",
-                    "alias": "MinimumSP"
-                }
-            ]
-        }
+        "fields": [
+          {
+            "function": "COUNT",
+            "alias": "TotalItems",
+            "field": "Item_Code"
+          }
+        ]
+      },
+      "format": "number"
     },
     {
-        "id": "maximum-sp-item",
-        "type": "stat",
-        "title": "Maximum Sale Price",
-        "format": "currency",
-        "width": 4,
-        "height": 150,
-        "visible": true,
-        "position": {
-            "x": 8,
-            "y": 2
+      "id": "minimum-sp-item",
+      "type": "stat",
+      "title": "Minimum Sale Price",
+      "width": 4,
+      "height": 175,
+      "visible": true,
+      "position": {
+        "x": 4,
+        "y": 2
+      },
+      "request": {
+        "action": "select",
+        "source": {
+          "table": "ItemMasterTable"
         },
-        "request": {
-            "controller": "Query",
-            "action": "select",
-            "table": "ItemMasterTable",
-            "columns": [
-                {
-                    "function": "MAX",
-                    "column": "Sale_Rate",
-                    "alias": "MaximumSP"
-                }
-            ]
-        }
+        "fields": [
+          {
+            "function": "MIN",
+            "alias": "MinimumSP",
+            "field": "Sale_Rate"
+          }
+        ]
+      },
+      "format": "currency"
     },
-	{
-    "id": "total-value",
-    "type": "stat",
-    "title": "Total Value",
-    "width": 4,
-    "height": 150,
-    "visible": true,
-    "position": {
+    {
+      "id": "maximum-sp-item",
+      "type": "stat",
+      "title": "Maximum Sale Price",
+      "width": 4,
+      "height": 175,
+      "visible": true,
+      "position": {
+        "x": 8,
+        "y": 2
+      },
+      "request": {
+        "action": "select",
+        "source": {
+          "table": "ItemMasterTable"
+        },
+        "fields": [
+          {
+            "function": "MAX",
+            "alias": "MaximumSP",
+            "field": "Sale_Rate"
+          }
+        ]
+      },
+      "format": "currency"
+    },
+    {
+      "id": "total-value",
+      "type": "stat",
+      "title": "Total Value",
+      "width": 4,
+      "height": 175,
+      "visible": true,
+      "position": {
         "x": 0,
         "y": 3
-    },
-    "format": "currency",
-    "request": {
-        "controller": "Query",
+      },
+      "request": {
         "action": "select",
-        "table": "ItemMasterTable",
-        "columns": [
-            {
-                "function": "SUM",
-                "column": "Sale_Rate",
-                "alias": "TotalValue"
-            }
+        "source": {
+          "table": "ItemMasterTable"
+        },
+        "fields": [
+          {
+            "function": "SUM",
+            "alias": "TotalValue",
+            "field": "Sale_Rate"
+          }
         ]
+      },
+      "format": "currency"
     }
-}
-
-    ]
+  ]
 }

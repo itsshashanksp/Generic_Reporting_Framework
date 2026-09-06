@@ -2,33 +2,61 @@
   "id": "customer",
   "title": "Customer Report",
   "description": "Displays all customers.",
-
-  "toolbar": {
-    "export": true,
-    "refresh": true,
-    "settings": false,
-    "saveReport": false
+  "request": {
+    "action": "select",
+    "source": {
+      "table": "CustomerTable"
+    },
+    "fields": [
+      "*"
+    ]
   },
-
+  "columns": [
+    {
+      "field": "Cust_Name",
+      "header": "Customer Name"
+    },
+    {
+      "field": "Cust_Add",
+      "header": "Address"
+    },
+    {
+      "field": "Cust_Phon4",
+      "header": "Mobile"
+    }
+  ],
+  "filters": [
+    {
+      "field": "Cust_Name",
+      "label": "Customer",
+      "type": "text"
+    },
+    {
+      "field": "StDate",
+      "label": "Start Date",
+      "type": "daterange",
+      "operator": "between"
+    }
+  ],
   "grid": {
     "pagination": {
       "enabled": true,
       "pageSize": 25,
-      "pageSizeOptions": [25, 50, 100]
+      "pageSizeOptions": [
+        25,
+        50,
+        100
+      ]
     },
-
     "rowSelection": "multiple",
-
     "grouping": {
       "enabled": true,
-
       "groups": [
         {
           "field": "Cust_Name",
           "header": "Customer Name"
         }
       ],
-
       "aggregates": [
         {
           "field": "Cust_Name",
@@ -51,48 +79,20 @@
       ]
     }
   },
-
+  "toolbar": {
+    "export": true,
+    "refresh": true,
+    "settings": false,
+    "saveReport": false
+  },
   "export": {
     "enabled": true,
-    "formats": ["csv", "excel"],
+    "formats": [
+      "csv",
+      "excel"
+    ],
     "filename": "customer-report",
     "exportAll": true,
     "exportCurrentView": true
-  },
-
-  "columns": [
-    {
-      "field": "Cust_Name",
-      "header": "Customer Name"
-    },
-    {
-      "field": "Cust_Add",
-      "header": "Address"
-    },
-    {
-      "field": "Cust_Phon4",
-      "header": "Mobile"
-    }
-  ],
-
-  "filters": [
-    {
-      "field": "Cust_Name",
-      "label": "Customer",
-      "type": "text"
-    },
-    {
-      "field": "StDate",
-      "label": "Start Date",
-      "type": "daterange",
-      "operator": "between"
-    }
-  ],
-
-  "request": {
-    "controller": "Query",
-    "action": "select",
-    "table": "CustomerTable",
-    "columns": ["*"]
   }
 }

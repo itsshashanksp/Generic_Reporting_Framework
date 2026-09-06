@@ -6,7 +6,7 @@ export function buildGrouping(
     if (!config?.enabled) {
         return {
             groupBy: [],
-            columns: [],
+            fields: [],
         };
     }
 
@@ -15,13 +15,13 @@ export function buildGrouping(
             group => group.field
         ) ?? [];
 
-    const columns = [
+    const fields = [
         ...groupBy,
 
         ...(config.aggregates?.map(
             aggregate => ({
                 function: aggregate.function,
-                column: aggregate.field,
+                field: aggregate.field,
                 ...(aggregate.alias
                     ? {
                           alias: aggregate.alias,
@@ -33,6 +33,6 @@ export function buildGrouping(
 
     return {
         groupBy,
-        columns,
+        fields,
     };
 }

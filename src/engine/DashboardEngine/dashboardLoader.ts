@@ -7,6 +7,7 @@ import type {
     DashboardValidationResult,
 } from "../DashboardValidator";
 import { loadFilters } from "../FilterEngine";
+import { getReportIds } from "../ReportEngine/reportLoader";
 
 export type DashboardLoadResult =
     | {
@@ -54,7 +55,8 @@ export function getDashboard(
 
     const validation =
         validateDashboard(
-            dashboardConfiguration
+            dashboardConfiguration,
+            { reportIds: getReportIds() }
         );
 
     if (!validation.valid) {
@@ -108,9 +110,17 @@ export function buildDashboardRegistry(
             typeof dashboard.id === "string" &&
             dashboard.id.trim().length > 0
         ) {
+            if (Object.prototype.hasOwnProperty.call(registry, dashboard.id)) {
+                console.error(`Duplicate dashboard id "${dashboard.id}".`);
+                return;
+            }
             registry[dashboard.id] = dashboard;
         }
     });
 
     return registry;
+}
+
+export function getDashboardIds(): string[] {
+    return Object.keys(dashboards);
 }

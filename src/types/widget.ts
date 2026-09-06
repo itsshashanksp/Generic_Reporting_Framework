@@ -1,3 +1,6 @@
+import type { ExportConfig } from "./export";
+import type { QueryFilter, QuerySort, UniversalQueryRequest } from "./api";
+
 export type WidgetType =
     | "report"
     | "stat"
@@ -14,38 +17,9 @@ export type ChartType =
     | "line"
     | "pie";
 
-export interface WidgetWhereCondition {
-    column: string;
-    operator: string;
-    value: unknown;
-}
-
-export interface WidgetRequest {
-    controller: string;
-    action: string;
-    table: string;
-
-    columns: (
-        | string
-        | {
-              function: string;
-              column: string;
-              alias?: string;
-          }
-    )[];
-
-    groupBy?: string[];
-
-    where?: WidgetWhereCondition[];
-
-    sort?: {
-        column: string;
-        direction: "ASC" | "DESC";
-    }[];
-
-    page?: number;
-
-    pageSize?: number;
+export interface WidgetRequest extends Omit<UniversalQueryRequest, "filters" | "sort"> {
+    filters?: QueryFilter[];
+    sort?: QuerySort[];
 }
 
 export interface DashboardWidget {
@@ -58,8 +32,6 @@ export interface DashboardWidget {
     description?: string;
 
     reportId?: string;
-
-    value?: string | number;
 
     format?: WidgetFormat;
 
@@ -94,4 +66,3 @@ export interface DashboardWidget {
         y: number;
     };
 }
-import type { ExportConfig } from "./export";

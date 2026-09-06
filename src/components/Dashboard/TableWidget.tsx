@@ -12,7 +12,7 @@ import {
     isRequestAbort,
 } from "../../api/request";
 import { useDashboard } from "../../engine/DashboardContext";
-import { buildWhere } from "../../engine/FilterQueryBuilder";
+import { buildFilters } from "../../engine/FilterQueryBuilder";
 import { createRequestCacheKey, getCachedResponse, getOrCreateInFlightRequest, setCachedResponse } from "../../engine/RequestCache";
 import { exportExcel, exportRowsCSV, fetchAllRowsForExport } from "../../engine/ExportEngine";
 
@@ -43,7 +43,7 @@ interface TableWidgetProps {
 type SortDirection = "ASC" | "DESC";
 
 interface SortState {
-    column: string;
+    field: string;
     direction: SortDirection;
 }
 
@@ -127,18 +127,18 @@ export default function TableWidget({
     const [exportProgress, setExportProgress] = useState("");
     const [exportError, setExportError] = useState("");
 
-    const dashboardWhere = useMemo(
-        () => buildWhere(appliedFilters, filterDefinitions),
+    const dashboardFilters = useMemo(
+        () => buildFilters(appliedFilters, filterDefinitions),
         [appliedFilters, filterDefinitions]
     );
 
     const queryKey = useMemo(
         () => JSON.stringify({
             request,
-            dashboardWhere,
+            dashboardFilters,
             configuredPageSize,
         }),
-        [request, dashboardWhere, configuredPageSize]
+        [request, dashboardFilters, configuredPageSize]
     );
 
     const currentPage = pageState.queryKey === queryKey
@@ -150,14 +150,13 @@ export default function TableWidget({
     );
     const requestPayload = useMemo(() => ({
         ...request,
-        where: [
-            ...(Array.isArray(request.where) ? request.where : []),
-            ...dashboardWhere,
+        filters: [
+            ...(Array.isArray(request.filters) ? request.filters : []),
+            ...dashboardFilters,
         ],
-        page: currentPage,
-        pageSize: activePageSize,
+        pagination: { page: currentPage, pageSize: activePageSize },
         ...(sort ? { sort: [sort] } : {}),
-    }), [request, dashboardWhere, currentPage, activePageSize, sort]);
+    }), [request, dashboardFilters, currentPage, activePageSize, sort]);
     const cacheKey = useMemo(
         () => createRequestCacheKey(`dashboard:${cacheScope}`, requestPayload),
         [cacheScope, requestPayload]
@@ -187,7 +186,7 @@ export default function TableWidget({
                 if (cachedResponse) {
                     const cachedRows = cachedResponse.data ?? [];
                     setRows(cachedRows);
-                    setTotalRows(cachedResponse.totalRows ?? cachedResponse.rowsReturned ?? cachedRows.length);
+                    setTotalRows(cachedResponse.meta?.totalRows ?? cachedResponse.meta?.rowsReturned ?? cachedRows.length);
                     resultViewKeyRef.current = viewKey;
                     setResultViewKey(viewKey);
                     setError(null);
@@ -222,8 +221,8 @@ export default function TableWidget({
                 }
 
                 const responseRows = response.data ?? [];
-                const responseTotal = response.totalRows
-                    ?? response.rowsReturned
+                const responseTotal = response.meta?.totalRows
+                    ?? response.meta?.rowsReturned
                     ?? responseRows.length;
                 const pageCount = Math.max(
                     1,
@@ -302,11 +301,11 @@ export default function TableWidget({
 
     const handleSort = (column: string) => {
         setSort(previous => {
-            if (previous?.column !== column) {
-                return { column, direction: "ASC" };
+            if (previous?.field !== column) {
+                return { field: column, direction: "ASC" };
             }
             if (previous.direction === "ASC") {
-                return { column, direction: "DESC" };
+                return { field: column, direction: "DESC" };
             }
             return null;
         });
@@ -340,11 +339,10 @@ export default function TableWidget({
         try {
             const data = await fetchAllRowsForExport({
                 ...request,
-                page: undefined,
-                pageSize: undefined,
-                where: [
-                    ...(Array.isArray(request.where) ? request.where : []),
-                    ...dashboardWhere,
+                pagination: undefined,
+                filters: [
+                    ...(Array.isArray(request.filters) ? request.filters : []),
+                    ...dashboardFilters,
                 ],
                 ...(sort ? { sort: [sort] } : {}),
             }, {
@@ -370,7 +368,7 @@ export default function TableWidget({
             setExportProgress("");
             setExporting(false);
         }
-    }, [request, dashboardWhere, sort, exportRows]);
+    }, [request, dashboardFilters, sort, exportRows]);
 
     const exportOptions: ExportMenuOption[] = [];
     if (exportConfig?.enabled) {
@@ -479,7 +477,7 @@ export default function TableWidget({
                             <thead>
                                 <tr>
                                     {columns.map(column => {
-                                        const activeSort = sort?.column === column;
+                                        const activeSort = sort?.field === column;
 
                                         return (
                                             <th

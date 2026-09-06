@@ -3,8 +3,8 @@
     "id": "dashboard",
     "title": "Dashboard",
     "icon": "dashboard",
-    "visible": true,
-    "dashboardId": "customer-dashboard"
+    "dashboardId": "customer-dashboard",
+    "visible": true
   },
   {
     "id": "reports",
@@ -16,8 +16,15 @@
         "id": "customer_report",
         "title": "Customer Report",
         "icon": "report",
-        "visible": true,
-        "reportId": "customer"
+        "reportId": "customer",
+        "visible": true
+      },
+      {
+        "id": "item_report",
+        "title": "Item Report",
+        "icon": "report",
+        "reportId": "item",
+        "visible": true
       }
     ]
   },
@@ -25,7 +32,7 @@
     "id": "settings",
     "title": "Settings",
     "icon": "settings",
-    "visible": false,
-    "route": "/settings"
+    "route": "/settings",
+    "visible": false
   }
 ]

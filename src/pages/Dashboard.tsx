@@ -13,7 +13,7 @@ import {
 
 import type { DashboardDefinition } from "../types/dashboard";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import "./Dashboard.css";
 
@@ -97,6 +97,8 @@ function DashboardContent({
     dashboard: DashboardDefinition;
 }) {
 
+    const [filterError, setFilterError] = useState("");
+
     const columns =
         dashboard.layout?.columns ?? 12;
 
@@ -131,11 +133,31 @@ function DashboardContent({
     }, [dashboard.id, clearFilters]);
 
     const handleSearch = () => {
+        const missing = (dashboard.filters ?? []).filter(filter => {
+            const value = filters[filter.field];
+            return filter.required && (
+                value === undefined ||
+                value === null ||
+                value === "" ||
+                (Array.isArray(value) && (
+                    value.length === 0 ||
+                    value.some(item => item === "" || item === null || item === undefined)
+                ))
+            );
+        });
+
+        if (missing.length > 0) {
+            setFilterError(`Complete the required filter${missing.length > 1 ? "s" : ""}: ${missing.map(filter => filter.label).join(", ")}.`);
+            return;
+        }
+
+        setFilterError("");
         applyFilters(filters);
     };
 
     const handleClearFilters = () => {
         clearFilters();
+        setFilterError("");
         applyFilters({});
     };
 
@@ -188,6 +210,8 @@ function DashboardContent({
                         <FilterRenderer
                             filters={dashboard.filters}
                         />
+
+                        {filterError && <p className="form-error" role="alert">{filterError}</p>}
 
                         <div className="dashboard-filter-actions">
 
@@ -327,7 +351,7 @@ function DashboardContent({
                                                 ? `${positionY}`
                                                 : "auto",
 
-                                        minHeight:
+                                        height:
                                             widget.height !== undefined
                                                 ? `${widget.height}px`
                                                 : "auto",

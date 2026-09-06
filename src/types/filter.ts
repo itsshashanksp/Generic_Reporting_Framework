@@ -52,6 +52,4 @@ export interface FilterDefinition {
 
     placeholder?: string;
 
-    format?: string;
-
 }

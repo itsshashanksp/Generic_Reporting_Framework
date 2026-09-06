@@ -2,8 +2,9 @@ import type { ColumnDefinition } from "./column";
 import type { FilterDefinition } from "./filter";
 import type { GroupingConfig } from "./grouping";
 import type { ExportConfig } from "./export";
+import type { QuerySort, UniversalQueryRequest } from "./api";
 export interface SortDefinition {
-    column: string;
+    field: string;
     direction: "ASC" | "DESC";
 }
 
@@ -13,40 +14,11 @@ export interface PaginationConfig {
     pageSizeOptions?: number[];
 }
 
-export interface ReportPagination {
-    page: number;
-    pageSize: number;
-}
-
-export interface ReportRequest {
-    controller: string;
-    action: string;
-    table: string;
-
-    columns?: (
-        | string
-        | {
-              function: string;
-              column: string;
-              alias?: string;
-          }
-    )[];
-
-    groupBy?: string[];
-
-    where?: unknown[];
-
-    sort?: SortDefinition[];
-
-    page?: number;
-
-    pageSize?: number;
-
-    filters?: Record<string, unknown>;
+export interface ReportRequest extends Omit<UniversalQueryRequest, "sort"> {
+    sort?: QuerySort[];
 }
 
 export interface ToolbarConfig {
-    search: boolean;
     export: boolean;
     refresh: boolean;
     settings: boolean;
@@ -61,36 +33,12 @@ export interface GridConfig {
     grouping?: GroupingConfig;
 }
 
-export interface ReportFilter {
-    id: string;
-    label: string;
-    type:
-        | "text"
-        | "number"
-        | "date"
-        | "daterange"
-        | "select"
-        | "multiselect"
-        | "checkbox";
-
-    field: string;
-
-    defaultValue?: unknown;
-
-    options?: {
-        label: string;
-        value: string | number;
-    }[];
-}
-
 export interface ReportDefinition {
     id: string;
 
     title: string;
 
     description?: string;
-
-    icon?: string;
 
     toolbar: ToolbarConfig;
 

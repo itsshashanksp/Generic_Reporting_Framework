@@ -1,5 +1,6 @@
 import type { ReportDefinition } from "../../types/report";
-import { validateReport } from "../ReportDefinitionEngine/validator";
+import { getReportValidationErrors } from "../ReportDefinitionEngine/validator";
+import { loadDefinition } from "../ReportDefinitionEngine/loader";
 
 const reportFiles = import.meta.glob(
     "../../config/reports/*.json",
@@ -10,27 +11,33 @@ const reportFiles = import.meta.glob(
 ) as Record<string, ReportDefinition>;
 
 
-const reports: Record<
-    string,
-    ReportDefinition
-> = {};
+const reports = buildReportRegistry(reportFiles);
 
+export function buildReportRegistry(
+    modules: Record<string, unknown>
+): Record<string, ReportDefinition> {
+    const registry: Record<string, ReportDefinition> = {};
 
-for (const report of Object.values(
-    reportFiles
-)) {
+    Object.entries(modules).forEach(([source, report]) => {
+        const errors = getReportValidationErrors(report);
+        if (errors.length > 0) {
+            console.error(`Invalid report configuration: ${source}`, errors);
+            return;
+        }
 
-    if (
-        report &&
-        typeof report.id === "string" &&
-        report.id.trim() !== "" &&
-        validateReport(report)
-    ) {
+        try {
+            const loaded = loadDefinition(report as ReportDefinition);
+            if (Object.prototype.hasOwnProperty.call(registry, loaded.id)) {
+                console.error(`Duplicate report id "${loaded.id}" in ${source}.`);
+                return;
+            }
+            registry[loaded.id] = loaded;
+        } catch (error) {
+            console.error(`Unable to load report configuration: ${source}`, error);
+        }
+    });
 
-        reports[report.id] = report;
-
-    }
-
+    return registry;
 }
 
 
@@ -40,4 +47,8 @@ export function getReport(
 
     return reports[reportId];
 
+}
+
+export function getReportIds(): string[] {
+    return Object.keys(reports);
 }

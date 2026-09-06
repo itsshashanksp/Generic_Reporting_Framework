@@ -10,6 +10,10 @@ export interface DashboardValidationResult {
     warnings: string[];
 }
 
+export interface DashboardValidationOptions {
+    reportIds?: Iterable<string>;
+}
+
 const widgetTypes = [
     "report",
     "stat",
@@ -39,7 +43,8 @@ const filterTypes = [
 ] as const;
 
 export function validateDashboard(
-    dashboard: unknown
+    dashboard: unknown,
+    options: DashboardValidationOptions = {}
 ): DashboardValidationResult {
 
     const errors: string[] = [];
@@ -55,6 +60,13 @@ export function validateDashboard(
         };
     }
 
+    rejectUnknownProperties(
+        dashboard,
+        ["id", "title", "description", "layout", "autoRefresh", "filters", "widgets"],
+        "Dashboard",
+        errors
+    );
+
     if (!isNonEmptyString(dashboard.id)) {
         errors.push(
             "Dashboard id is required."
@@ -66,6 +78,13 @@ export function validateDashboard(
             "Dashboard title is required."
         );
     }
+
+
+    validateOptionalString(
+        dashboard.description,
+        "Dashboard description",
+        errors
+    );
 
     const columns = validateLayout(
         dashboard.layout,
@@ -104,7 +123,8 @@ export function validateDashboard(
                     columns,
                     errors,
                     warnings,
-                    widgetIds
+                    widgetIds,
+                    options.reportIds
                 );
             }
         );
@@ -134,6 +154,14 @@ function validateLayout(
 
         return 12;
     }
+
+
+    rejectUnknownProperties(
+        layout,
+        ["columns", "tabletColumns", "mobileColumns"],
+        "Dashboard layout",
+        errors
+    );
 
     validatePositiveInteger(
         layout.columns,
@@ -176,6 +204,14 @@ function validateAutoRefresh(
 
         return;
     }
+
+
+    rejectUnknownProperties(
+        autoRefresh,
+        ["enabled", "interval"],
+        "Dashboard autoRefresh",
+        errors
+    );
 
     if (
         autoRefresh.enabled !== undefined &&
@@ -237,6 +273,14 @@ function validateFilters(
             return;
         }
 
+
+        rejectUnknownProperties(
+            filter,
+            ["field", "label", "type", "operator", "options", "visible", "required", "placeholder"],
+            label,
+            errors
+        );
+
         if (!isNonEmptyString(filter.field)) {
             errors.push(
                 `${label} requires field.`
@@ -267,6 +311,15 @@ function validateFilters(
                 `${label} has invalid type.`
             );
         }
+
+
+        for (const field of ["visible", "required"]) {
+            if (filter[field] !== undefined && typeof filter[field] !== "boolean") {
+                errors.push(`${label} ${field} must be a boolean.`);
+            }
+        }
+
+        validateOptionalString(filter.placeholder, `${label} placeholder`, errors);
     });
 
     if (errors.length === initialErrorCount) {
@@ -290,7 +343,8 @@ function validateWidget(
     dashboardColumns: number,
     errors: string[],
     warnings: string[],
-    widgetIds: Set<string>
+    widgetIds: Set<string>,
+    reportIds?: Iterable<string>
 ) {
 
     if (!isRecord(widget)) {
@@ -300,6 +354,21 @@ function validateWidget(
 
         return;
     }
+
+
+    const commonKeys = ["id", "type", "title", "description", "width", "height", "visible", "position"];
+    const typeKeys: Record<string, string[]> = {
+        report: ["reportId"],
+        stat: ["request", "format"],
+        table: ["request", "pageSize", "pageSizeOptions", "export"],
+        chart: ["request", "xField", "yField", "chartType", "showLegend", "showTooltip", "showGrid", "showLabels"],
+    };
+    rejectUnknownProperties(
+        widget,
+        [...commonKeys, ...(typeof widget.type === "string" ? typeKeys[widget.type] ?? [] : [])],
+        `Widget at index ${index}`,
+        errors
+    );
 
     const widgetLabel =
         isNonEmptyString(widget.id)
@@ -325,6 +394,9 @@ function validateWidget(
             `${widgetLabel} requires title.`
         );
     }
+
+
+    validateOptionalString(widget.description, `${widgetLabel} description`, errors);
 
     if (
         !isNonEmptyString(widget.type)
@@ -371,6 +443,10 @@ function validateWidget(
             errors.push(
                 `Report widget "${String(widget.id ?? "")}" requires reportId.`
             );
+        } else if (reportIds && !new Set(reportIds).has(widget.reportId)) {
+            errors.push(
+                `Report widget "${String(widget.id ?? "")}" references unknown reportId: ${widget.reportId}`
+            );
         }
     } else {
         validateRequest(
@@ -405,6 +481,13 @@ function validateWidget(
             errors.push(
                 `Chart widget "${String(widget.id ?? "")}" has invalid chartType.`
             );
+        }
+
+
+        for (const field of ["showLegend", "showTooltip", "showGrid", "showLabels"]) {
+            if (widget[field] !== undefined && typeof widget[field] !== "boolean") {
+                errors.push(`Chart widget "${String(widget.id ?? "")}" ${field} must be a boolean.`);
+            }
         }
     }
 
@@ -473,6 +556,12 @@ function validateExportConfig(config: unknown, label: string, errors: string[]) 
         errors.push(`${label} must be an object.`);
         return;
     }
+    rejectUnknownProperties(
+        config,
+        ["enabled", "formats", "filename", "exportAll", "exportCurrentView"],
+        label,
+        errors
+    );
     if (typeof config.enabled !== "boolean") {
         errors.push(`${label} enabled must be a boolean.`);
     }
@@ -517,19 +606,11 @@ function validateWidgetDimensions(
         }
     }
 
-    if (
-        widget.height !== undefined &&
-        (
-            typeof widget.height !== "number" ||
-            !Number.isFinite(widget.height) ||
-            !Number.isInteger(widget.height) ||
-            widget.height < 0
-        )
-    ) {
-        errors.push(
-            `${widgetLabel} height must be a non-negative integer.`
-        );
-    }
+    validatePositiveInteger(
+        widget.height,
+        `${widgetLabel} height`,
+        errors
+    );
 
     if (widget.position === undefined) {
         return;
@@ -542,6 +623,14 @@ function validateWidgetDimensions(
 
         return;
     }
+
+
+    rejectUnknownProperties(
+        widget.position,
+        ["x", "y"],
+        `${widgetLabel} position`,
+        errors
+    );
 
     const { x, y } = widget.position;
 
@@ -598,27 +687,36 @@ function validateRequest(
         return;
     }
 
-    for (const field of [
-        "controller",
-        "action",
-        "table",
-    ]) {
-        if (!isNonEmptyString(request[field])) {
-            errors.push(
-                `${widgetLabel} request requires ${field}.`
-            );
-        }
+
+    rejectUnknownProperties(
+        request,
+        [
+            "action", "source", "fields", "filters", "joins", "groupBy", "having",
+            "sort", "pagination", "distinct", "limit", "filterLogic", "with",
+        ],
+        `${widgetLabel} request`,
+        errors
+    );
+
+    if (request.action !== "select") {
+        errors.push(`${widgetLabel} request action must be select.`);
+    }
+    if (!isRecord(request.source) || !isNonEmptyString(request.source.table)) {
+        errors.push(`${widgetLabel} request requires source.table.`);
+    } else {
+        rejectUnknownProperties(request.source, ["table", "alias"], `${widgetLabel} request source`, errors);
+        validateOptionalString(request.source.alias, `${widgetLabel} request source alias`, errors);
     }
 
     if (
-        !Array.isArray(request.columns) ||
-        request.columns.length === 0
+        !Array.isArray(request.fields) ||
+        request.fields.length === 0
     ) {
         errors.push(
-            `${widgetLabel} request columns must be a non-empty array.`
+            `${widgetLabel} request fields must be a non-empty array.`
         );
     } else {
-        request.columns.forEach(
+        request.fields.forEach(
             (column, index) => {
                 if (isNonEmptyString(column)) {
                     return;
@@ -626,11 +724,23 @@ function validateRequest(
 
                 if (
                     !isRecord(column) ||
-                    !isNonEmptyString(column.function) ||
-                    !isNonEmptyString(column.column)
+                    (!isNonEmptyString(column.function) && !isNonEmptyString(column.field)
+                        && column.case === undefined && column.expression === undefined)
                 ) {
                     errors.push(
-                        `${widgetLabel} request column at index ${index} is invalid.`
+                        `${widgetLabel} request field at index ${index} is invalid.`
+                    );
+                } else {
+                    rejectUnknownProperties(
+                        column,
+                        ["field", "fields", "function", "alias", "sort", "case", "expression", "buckets", "offset", "default", "separator", "datatype", "style", "value", "values", "index", "datepart", "number", "start", "end", "year", "month", "day", "hour", "minute", "second", "millisecond", "precision", "power", "part", "length", "search", "replace", "pattern", "format", "condition", "true", "false"],
+                        `${widgetLabel} request field at index ${index}`,
+                        errors
+                    );
+                    validateOptionalString(
+                        column.alias,
+                        `${widgetLabel} request field at index ${index} alias`,
+                        errors
                     );
                 }
             }
@@ -652,20 +762,88 @@ function validateRequest(
     }
 
     if (
-        request.where !== undefined &&
+        request.filters !== undefined &&
         (
-            !Array.isArray(request.where) ||
-            request.where.some(
+            !Array.isArray(request.filters) ||
+            request.filters.some(
                 condition =>
                     !isRecord(condition) ||
-                    !isNonEmptyString(condition.column) ||
+                    ((condition.operator !== "EXISTS" && condition.operator !== "NOT EXISTS") && !isNonEmptyString(condition.field)) ||
                     !isNonEmptyString(condition.operator)
             )
         )
     ) {
         errors.push(
-            `${widgetLabel} request where conditions are invalid.`
+            `${widgetLabel} request filters conditions are invalid.`
         );
+    }
+
+
+    if (Array.isArray(request.filters)) {
+        request.filters.forEach((condition, index) => {
+            if (isRecord(condition)) {
+                rejectUnknownProperties(
+                    condition,
+                    ["field", "operator", "value", "query"],
+                    `${widgetLabel} request filters condition at index ${index}`,
+                    errors
+                );
+                const nullCheck = condition.operator === "IS NULL" || condition.operator === "IS NOT NULL";
+                if (!nullCheck && !Object.prototype.hasOwnProperty.call(condition, "value") && condition.query === undefined) {
+                    errors.push(`${widgetLabel} request filters condition at index ${index} requires value or query.`);
+                }
+            }
+        });
+    }
+
+    if (request.sort !== undefined) {
+        if (!Array.isArray(request.sort)) {
+            errors.push(`${widgetLabel} request sort must be an array.`);
+        } else {
+            request.sort.forEach((sort, index) => {
+                if (!isRecord(sort)) {
+                    errors.push(`${widgetLabel} request sort at index ${index} must be an object.`);
+                    return;
+                }
+                rejectUnknownProperties(sort, ["field", "direction"], `${widgetLabel} request sort at index ${index}`, errors);
+                if (!isNonEmptyString(sort.field)) errors.push(`${widgetLabel} request sort at index ${index} requires field.`);
+                if (sort.direction !== "ASC" && sort.direction !== "DESC") errors.push(`${widgetLabel} request sort at index ${index} direction must be ASC or DESC.`);
+            });
+        }
+    }
+
+    if (request.pagination !== undefined) {
+        if (!isRecord(request.pagination)) {
+            errors.push(`${widgetLabel} request pagination must be an object.`);
+        } else {
+            rejectUnknownProperties(request.pagination, ["page", "pageSize"], `${widgetLabel} request pagination`, errors);
+            validatePositiveInteger(request.pagination.page, `${widgetLabel} request pagination page`, errors);
+            validatePositiveInteger(request.pagination.pageSize, `${widgetLabel} request pagination pageSize`, errors);
+        }
+    }
+    if (request.distinct !== undefined && typeof request.distinct !== "boolean") {
+        errors.push(`${widgetLabel} request distinct must be a boolean.`);
+    }
+    validatePositiveInteger(request.limit, `${widgetLabel} request limit`, errors);
+    if (request.filterLogic !== undefined && request.filterLogic !== "AND" && request.filterLogic !== "OR") {
+        errors.push(`${widgetLabel} request filterLogic must be AND or OR.`);
+    }
+}
+
+function rejectUnknownProperties(
+    value: Record<string, unknown>,
+    allowed: string[],
+    label: string,
+    errors: string[]
+) {
+    Object.keys(value)
+        .filter(key => !allowed.includes(key))
+        .forEach(key => errors.push(`${label} contains unknown property "${key}".`));
+}
+
+function validateOptionalString(value: unknown, label: string, errors: string[]) {
+    if (value !== undefined && !isNonEmptyString(value)) {
+        errors.push(`${label} must be a non-empty string.`);
     }
 }
 

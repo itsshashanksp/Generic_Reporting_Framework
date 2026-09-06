@@ -3,12 +3,17 @@ import { ChevronDown, ChevronRight, FileBarChart, FolderKanban, LayoutDashboard,
 import { NavLink, useLocation } from "react-router-dom";
 
 import menu from "../../config/menu.json";
-import { loadNavigation } from "../../engine/NavigationEngine";
+import { getNavigationRoute, loadNavigation } from "../../engine/NavigationEngine";
+import { getReportIds } from "../../engine/ReportEngine/reportLoader";
+import { getDashboardIds } from "../../engine/DashboardEngine";
 import type { NavigationIcon, NavigationItem } from "../../types/navigation";
 
 const SIDEBAR_STORAGE_KEY = "generic-report-sidebar-collapsed";
 const REPORTS_STORAGE_KEY = "generic-report-sidebar-reports-expanded";
-const configuredItems = loadNavigation(menu);
+const configuredItems = loadNavigation(menu, {
+    reportIds: getReportIds(),
+    dashboardIds: getDashboardIds(),
+});
 const icons: Record<NavigationIcon, typeof LayoutDashboard> = {
     dashboard: LayoutDashboard,
     reports: FolderKanban,
@@ -92,7 +97,7 @@ export default function Sidebar({ items = configuredItems }: { items?: Navigatio
             <div className="app-sidebar__header">
                 {!collapsed && (
                     <div className="app-sidebar__brand">
-                        <span className="app-sidebar__brand-name">Generic Reporting <strong>Framework</strong></span>
+                        <span className="app-sidebar__brand-name"><strong>Generic Reporting Framework</strong></span>
                     </div>
                 )}
 
@@ -113,12 +118,10 @@ export default function Sidebar({ items = configuredItems }: { items?: Navigatio
             {visibleItems.map(item => {
                 const Icon = icons[item.icon];
                 const visibleChildren = item.children?.filter(child => child.visible !== false) ?? [];
-                const childRoutes = visibleChildren.map(child => child.route
-                    ?? (child.reportId ? `/report/${child.reportId}` : child.dashboardId ? `/dashboard/${child.dashboardId}` : ""));
+                const childRoutes = visibleChildren.map(getNavigationRoute);
                 const activeChild = childRoutes.includes(location.pathname);
                 const groupExpanded = expandedGroups[item.id] ?? activeChild;
-                const route = item.route
-                    ?? (item.dashboardId ? `/dashboard/${item.dashboardId}` : item.reportId ? `/report/${item.reportId}` : "");
+                const route = getNavigationRoute(item);
 
                 return <div key={item.id} className="app-sidebar__section">
 
@@ -156,8 +159,7 @@ export default function Sidebar({ items = configuredItems }: { items?: Navigatio
                             {!collapsed && groupExpanded && <div className="app-sidebar__children" id={`navigation-group-${item.id}`}>
                             {visibleChildren.map(child => {
                                 const ChildIcon = icons[child.icon];
-                                const childRoute = child.route
-                                    ?? (child.reportId ? `/report/${child.reportId}` : child.dashboardId ? `/dashboard/${child.dashboardId}` : "");
+                                const childRoute = getNavigationRoute(child);
 
                                 return childRoute ? <NavLink
                                         key={child.id}

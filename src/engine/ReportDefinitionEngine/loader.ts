@@ -2,10 +2,18 @@ import { defaultReportDefinition } from "./defaults";
 import { loadColumns } from "../ColumnEngine";
 import { loadFilters } from "../FilterEngine";
 import type { ReportDefinition } from "../../types/report";
+import { getReportValidationErrors } from "./validator";
 
 export function loadDefinition(
-    report: ReportDefinition
+    value: unknown
 ): ReportDefinition {
+
+    const errors = getReportValidationErrors(value);
+    if (errors.length > 0) {
+        throw new Error(`Invalid report configuration: ${errors.join(" ")}`);
+    }
+
+    const report = value as ReportDefinition;
 
     return {
 

@@ -76,7 +76,18 @@ export function validateFilters(
 
     filters.forEach(filter => {
 
-        if (!filter.field) {
+        if (typeof filter !== "object" || filter === null || Array.isArray(filter)) {
+            throw new Error("Filter definitions must be objects.");
+        }
+
+        const configured = filter as unknown as Record<string, unknown>;
+        const allowedKeys = ["field", "label", "type", "operator", "options", "visible", "required", "placeholder"];
+        const unknownKey = Object.keys(configured).find(key => !allowedKeys.includes(key));
+        if (unknownKey) {
+            throw new Error(`Unknown filter property '${unknownKey}'.`);
+        }
+
+        if (typeof filter.field !== "string" || !filter.field.trim()) {
 
             throw new Error(
                 "Filter field is required."
@@ -95,12 +106,32 @@ export function validateFilters(
         fields.add(filter.field);
 
 
-        if (!filter.label) {
+        if (typeof filter.label !== "string" || !filter.label.trim()) {
 
             throw new Error(
                 `Filter label missing for '${filter.field}'.`
             );
 
+        }
+
+        if (filter.visible !== undefined && typeof filter.visible !== "boolean") {
+            throw new Error(`Filter visible must be a boolean for '${filter.field}'.`);
+        }
+
+        if (filter.required !== undefined && typeof filter.required !== "boolean") {
+            throw new Error(`Filter required must be a boolean for '${filter.field}'.`);
+        }
+
+        if (filter.placeholder !== undefined && typeof filter.placeholder !== "string") {
+            throw new Error(`Filter placeholder must be a string for '${filter.field}'.`);
+        }
+
+        if (filter.placeholder !== undefined && filter.type !== "text" && filter.type !== "number") {
+            throw new Error(`Placeholder is not supported for filter '${filter.field}' of type '${filter.type}'.`);
+        }
+
+        if (filter.options !== undefined && filter.type !== "select" && filter.type !== "multiselect") {
+            throw new Error(`Options are not supported for filter '${filter.field}' of type '${filter.type}'.`);
         }
 
 
@@ -150,6 +181,8 @@ export function validateFilters(
          */
         if (
             filter.type === "multiselect" &&
+            filter.operator !== "isNull" &&
+            filter.operator !== "isNotNull" &&
             (!filter.options ||
                 filter.options.length === 0)
         ) {
@@ -190,8 +223,19 @@ export function validateFilters(
             filter.options.forEach(
                 (option, index) => {
 
+                    if (typeof option !== "object" || option === null || Array.isArray(option)) {
+                        throw new Error(`Option at index ${index} for filter '${filter.field}' must be an object.`);
+                    }
+
+                    const unknownOptionKey = Object.keys(option).find(
+                        key => key !== "label" && key !== "value"
+                    );
+                    if (unknownOptionKey) {
+                        throw new Error(`Unknown option property '${unknownOptionKey}' for filter '${filter.field}'.`);
+                    }
+
                     if (
-                        option.label === undefined ||
+                        typeof option.label !== "string" ||
                         option.label === ""
                     ) {
 
@@ -203,8 +247,8 @@ export function validateFilters(
 
 
                     if (
-                        option.value === undefined ||
-                        option.value === null
+                        (typeof option.value !== "string" &&
+                            typeof option.value !== "number")
                     ) {
 
                         throw new Error(

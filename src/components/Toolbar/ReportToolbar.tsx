@@ -8,6 +8,7 @@ import {
     exportExcel,
 } from "../../engine/ExportEngine";
 import type { ToolbarConfig } from "../../types/report";
+import { isSavedReportsEnabled } from "../../engine/ReportDefinitionEngine";
 
 import "./Toolbar.css";
 
@@ -134,7 +135,7 @@ export default function ReportToolbar({
                 <ExportMenu options={exportOptions} disabled={isRefreshing} busy={isExporting} />
 
 
-                {config.saveReport !== false && onSaveReport && (
+                {isSavedReportsEnabled(config) && onSaveReport && (
 
                     <ToolbarButton
                         label="Save Report"

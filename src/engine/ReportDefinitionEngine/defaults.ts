@@ -4,8 +4,6 @@ export const defaultReportDefinition: Partial<ReportDefinition> = {
 
     toolbar: {
 
-        search: true,
-
         export: true,
 
         refresh: true,

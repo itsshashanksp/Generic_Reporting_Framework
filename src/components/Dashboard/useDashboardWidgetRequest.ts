@@ -6,7 +6,7 @@ import {
     isRequestAbort,
 } from "../../api/request";
 import { useDashboard } from "../../engine/DashboardContext";
-import { buildWhere } from "../../engine/FilterQueryBuilder";
+import { buildFilters } from "../../engine/FilterQueryBuilder";
 import {
     createRequestCacheKey,
     getCachedResponse,
@@ -16,8 +16,8 @@ import {
 import type { ApiResponse } from "../../types/api";
 import type { FilterDefinition } from "../../types/filter";
 
-interface RequestWithWhere {
-    where?: unknown[];
+interface RequestWithFilters {
+    filters?: unknown[];
 }
 
 interface WidgetRequestState {
@@ -28,7 +28,7 @@ interface WidgetRequestState {
 }
 
 export function useDashboardWidgetRequest(
-    request: (object & RequestWithWhere) | null,
+    request: (object & RequestWithFilters) | null,
     filterDefinitions: FilterDefinition[],
     cacheScope = "dashboard-widget"
 ) {
@@ -38,21 +38,21 @@ export function useDashboardWidgetRequest(
     const previousRefreshKey = useRef(refreshKey);
     const previousRetryKey = useRef(retryKey);
 
-    const dashboardWhere = useMemo(
-        () => buildWhere(appliedFilters, filterDefinitions),
+    const dashboardFilters = useMemo(
+        () => buildFilters(appliedFilters, filterDefinitions),
         [appliedFilters, filterDefinitions]
     );
     const queryKey = useMemo(
-        () => JSON.stringify({ request, dashboardWhere }),
-        [request, dashboardWhere]
+        () => JSON.stringify({ request, dashboardFilters }),
+        [request, dashboardFilters]
     );
     const requestPayload = useMemo(() => request ? ({
         ...request,
-        where: [
-            ...(Array.isArray(request.where) ? request.where : []),
-            ...dashboardWhere,
+        filters: [
+            ...(Array.isArray(request.filters) ? request.filters : []),
+            ...dashboardFilters,
         ],
-    }) : null, [request, dashboardWhere]);
+    }) : null, [request, dashboardFilters]);
     const cacheKey = useMemo(
         () => requestPayload
             ? createRequestCacheKey(`dashboard:${cacheScope}`, requestPayload)
