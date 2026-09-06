@@ -49,14 +49,17 @@ export default function GenericGrid({
     useEffect(() => () => setApi(null), [setApi]);
 
     const columnDefs = useMemo(() => {
-        const groupedColumns = gridConfig.grouping?.enabled
-            ? gridConfig.grouping.groups ?? []
+        const hasConfiguredGrouping = gridConfig.grouping?.enabled
+            && ((gridConfig.grouping.groups?.length ?? 0) > 0
+                || (gridConfig.grouping.aggregates?.length ?? 0) > 0);
+        const groupedColumns = hasConfiguredGrouping
+            ? gridConfig.grouping?.groups ?? []
             : [];
-        const aggregateColumns = gridConfig.grouping?.enabled
-            ? gridConfig.grouping.aggregates ?? []
+        const aggregateColumns = hasConfiguredGrouping
+            ? gridConfig.grouping?.aggregates ?? []
             : [];
 
-        return gridConfig.grouping?.enabled
+        return hasConfiguredGrouping
             ? [
                 ...groupedColumns.map(group => ({
                     field: group.field,

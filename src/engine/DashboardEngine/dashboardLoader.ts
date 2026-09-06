@@ -7,7 +7,12 @@ import type {
     DashboardValidationResult,
 } from "../DashboardValidator";
 import { loadFilters } from "../FilterEngine";
-import { getReportIds } from "../ReportEngine/reportLoader";
+import { getReport, getReportIds } from "../ReportEngine/reportLoader";
+import type { DashboardWidget, WidgetRequest } from "../../types/widget";
+import {
+    getWidgetDefinition,
+    getWidgetDefinitionIds,
+} from "../WidgetEngine";
 
 export type DashboardLoadResult =
     | {
@@ -56,7 +61,10 @@ export function getDashboard(
     const validation =
         validateDashboard(
             dashboardConfiguration,
-            { reportIds: getReportIds() }
+            {
+                reportIds: getReportIds(),
+                widgetIds: getWidgetDefinitionIds(),
+            }
         );
 
     if (!validation.valid) {
@@ -123,4 +131,19 @@ export function buildDashboardRegistry(
 
 export function getDashboardIds(): string[] {
     return Object.keys(dashboards);
+}
+
+/** Resolves data widgets through the same loaded report/query pipeline as reports. */
+export function resolveDashboardWidgetRequest(
+    widget: DashboardWidget
+): WidgetRequest | undefined {
+    if (widget.reportId) {
+        return getReport(widget.reportId)?.request;
+    }
+
+    if (widget.widgetId) {
+        return getWidgetDefinition(widget.widgetId)?.request;
+    }
+
+    return widget.request;
 }

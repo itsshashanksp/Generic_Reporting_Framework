@@ -16,7 +16,6 @@ import { ReportToolbar } from "../components/Toolbar";
 import { useFilters } from "../engine/FilterContext";
 import { buildFilters } from "../engine/FilterQueryBuilder";
 import { useGrid } from "../engine/GridContext";
-import { buildGrouping } from "../engine/GroupingEngine";
 import { getReportPaginationParameters, isSavedReportsEnabled } from "../engine/ReportDefinitionEngine";
 import { getReport, getReportError } from "../engine/ReportEngine/reportLoader";
 import { createRequestCacheKey, getCachedResponse, getOrCreateInFlightRequest, setCachedResponse } from "../engine/RequestCache";
@@ -75,7 +74,6 @@ export default function ReportViewer() {
 
         activeController.current?.abort();
         const sequence = ++requestSequence.current;
-        const grouping = buildGrouping(report.grid.grouping);
         const pagination = getReportPaginationParameters(
             report.grid.pagination,
             activePage,
@@ -83,9 +81,6 @@ export default function ReportViewer() {
         );
         const requestPayload = {
             ...report.request,
-            ...(report.grid.grouping?.enabled
-                ? { fields: grouping.fields, groupBy: grouping.groupBy }
-                : {}),
             filters: [
                 ...(Array.isArray(report.request.filters) ? report.request.filters : []),
                 ...buildFilters(activeFilters, report.filters ?? []),
@@ -286,14 +281,10 @@ export default function ReportViewer() {
         setExportStatus("Preparing export…");
 
         try {
-            const grouping = buildGrouping(report.grid.grouping);
             const response = await executeRequest(
                 {
                     ...report.request,
                     pagination: undefined,
-                    ...(report.grid.grouping?.enabled
-                        ? { fields: grouping.fields, groupBy: grouping.groupBy }
-                        : {}),
                     filters: [
                         ...(Array.isArray(report.request.filters)
                             ? report.request.filters

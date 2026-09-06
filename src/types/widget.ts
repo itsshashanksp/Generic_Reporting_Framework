@@ -1,5 +1,10 @@
 import type { ExportConfig } from "./export";
 import type { QueryFilter, QuerySort, UniversalQueryRequest } from "./api";
+import type { ColumnDefinition } from "./column";
+import type {
+    ReportPresentationDefinition,
+    ReportQueryDefinitionReference,
+} from "./report";
 
 export type WidgetType =
     | "report"
@@ -22,6 +27,15 @@ export interface WidgetRequest extends Omit<UniversalQueryRequest, "filters" | "
     sort?: QuerySort[];
 }
 
+/** Reusable widget data plus optional shared presentation metadata. */
+export type WidgetDefinitionConfiguration =
+    Pick<ReportPresentationDefinition, "id" | "title">
+    & Partial<Omit<ReportPresentationDefinition, "id" | "title" | "columns">>
+    & {
+        queryDefinition: ReportQueryDefinitionReference;
+        columns?: ColumnDefinition[];
+    };
+
 export interface DashboardWidget {
     id: string;
 
@@ -33,7 +47,12 @@ export interface DashboardWidget {
 
     reportId?: string;
 
+    widgetId?: string;
+
     format?: WidgetFormat;
+
+    /** Response field displayed by a stat widget. */
+    valueField?: string;
 
     xField?: string;
 

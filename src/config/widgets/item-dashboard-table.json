@@ -1,0 +1,32 @@
+{
+  "id": "item-dashboard-table",
+  "title": "Item Dashboard Table Data",
+  "description": "Data definition used by the item dashboard table.",
+  "queryDefinition": {
+    "format": "sql",
+    "resource": "item-dashboard-table.sql"
+  },
+  "columns": [
+    {
+      "field": "Item_Code",
+      "header": "Item Code"
+    },
+    {
+      "field": "Item_Desc",
+      "header": "Item Description"
+    },
+    {
+      "field": "Sale_Rate",
+      "header": "Sale Rate"
+    },
+    {
+      "field": "Item_MRP",
+      "header": "Item MRP"
+    },
+    {
+      "field": "Std_Vat",
+      "header": "GST %"
+    }
+  ],
+  "filters": []
+}

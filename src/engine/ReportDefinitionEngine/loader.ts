@@ -41,6 +41,7 @@ export type ResolvedReportQuery =
 
 export interface LoadDefinitionOptions {
     resolveSql?: (resource: string) => string | undefined;
+    columnsRequired?: boolean;
 }
 
 export function resolveReportQuery(
@@ -78,9 +79,12 @@ export function resolveReportQuery(
 
 export function loadDefinition(
     value: unknown,
-    { resolveSql = getSqlDefinition }: LoadDefinitionOptions = {}
+    {
+        resolveSql = getSqlDefinition,
+        columnsRequired = true,
+    }: LoadDefinitionOptions = {}
 ): ReportDefinition {
-    const errors = getReportValidationErrors(value);
+    const errors = getReportValidationErrors(value, { columnsRequired });
     if (errors.length > 0) {
         throw new Error(`Invalid report configuration: ${errors.join(" ")}`);
     }

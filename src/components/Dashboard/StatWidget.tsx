@@ -14,6 +14,7 @@ interface StatWidgetProps {
     title: string;
     description?: string;
     request: WidgetRequest;
+    valueField?: string;
     format?: "number" | "currency" | "decimal";
     filterDefinitions?: FilterDefinition[];
     cacheScope?: string;
@@ -52,6 +53,7 @@ export default function StatWidget({
     title,
     description,
     request,
+    valueField,
     format,
     filterDefinitions = EMPTY_FILTER_DEFINITIONS,
     cacheScope,
@@ -63,8 +65,10 @@ export default function StatWidget({
     );
     const value = useMemo(() => {
         const firstRow = response?.data?.[0];
-        return firstRow ? Object.values(firstRow)[0] : undefined;
-    }, [response]);
+        return firstRow
+            ? valueField ? firstRow[valueField] : Object.values(firstRow)[0]
+            : undefined;
+    }, [response, valueField]);
     const hasValue = value !== undefined && value !== null;
 
     return (

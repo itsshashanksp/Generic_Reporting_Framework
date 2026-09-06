@@ -2,14 +2,9 @@
   "id": "customer",
   "title": "Customer Report",
   "description": "Displays all customers.",
-  "request": {
-    "action": "select",
-    "source": {
-      "table": "CustomerTable"
-    },
-    "fields": [
-      "*"
-    ]
+  "queryDefinition": {
+    "format": "sql",
+    "resource": "customer.sql"
   },
   "columns": [
     {
@@ -17,12 +12,16 @@
       "header": "Customer Name"
     },
     {
-      "field": "Cust_Add",
-      "header": "Address"
+      "field": "TotalCustomers",
+      "header": "Total Customers"
     },
     {
-      "field": "Cust_Phon4",
-      "header": "Mobile"
+      "field": "MinimumBill",
+      "header": "Minimum Bill"
+    },
+    {
+      "field": "MaximumBill",
+      "header": "Maximum Bill"
     }
   ],
   "filters": [
@@ -50,33 +49,7 @@
     },
     "rowSelection": "multiple",
     "grouping": {
-      "enabled": true,
-      "groups": [
-        {
-          "field": "Cust_Name",
-          "header": "Customer Name"
-        }
-      ],
-      "aggregates": [
-        {
-          "field": "Cust_Name",
-          "function": "COUNT",
-          "alias": "TotalCustomers",
-          "header": "Total Customers"
-        },
-        {
-          "field": "Bill_Amt",
-          "function": "MIN",
-          "alias": "MinimumBill",
-          "header": "Minimum Bill"
-        },
-        {
-          "field": "Bill_Amt",
-          "function": "MAX",
-          "alias": "MaximumBill",
-          "header": "Maximum Bill"
-        }
-      ]
+      "enabled": true
     }
   },
   "toolbar": {

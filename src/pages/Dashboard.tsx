@@ -1,5 +1,5 @@
 import FilterRenderer from "../components/Filters/FilterRenderer";
-import { getDashboard } from "../engine/DashboardEngine";
+import { getDashboard, resolveDashboardWidgetRequest } from "../engine/DashboardEngine";
 
 import ReportWidget from "../components/Dashboard/ReportWidget";
 import StatWidget from "../components/Dashboard/StatWidget";
@@ -266,6 +266,9 @@ function DashboardContent({
                     {visibleWidgets.map(
                         widget => {
 
+                            const widgetRequest =
+                                resolveDashboardWidgetRequest(widget);
+
                             /*
                              * Keep widget width
                              * between 1 and the
@@ -384,7 +387,7 @@ function DashboardContent({
                                         )}
 
                                     {widget.type === "stat" &&
-                                        widget.request && (
+                                        widgetRequest && (
                                             <StatWidget
                                                 title={
                                                     widget.title
@@ -393,8 +396,9 @@ function DashboardContent({
                                                     widget.description
                                                 }
                                                 request={
-                                                    widget.request
+                                                    widgetRequest
                                                 }
+                                                valueField={widget.valueField}
                                                 format={
                                                     widget.format
                                                 }
@@ -406,7 +410,7 @@ function DashboardContent({
                                         )}
 
                                     {widget.type === "table" &&
-                                        widget.request && (
+                                        widgetRequest && (
                                             <TableWidget
                                                 title={
                                                     widget.title
@@ -421,7 +425,7 @@ function DashboardContent({
                                                     widget.pageSizeOptions
                                                 }
                                                 request={
-                                                    widget.request
+                                                    widgetRequest
                                                 }
                                                 filterDefinitions={
                                                     dashboard.filters ?? []
@@ -432,7 +436,7 @@ function DashboardContent({
                                         )}
 
                                     {widget.type === "chart" &&
-                                        widget.request &&
+                                        widgetRequest &&
                                         widget.xField &&
                                         widget.yField && (
                                             <ChartWidget
@@ -443,7 +447,7 @@ function DashboardContent({
                                                     widget.description
                                                 }
                                                 request={
-                                                    widget.request
+                                                    widgetRequest
                                                 }
                                                 xField={
                                                     widget.xField

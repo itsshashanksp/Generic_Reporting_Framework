@@ -187,9 +187,10 @@ yet part of this SQL subset.
 
 ## Resources and safety
 
-SQL resources live directly in `src/config/reports/` and are bundled as raw
-text by Vite's static glob. A report reference is a case-sensitive basename,
-for example:
+SQL resources live directly in `src/config/reports/` for standalone reports
+and `src/config/widgets/` for reusable data-driven widgets. Each category is
+bundled by its own explicit Vite static glob and resolved only through its
+corresponding registry. A reference is a case-sensitive basename, for example:
 
 ```json
 { "format": "sql", "resource": "customer.sql" }
@@ -197,9 +198,10 @@ for example:
 
 References must match `[A-Za-z0-9][A-Za-z0-9._-]*.sql`. Subdirectories,
 absolute paths, `..`, query strings, fragments, and URLs are rejected. A valid
-but absent resource returns `undefined` from the low-level lookup and must make
-a future report-resolution step fail clearly. Duplicate basenames make registry
-construction fail.
+but absent resource returns `undefined` from that category's low-level lookup
+and makes report/widget resolution fail clearly. The report loader never scans
+widget resources, and the widget loader never scans report resources. Duplicate
+basenames within a registry make registry construction fail.
 
 These SQL files are static authoring resources, not secrets. They must not
 contain credentials, passwords, connection strings, or API secrets. The loader
@@ -216,3 +218,11 @@ their logic, logical-field sorting, and `{ page, pageSize }` pagination. Search
 application state and future runtime grouping selections remain UI concerns.
 Neither authored nor runtime sorting uses positional values such as `ORDER BY
 1`. No runtime state is interpolated into SQL text.
+
+SQL is the only production authoring format for anything that changes database
+results or computation. Report and widget JSON may describe columns, labels,
+filter controls, grid behavior, pagination controls, export, and presentation,
+but must not duplicate SELECT fields, aggregates, joins, static filters,
+GROUP BY, HAVING, or static ORDER BY. The JSON `queryDefinition` object only
+identifies the statically bundled SQL resource. User-entered filters, sorting,
+and pagination remain runtime state and are merged only after SQL parsing.

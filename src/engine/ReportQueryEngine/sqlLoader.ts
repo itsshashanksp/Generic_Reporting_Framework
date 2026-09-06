@@ -1,7 +1,12 @@
 import { isValidSqlResourceReference } from "./sqlContract";
 
-const sqlModules = import.meta.glob(
+const reportSqlModules = import.meta.glob(
     "../../config/reports/*.sql",
+    { eager: true, query: "?raw", import: "default" }
+) as Record<string, unknown>;
+
+const widgetSqlModules = import.meta.glob(
+    "../../config/widgets/*.sql",
     { eager: true, query: "?raw", import: "default" }
 ) as Record<string, unknown>;
 
@@ -32,13 +37,26 @@ export function buildSqlDefinitionRegistry(
     return registry;
 }
 
-const sqlDefinitions = buildSqlDefinitionRegistry(sqlModules);
+const reportSqlDefinitions = buildSqlDefinitionRegistry(reportSqlModules);
+const widgetSqlDefinitions = buildSqlDefinitionRegistry(widgetSqlModules);
 
-/** Loads authoring text only; it does not execute or send SQL anywhere. */
+/** Loads report authoring text only; it does not execute or send SQL anywhere. */
 export function getSqlDefinition(resource: string): string | undefined {
+    return getKnownSqlDefinition(resource, reportSqlDefinitions);
+}
+
+/** Loads widget authoring text only from the explicit widget resource registry. */
+export function getWidgetSqlDefinition(resource: string): string | undefined {
+    return getKnownSqlDefinition(resource, widgetSqlDefinitions);
+}
+
+function getKnownSqlDefinition(
+    resource: string,
+    registry: Record<string, string>
+): string | undefined {
     if (!isValidSqlResourceReference(resource)) {
         throw new InvalidSqlResourceReferenceError(resource);
     }
 
-    return sqlDefinitions[resource];
+    return registry[resource];
 }

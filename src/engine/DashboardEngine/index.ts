@@ -1,6 +1,7 @@
 export {
     getDashboard,
     getDashboardIds,
+    resolveDashboardWidgetRequest,
 } from "./dashboardLoader";
 
 export type {

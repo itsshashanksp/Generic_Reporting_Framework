@@ -12,6 +12,7 @@ export interface DashboardValidationResult {
 
 export interface DashboardValidationOptions {
     reportIds?: Iterable<string>;
+    widgetIds?: Iterable<string>;
 }
 
 const widgetTypes = [
@@ -124,7 +125,8 @@ export function validateDashboard(
                     errors,
                     warnings,
                     widgetIds,
-                    options.reportIds
+                    options.reportIds,
+                    options.widgetIds
                 );
             }
         );
@@ -344,7 +346,8 @@ function validateWidget(
     errors: string[],
     warnings: string[],
     widgetIds: Set<string>,
-    reportIds?: Iterable<string>
+    reportIds?: Iterable<string>,
+    widgetDefinitionIds?: Iterable<string>
 ) {
 
     if (!isRecord(widget)) {
@@ -359,9 +362,9 @@ function validateWidget(
     const commonKeys = ["id", "type", "title", "description", "width", "height", "visible", "position"];
     const typeKeys: Record<string, string[]> = {
         report: ["reportId"],
-        stat: ["request", "format"],
-        table: ["request", "pageSize", "pageSizeOptions", "export"],
-        chart: ["request", "xField", "yField", "chartType", "showLegend", "showTooltip", "showGrid", "showLabels"],
+        stat: ["request", "reportId", "widgetId", "format", "valueField"],
+        table: ["request", "reportId", "widgetId", "pageSize", "pageSizeOptions", "export"],
+        chart: ["request", "reportId", "widgetId", "xField", "yField", "chartType", "showLegend", "showTooltip", "showGrid", "showLabels"],
     };
     rejectUnknownProperties(
         widget,
@@ -436,9 +439,11 @@ function validateWidget(
         errors
     );
 
-    if (
-        widget.type === "report"
-    ) {
+    const hasReportId = widget.reportId !== undefined;
+    const hasWidgetId = widget.widgetId !== undefined;
+    const hasRequest = widget.request !== undefined;
+
+    if (widget.type === "report") {
         if (!isNonEmptyString(widget.reportId)) {
             errors.push(
                 `Report widget "${String(widget.id ?? "")}" requires reportId.`
@@ -447,6 +452,22 @@ function validateWidget(
             errors.push(
                 `Report widget "${String(widget.id ?? "")}" references unknown reportId: ${widget.reportId}`
             );
+        }
+    } else if ([hasReportId, hasWidgetId, hasRequest].filter(Boolean).length !== 1) {
+        errors.push(
+            `${widget.type} widget "${String(widget.id ?? "")}" requires exactly one of widgetId, reportId, or request.`
+        );
+    } else if (hasWidgetId) {
+        if (!isNonEmptyString(widget.widgetId)) {
+            errors.push(`${widgetLabel} widgetId must be a non-empty string.`);
+        } else if (widgetDefinitionIds && !new Set(widgetDefinitionIds).has(widget.widgetId)) {
+            errors.push(`${widgetLabel} references unknown widgetId: ${widget.widgetId}`);
+        }
+    } else if (hasReportId) {
+        if (!isNonEmptyString(widget.reportId)) {
+            errors.push(`${widgetLabel} reportId must be a non-empty string.`);
+        } else if (reportIds && !new Set(reportIds).has(widget.reportId)) {
+            errors.push(`${widgetLabel} references unknown reportId: ${widget.reportId}`);
         }
     } else {
         validateRequest(
@@ -533,6 +554,7 @@ function validateWidget(
     }
 
     if (widget.type === "stat") {
+        validateOptionalString(widget.valueField, `Stat widget "${String(widget.id ?? "")}" valueField`, errors);
         if (widget.format === undefined) {
             warnings.push(
                 `Stat widget "${String(widget.id ?? "")}" has no format.`

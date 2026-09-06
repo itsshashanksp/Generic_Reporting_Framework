@@ -13,7 +13,14 @@ export function validateReport(report: unknown): boolean {
     return getReportValidationErrors(report).length === 0;
 }
 
-export function getReportValidationErrors(report: unknown): string[] {
+export interface ReportValidationOptions {
+    columnsRequired?: boolean;
+}
+
+export function getReportValidationErrors(
+    report: unknown,
+    { columnsRequired = true }: ReportValidationOptions = {}
+): string[] {
     const errors: string[] = [];
     if (!isRecord(report)) return ["Report configuration must be an object."];
     rejectUnknown(report, REPORT_KEYS, "Report", errors);
@@ -27,7 +34,7 @@ export function getReportValidationErrors(report: unknown): string[] {
     }
     validateQueryDefinitionReference(report.queryDefinition, errors);
     if (hasRequest) validateRequest(report.request, errors);
-    validateColumns(report.columns, errors);
+    validateColumns(report.columns, errors, columnsRequired);
     validateFilters(report.filters, errors);
     validateGrid(report.grid, errors);
     validateToolbar(report.toolbar, errors);
@@ -82,7 +89,8 @@ function validateRequest(value: unknown, errors: string[]) {
     }
 }
 
-function validateColumns(value: unknown, errors: string[]) {
+function validateColumns(value: unknown, errors: string[], required: boolean) {
+    if (value === undefined && !required) return;
     if (!Array.isArray(value) || value.length === 0) return errors.push("Report columns must be a non-empty array.");
     const fields = new Set<string>();
     value.forEach((entry, index) => {

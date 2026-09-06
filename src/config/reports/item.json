@@ -42,10 +42,7 @@
         100
       ]
     },
-    "rowSelection": "multiple",
-    "grouping": {
-      "enabled": false
-    }
+    "rowSelection": "multiple"
   },
   "toolbar": {
     "export": true,

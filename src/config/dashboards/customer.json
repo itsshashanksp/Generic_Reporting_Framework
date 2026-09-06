@@ -34,19 +34,7 @@
         "x": 0,
         "y": 1
       },
-      "request": {
-        "action": "select",
-        "source": {
-          "table": "ItemMasterTable"
-        },
-        "fields": [
-          "Item_Code",
-          "Item_Desc",
-          "Sale_Rate",
-          "Item_MRP",
-          "Std_Vat"
-        ]
-      },
+      "widgetId": "item-dashboard-table",
       "pageSize": 10,
       "export": {
         "enabled": true,
@@ -71,19 +59,8 @@
         "x": 0,
         "y": 2
       },
-      "request": {
-        "action": "select",
-        "source": {
-          "table": "ItemMasterTable"
-        },
-        "fields": [
-          {
-            "function": "COUNT",
-            "alias": "TotalItems",
-            "field": "Item_Code"
-          }
-        ]
-      },
+      "widgetId": "item-dashboard-stats",
+      "valueField": "TotalItems",
       "format": "number"
     },
     {
@@ -97,19 +74,8 @@
         "x": 4,
         "y": 2
       },
-      "request": {
-        "action": "select",
-        "source": {
-          "table": "ItemMasterTable"
-        },
-        "fields": [
-          {
-            "function": "MIN",
-            "alias": "MinimumSP",
-            "field": "Sale_Rate"
-          }
-        ]
-      },
+      "widgetId": "item-dashboard-stats",
+      "valueField": "MinimumSP",
       "format": "currency"
     },
     {
@@ -123,19 +89,8 @@
         "x": 8,
         "y": 2
       },
-      "request": {
-        "action": "select",
-        "source": {
-          "table": "ItemMasterTable"
-        },
-        "fields": [
-          {
-            "function": "MAX",
-            "alias": "MaximumSP",
-            "field": "Sale_Rate"
-          }
-        ]
-      },
+      "widgetId": "item-dashboard-stats",
+      "valueField": "MaximumSP",
       "format": "currency"
     },
     {
@@ -149,19 +104,8 @@
         "x": 0,
         "y": 3
       },
-      "request": {
-        "action": "select",
-        "source": {
-          "table": "ItemMasterTable"
-        },
-        "fields": [
-          {
-            "function": "SUM",
-            "alias": "TotalValue",
-            "field": "Sale_Rate"
-          }
-        ]
-      },
+      "widgetId": "item-dashboard-stats",
+      "valueField": "TotalValue",
       "format": "currency"
     }
   ]
