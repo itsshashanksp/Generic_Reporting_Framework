@@ -243,7 +243,7 @@ function isSupportedSelectItem(value: string): boolean {
         || /^CASE\b[\s\S]+\bEND\s+AS\s+[A-Za-z_][A-Za-z0-9_]*$/i.test(item)
         || /^[A-Za-z_][A-Za-z0-9_]*\s*\([\s\S]*\)(?:\s+AS\s+[A-Za-z_][A-Za-z0-9_]*)?$/i.test(item)
         || /^(?:ROW_NUMBER|RANK|DENSE_RANK|NTILE|LAG|LEAD|FIRST_VALUE|LAST_VALUE)\s*\([^)]*\)\s+OVER\s*\([\s\S]+\)\s+AS\s+[A-Za-z_][A-Za-z0-9_]*$/i.test(item)
-        || /^[A-Za-z_][A-Za-z0-9_.]*\s*[+\-*/%]\s*(?:[A-Za-z_][A-Za-z0-9_.]*|-?(?:\d+(?:\.\d+)?|\.\d+))\s+AS\s+[A-Za-z_][A-Za-z0-9_]*$/i.test(item)
+        || /^(?:[A-Za-z_][A-Za-z0-9_.]*|-?(?:\d+(?:\.\d+)?|\.\d+))\s*[+\-*/%]\s*(?:[A-Za-z_][A-Za-z0-9_.]*|-?(?:\d+(?:\.\d+)?|\.\d+))\s+AS\s+[A-Za-z_][A-Za-z0-9_]*$/i.test(item)
         || /^CURRENT_TIMESTAMP(?:\s+AS\s+[A-Za-z_][A-Za-z0-9_]*)?$/i.test(item);
 }
 

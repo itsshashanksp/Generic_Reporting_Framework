@@ -685,7 +685,7 @@ function throwContractError(
     }
     if (code === "INVALID_SELECT") {
         throw new ReportSqlParserError(
-            looksLikeInvalidSelectIdentifier(sql)
+            looksLikeInvalidSelectIdentifier(sql) || looksLikeMalformedSelectAlias(sql)
                 ? "INVALID_IDENTIFIER"
                 : "INVALID_SELECT_EXPRESSION",
             message
@@ -733,6 +733,13 @@ function looksLikeInvalidSelectIdentifier(sql: string): boolean {
     const select = /^\s*SELECT\s+([\s\S]+?)\s+FROM\b/i.exec(sql)?.[1];
     return select !== undefined
         && splitSelectItems(select).some(looksLikeSimpleReference);
+}
+
+function looksLikeMalformedSelectAlias(sql: string): boolean {
+    const select = /^\s*SELECT\s+([\s\S]+?)\s+FROM\b/i.exec(sql)?.[1];
+    return select !== undefined
+        && splitSelectItems(select).some(item => /\s+AS\s+/i.test(item)
+            && !new RegExp(`\\s+AS\\s+${IDENTIFIER}$`, "i").test(item.trim()));
 }
 
 function looksLikeSimpleReference(value: string): boolean {

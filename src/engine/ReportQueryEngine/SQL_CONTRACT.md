@@ -11,7 +11,7 @@ select_item := "*"
              | field [AS alias]
              | aggregate "(" (field | "*") ")" [AS alias]
              | supported_function "(" supported_arguments ")" [AS alias]
-             | field arithmetic (field | number) AS alias
+             | (field | number) arithmetic (field | number) AS alias
              | simple_case AS alias
              | supported_window OVER "(" ORDER BY sort_item ("," sort_item)* ")" AS alias
 aggregate   := COUNT | SUM | AVG | MIN | MAX
