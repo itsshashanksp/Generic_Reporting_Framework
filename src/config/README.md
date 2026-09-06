@@ -4,7 +4,7 @@ All files in this directory use the runtime configuration schema. Unknown proper
 
 ## Canonical order
 
-Report files use this top-level order: `id`, `title`, `description`, `request`, `columns`, `filters`, `grid`, `toolbar`, `export`.
+Report files use this top-level order: `id`, `title`, `description`, `queryDefinition`, `request`, `columns`, `filters`, `grid`, `toolbar`, `export`.
 
 Dashboard files use: `id`, `title`, `description`, `layout`, `autoRefresh`, `filters`, `widgets`. Each widget starts with `id`, `type`, `title`, and `description`, followed by layout (`width`, `height`, `visible`, `position`), `request`, and then type-specific settings.
 
@@ -12,6 +12,7 @@ Menu entries use: `id`, `title`, `icon`, one destination, `visible`, and `childr
 
 ## Supported report properties
 
+- Query source: exactly one of `queryDefinition` or `request` is required. SQL-backed reports use `queryDefinition` with `format: "sql"` and a flat `.sql` resource filename; legacy reports continue to use `request`. SQL-backed definitions are normalized to the existing Universal request shape during loading.
 - Request: `action`, `source`, `fields`, `filters`, `joins`, `groupBy`, `having`, `sort`, `pagination`, `distinct`, `limit`, `filterLogic`, and `with`.
 - Column: `field`, `header`, `visible`, `sortable`, `width`.
 - Filter: `field`, `label`, `type`, `operator`, `options`, `visible`, `required`, `placeholder`.

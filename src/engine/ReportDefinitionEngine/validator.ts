@@ -1,7 +1,8 @@
 import type { FilterType } from "../../types/filter";
 import { allowedOperators } from "../FilterEngine/validator";
+import { isValidSqlResourceReference } from "../ReportQueryEngine/sqlContract";
 
-const REPORT_KEYS = ["id", "title", "description", "request", "columns", "filters", "grid", "toolbar", "export"];
+const REPORT_KEYS = ["id", "title", "description", "queryDefinition", "request", "columns", "filters", "grid", "toolbar", "export"];
 const REQUEST_KEYS = ["action", "source", "fields", "filters", "joins", "groupBy", "having", "sort", "pagination", "distinct", "limit", "filterLogic", "with"];
 const REQUEST_FIELD_KEYS = ["field", "fields", "function", "alias", "sort", "case", "expression", "buckets", "offset", "default", "separator", "datatype", "style", "value", "values", "index", "datepart", "number", "start", "end", "year", "month", "day", "hour", "minute", "second", "millisecond", "precision", "power", "part", "length", "search", "replace", "pattern", "format", "condition", "true", "false"];
 const COLUMN_KEYS = ["field", "header", "visible", "sortable", "width"];
@@ -19,13 +20,34 @@ export function getReportValidationErrors(report: unknown): string[] {
     requireString(report.id, "Report id", errors);
     requireString(report.title, "Report title", errors);
     optionalString(report.description, "Report description", errors);
-    validateRequest(report.request, errors);
+    const hasQueryDefinition = report.queryDefinition !== undefined;
+    const hasRequest = report.request !== undefined;
+    if (hasQueryDefinition === hasRequest) {
+        errors.push("Report must contain exactly one of request or queryDefinition.");
+    }
+    validateQueryDefinitionReference(report.queryDefinition, errors);
+    if (hasRequest) validateRequest(report.request, errors);
     validateColumns(report.columns, errors);
     validateFilters(report.filters, errors);
     validateGrid(report.grid, errors);
     validateToolbar(report.toolbar, errors);
     validateExport(report.export, "Report export", errors);
     return errors;
+}
+
+function validateQueryDefinitionReference(value: unknown, errors: string[]) {
+    if (value === undefined) return;
+    if (!isRecord(value)) return errors.push("Report queryDefinition must be an object.");
+    rejectUnknown(value, ["format", "resource"], "Report queryDefinition", errors);
+    if (value.format !== "sql") errors.push("Report queryDefinition format must be sql.");
+    requireString(value.resource, "Report queryDefinition resource", errors);
+    if (
+        typeof value.resource === "string"
+        && value.resource.trim().length > 0
+        && !isValidSqlResourceReference(value.resource)
+    ) {
+        errors.push("Report queryDefinition resource must be a .sql filename without a path.");
+    }
 }
 
 function validateRequest(value: unknown, errors: string[]) {

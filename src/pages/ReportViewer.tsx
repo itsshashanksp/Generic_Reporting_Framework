@@ -18,7 +18,7 @@ import { buildFilters } from "../engine/FilterQueryBuilder";
 import { useGrid } from "../engine/GridContext";
 import { buildGrouping } from "../engine/GroupingEngine";
 import { getReportPaginationParameters, isSavedReportsEnabled } from "../engine/ReportDefinitionEngine";
-import { getReport } from "../engine/ReportEngine/reportLoader";
+import { getReport, getReportError } from "../engine/ReportEngine/reportLoader";
 import { createRequestCacheKey, getCachedResponse, getOrCreateInFlightRequest, setCachedResponse } from "../engine/RequestCache";
 import { saveSavedReport } from "../engine/SavedReportEngine";
 import { exportExcel, exportRowsCSV } from "../engine/ExportEngine";
@@ -44,6 +44,7 @@ export default function ReportViewer() {
     const { filters, replaceFilters, clearFilters } = useFilters();
     const { api } = useGrid();
     const report = getReport(reportId || "") ?? null;
+    const reportConfigurationError = getReportError(reportId || "");
 
     const [result, setResult] = useState<ApiResponse | null>(null);
     const [loadedReportId, setLoadedReportId] = useState("");
@@ -340,8 +341,8 @@ export default function ReportViewer() {
     if (!report) {
         return (
             <ErrorState
-                title="Report not found"
-                message={`Report "${reportId || ""}" was not found.`}
+                title={reportConfigurationError ? "Report configuration error" : "Report not found"}
+                message={reportConfigurationError ?? `Report "${reportId || ""}" was not found.`}
             />
         );
     }

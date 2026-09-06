@@ -2,14 +2,9 @@
   "id": "item",
   "title": "Item Report",
   "description": "Displays all items.",
-  "request": {
-    "action": "select",
-    "source": {
-      "table": "ItemMasterTable"
-    },
-    "fields": [
-      "*"
-    ]
+  "queryDefinition": {
+    "format": "sql",
+    "resource": "item.sql"
   },
   "columns": [
     {

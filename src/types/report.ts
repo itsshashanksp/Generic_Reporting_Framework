@@ -18,6 +18,12 @@ export interface ReportRequest extends Omit<UniversalQueryRequest, "sort"> {
     sort?: QuerySort[];
 }
 
+/** Static SQL authoring metadata. The referenced resource is authoritative. */
+export interface ReportQueryDefinitionReference {
+    format: "sql";
+    resource: string;
+}
+
 export interface ToolbarConfig {
     export: boolean;
     refresh: boolean;
@@ -33,7 +39,7 @@ export interface GridConfig {
     grouping?: GroupingConfig;
 }
 
-export interface ReportDefinition {
+export interface ReportPresentationDefinition {
     id: string;
 
     title: string;
@@ -49,6 +55,22 @@ export interface ReportDefinition {
     columns: ColumnDefinition[];
 
     filters: FilterDefinition[];
+}
+
+export type ReportConfiguration = ReportPresentationDefinition & (
+    | {
+          request: ReportRequest;
+          queryDefinition?: never;
+      }
+    | {
+          request?: never;
+          queryDefinition: ReportQueryDefinitionReference;
+      }
+);
+
+/** Normalized definition consumed by the existing report runtime. */
+export interface ReportDefinition extends ReportPresentationDefinition {
+    queryDefinition?: ReportQueryDefinitionReference;
 
     request: ReportRequest;
 }
