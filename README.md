@@ -1,75 +1,79 @@
-# React + TypeScript + Vite
+# Generic Reporting Framework
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A configuration-driven React frontend for building reusable reports, widgets, and dashboards on top of the Generic SQL API.
 
-Currently, two official plugins are available:
+## Overview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The framework keeps responsibilities explicit:
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```text
+SQL authoring resources  -> query and data logic
+JSON configuration       -> presentation and interaction choices
+Runtime state            -> filters, sorting, and pagination selected by the user
+Universal JSON request   -> request sent to the Generic SQL API
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+This boundary lets report authors change data selection independently from the user interface. The frontend loads SQL and JSON configuration, validates both, converts the result to the backend's universal request shape, and renders the response through reusable React components.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Features
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- SQL-authored reports and widget data definitions with validation and typed parser errors
+- JSON-configured columns, filters, grids, toolbars, widgets, dashboards, and navigation
+- Reusable report, stat, table, and chart dashboard widgets
+- Runtime filtering, sorting, and server-side pagination
+- AG Grid-based `GenericGrid` with column resizing, reordering, and configured grouping
+- Request caching and in-flight request deduplication
+- Current-view and all-row CSV/Excel exports where enabled by configuration
+- Browser-local saved report views
+- Automated Vitest and React Testing Library coverage
+- GitHub Actions checks for tests, lint, type-checking, and production builds
 
+The application is built with React, TypeScript, Vite, Material UI, AG Grid, and Recharts.
+
+## Architecture
+
+The frontend is organized into configuration, definition/query engines, API integration, shared state, and presentation components. See the [architecture guide](docs/ARCHITECTURE.md) and the [SQL/JSON responsibility rules](docs/SQL-JSON-SEPARATION.md).
+
+## Getting Started
+
+```bash
+git clone git@github.com:itsshashanksp/Generic_Reporting_Framework.git
+cd Generic_Reporting_Framework
+npm ci
+npm run dev
 ```
+
+Set `VITE_API_URL` in a local `.env` file to the Generic SQL API endpoint used for live data. See [Getting Started](docs/GETTING-STARTED.md) for details.
+
+Run the project checks with:
+
+```bash
+npm test
+npm run lint
+npx tsc --noEmit
+npm run build
+```
+
+## Documentation
+
+| Document | Description |
+| --- | --- |
+| [Documentation index](docs/README.md) | Navigation for all project documentation |
+| [Architecture](docs/ARCHITECTURE.md) | Overall frontend architecture and request flow |
+| [Getting Started](docs/GETTING-STARTED.md) | Installation, configuration, and first run |
+| [Development](docs/DEVELOPMENT.md) | Project structure and developer workflows |
+| [Query Engine](docs/QUERY-ENGINE.md) | SQL parsing and universal request generation |
+| [SQL / JSON Separation](docs/SQL-JSON-SEPARATION.md) | Configuration responsibility rules |
+| [Reports](docs/REPORTS.md) | Report definition and rendering architecture |
+| [Widgets](docs/WIDGETS.md) | Reusable widget definitions and widget types |
+| [Dashboards](docs/DASHBOARDS.md) | Dashboard configuration and runtime behavior |
+| [Testing](docs/TESTING.md) | Test strategy, commands, and CI |
+| [Roadmap](docs/ROADMAP.md) | Completed and planned work |
+
+## Contributing
+
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a change.
+
+## License
+
+This project is available under the [MIT License](LICENSE).
