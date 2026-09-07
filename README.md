@@ -7,17 +7,18 @@ A configuration-driven React frontend for building reusable reports, widgets, an
 The framework keeps responsibilities explicit:
 
 ```text
-SQL authoring resources  -> query and data logic
-JSON configuration       -> presentation and interaction choices
-Runtime state            -> filters, sorting, and pagination selected by the user
-Universal JSON request   -> request sent to the Generic SQL API
+JSON report/dashboard/widget configuration
+        -> validation and defaults
+        -> runtime filters, sorting and pagination
+        -> JSON request to the Generic SQL API
+        -> report grid or dashboard widget
 ```
 
-This boundary lets report authors change data selection independently from the user interface. The frontend loads SQL and JSON configuration, validates both, converts the result to the backend's universal request shape, and renders the response through reusable React components.
+Data can be described by a top-level universal JSON request or by an opaque SQL resource ID. SQL text, resource registration and execution remain backend responsibilities; the frontend does not load SQL files.
 
 ## Features
 
-- SQL-authored reports and widget data definitions with validation and typed parser errors
+- JSON request and backend SQL-resource query modes
 - JSON-configured columns, filters, grids, toolbars, widgets, dashboards, and navigation
 - Reusable report, stat, table, and chart dashboard widgets
 - Runtime filtering, sorting, and server-side pagination
@@ -62,13 +63,15 @@ npm run build
 | [Architecture](docs/ARCHITECTURE.md) | Overall frontend architecture and request flow |
 | [Getting Started](docs/GETTING-STARTED.md) | Installation, configuration, and first run |
 | [Development](docs/DEVELOPMENT.md) | Project structure and developer workflows |
-| [Query Engine](docs/QUERY-ENGINE.md) | SQL parsing and universal request generation |
-| [SQL / JSON Separation](docs/SQL-JSON-SEPARATION.md) | Configuration responsibility rules |
+| [Configuration reference](docs/CONFIGURATION.md) | Complete report, dashboard, widget and menu properties |
+| [Query modes](docs/QUERY-MODES.md) | JSON requests, SQL resource IDs and runtime merging |
+| [Feature behavior](docs/FEATURES.md) | Filtering, grid, export, saved views and cache details |
+| [Examples](docs/EXAMPLES.md) | Valid configurations and authoring recipes |
 | [Reports](docs/REPORTS.md) | Report definition and rendering architecture |
 | [Widgets](docs/WIDGETS.md) | Reusable widget definitions and widget types |
 | [Dashboards](docs/DASHBOARDS.md) | Dashboard configuration and runtime behavior |
 | [Testing](docs/TESTING.md) | Test strategy, commands, and CI |
-| [Roadmap](docs/ROADMAP.md) | Completed and planned work |
+| [Supported behavior](docs/SUPPORTED.md) | Capability matrix and known gaps |
 
 ## Contributing
 

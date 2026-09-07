@@ -4,7 +4,7 @@
   "description": "Displays all items.",
   "queryDefinition": {
     "format": "sql",
-    "resource": "item.sql"
+    "resource": "item"
   },
   "columns": [
     {

@@ -10,6 +10,8 @@ import { loadFilters } from "../FilterEngine";
 import { getReport, getReportIds } from "../ReportEngine/reportLoader";
 import type { DashboardWidget, WidgetRequest } from "../../types/widget";
 import type { ColumnDefinition } from "../../types/column";
+import type { ReportConfiguration, ReportDefinition } from "../../types/report";
+import { loadDefinition } from "../ReportDefinitionEngine";
 import {
     getWidgetDefinition,
     getWidgetDefinitionIds,
@@ -134,32 +136,51 @@ export function getDashboardIds(): string[] {
     return Object.keys(dashboards);
 }
 
+/** Resolves inline definitions first, then existing report/widget references. */
+export function resolveDashboardWidgetDefinition(
+    widget: DashboardWidget
+): ReportDefinition | undefined {
+    if (widget.queryDefinition || widget.request) {
+        const configuration: ReportConfiguration = {
+            id: widget.id,
+            title: widget.title,
+            ...(widget.description !== undefined
+                ? { description: widget.description }
+                : {}),
+            ...(widget.queryDefinition
+                ? { queryDefinition: widget.queryDefinition }
+                : { request: widget.request! }),
+            ...(widget.columns !== undefined ? { columns: widget.columns } : {}),
+            filters: widget.filters ?? [],
+            ...(widget.grid !== undefined ? { grid: widget.grid } : {}),
+            ...(widget.toolbar !== undefined ? { toolbar: widget.toolbar } : {}),
+            ...(widget.export !== undefined ? { export: widget.export } : {}),
+        } as ReportConfiguration;
+
+        return loadDefinition(configuration, { columnsRequired: false });
+    }
+
+    if (widget.widgetId) {
+        return getWidgetDefinition(widget.widgetId);
+    }
+
+    if (widget.reportId) {
+        return getReport(widget.reportId);
+    }
+
+    return undefined;
+}
+
 /** Resolves data widgets through the same loaded report/query pipeline as reports. */
 export function resolveDashboardWidgetRequest(
     widget: DashboardWidget
 ): WidgetRequest | undefined {
-    if (widget.reportId) {
-        return getReport(widget.reportId)?.request;
-    }
-
-    if (widget.widgetId) {
-        return getWidgetDefinition(widget.widgetId)?.request;
-    }
-
-    return widget.request;
+    return resolveDashboardWidgetDefinition(widget)?.request;
 }
 
 /** Resolves optional table presentation columns without changing widget query data. */
 export function resolveDashboardWidgetColumns(
     widget: DashboardWidget
 ): ColumnDefinition[] | undefined {
-    if (widget.reportId) {
-        return getReport(widget.reportId)?.columns;
-    }
-
-    if (widget.widgetId) {
-        return getWidgetDefinition(widget.widgetId)?.columns;
-    }
-
-    return undefined;
+    return resolveDashboardWidgetDefinition(widget)?.columns ?? widget.columns;
 }

@@ -43,4 +43,28 @@ describe("request cache", () => {
         expect(first).toBe(response);
         expect(second).toBe(response);
     });
+
+    it("cancels one consumer without cancelling another consumer", async () => {
+        const firstController = new AbortController();
+        const secondController = new AbortController();
+        let underlyingSignal: AbortSignal | undefined;
+        let resolveRequest!: (value: ApiResponse) => void;
+        const create = vi.fn((signal: AbortSignal) => {
+            underlyingSignal = signal;
+            return new Promise<ApiResponse>(resolve => {
+                resolveRequest = resolve;
+            });
+        });
+
+        const first = getOrCreateInFlightRequest("shared", create, firstController.signal);
+        const second = getOrCreateInFlightRequest("shared", create, secondController.signal);
+        firstController.abort();
+
+        await expect(first).rejects.toMatchObject({ name: "AbortError" });
+        expect(underlyingSignal?.aborted).toBe(false);
+
+        resolveRequest(response);
+        await expect(second).resolves.toBe(response);
+        expect(create).toHaveBeenCalledTimes(1);
+    });
 });

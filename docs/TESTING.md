@@ -1,28 +1,8 @@
 # Testing
 
-The frontend uses Vitest, React Testing Library, and jsdom. Tests are deterministic and frontend-only: they do not start PHP, connect to SQL Server, or require the Generic SQL API.
+The frontend uses Vitest, React Testing Library and jsdom. Tests are frontend-only and should mock network responses; shared setup rejects accidental unmocked fetch calls.
 
-## Test Organization
-
-Tests are colocated in `__tests__` directories near the production behavior they cover. Vitest discovers `*.test.*` and `*.spec.*` files through its standard discovery rules. Shared setup is in `src/test/setup.ts`.
-
-The setup file installs DOM matchers and a failing `fetch` guard. Any test that would make an unmocked network request fails immediately; component and integration tests must provide deliberate request mocks.
-
-## Coverage Areas
-
-- SQL contract parsing, mapping, and typed failures
-- `QueryDefinition` conversion to the universal API request
-- filters, including single-ended date-range regressions
-- production report, widget, and dashboard configuration separation
-- widget/dashboard loading and field resolution
-- report and dashboard component data flow with mocked responses
-- grid columns, sorting, grouping, and pagination behavior
-- request-cache expiry and in-flight deduplication
-- navigation structure and sidebar collapse behavior
-
-Unit tests cover deterministic engines and converters. Component/integration tests render real React components against small mocked API responses. Final visual appearance and native AG Grid drag interactions still require browser verification.
-
-## Local Validation
+## Validation commands
 
 ```bash
 npm test
@@ -31,10 +11,14 @@ npx tsc --noEmit
 npm run build
 ```
 
-Use `npm test -- --watch` for an interactive local Vitest session. Do not weaken assertions or alter tests merely to hide a production regression.
+Use `npm test -- --watch` while developing. The build already invokes a TypeScript project build, but the standalone check makes type failures easier to isolate.
 
-## Continuous Integration
+Tests are colocated in `__tests__` directories and cover definition validators/loaders, filters, report and dashboard request flow, widgets, grid behavior, exports, saved state, caching and navigation. Legacy query-parser tests cover that isolated engine, not proof that it participates in active report execution.
 
-`.github/workflows/frontend-ci.yml` runs on pushes and pull requests with Node.js 22. It installs locked dependencies with `npm ci`, then runs tests, lint, the standalone TypeScript check, and the production build.
+Configuration tests are especially important because Vite glob discovery loads checked-in production definitions. If configuration and tests disagree during a migration, report that mismatch rather than weakening validation.
 
-[Documentation index](README.md) · [Development](DEVELOPMENT.md) · [Contributing](../CONTRIBUTING.md)
+Browser verification is still appropriate for responsive layout, native AG Grid drag/resize interactions, chart presentation, downloaded files and backend integration.
+
+CI is defined in `.github/workflows/frontend-ci.yml` and uses the locked npm dependencies.
+
+[Development](DEVELOPMENT.md) · [Supported behavior](SUPPORTED.md)

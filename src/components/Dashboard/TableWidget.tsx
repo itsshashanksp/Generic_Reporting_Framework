@@ -282,7 +282,15 @@ export default function TableWidget({
 
         void loadTable();
 
-        return () => controller.abort();
+        return () => {
+            // Abort the HTTP consumer and independently invalidate its result.
+            // The sequence guard protects the view if cancellation cannot stop
+            // work already executing on the server.
+            if (latestRequest.current === requestId) {
+                latestRequest.current += 1;
+            }
+            controller.abort();
+        };
     }, [
         requestPayload,
         cacheKey,

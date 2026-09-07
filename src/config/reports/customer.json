@@ -2,10 +2,11 @@
   "id": "customer",
   "title": "Customer Report",
   "description": "Displays all customers.",
+
   "queryDefinition": {
-    "format": "sql",
-    "resource": "customer.sql"
-  },
+  "format": "sql",
+  "resource": "customer"
+},
   "columns": [
     {
       "field": "Cust_Name",
@@ -24,6 +25,7 @@
       "header": "Maximum Bill"
     }
   ],
+
   "filters": [
     {
       "field": "Cust_Name",
@@ -37,6 +39,7 @@
       "operator": "between"
     }
   ],
+
   "grid": {
     "pagination": {
       "enabled": true,
@@ -47,17 +50,16 @@
         100
       ]
     },
-    "rowSelection": "multiple",
-    "grouping": {
-      "enabled": true
-    }
+    "rowSelection": "multiple"
   },
+
   "toolbar": {
     "export": true,
     "refresh": true,
     "settings": false,
     "saveReport": false
   },
+
   "export": {
     "enabled": true,
     "formats": [

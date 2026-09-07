@@ -1,0 +1,209 @@
+{
+  "id": "bill-dashboard",
+  "title": "Sales & Purchase Dashboard",
+  "description": "Month-wise sales, category-wise sales and month-wise purchases for the current financial year.",
+  "layout": {
+    "columns": 12,
+    "tabletColumns": 6,
+    "mobileColumns": 1
+  },
+  "autoRefresh": {
+    "enabled": false,
+    "interval": 30000
+  },
+  "filters": [],
+  "widgets": [
+    {
+      "id": "sales-month-wise",
+      "type": "table",
+      "title": "Total Sales Month Wise",
+      "description": "Sales grouped by month for the current financial year.",
+      "width": 6,
+      "visible": true,
+      "position": {
+        "x": 0,
+        "y": 1
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "bill-sales-month-wise"
+      },
+      "columns": [
+        {
+          "field": "Month",
+          "header": "Month"
+        },
+        {
+          "field": "Sales",
+          "header": "Sales"
+        }
+      ],
+      "filters": [],
+      "pageSize": 10,
+      "export": {
+        "enabled": true,
+        "formats": [
+          "csv",
+          "excel"
+        ],
+        "exportCurrentView": true,
+        "exportAll": true,
+        "filename": "sales-month-wise"
+      }
+    },
+    {
+      "id": "purchases-month-wise",
+      "type": "table",
+      "title": "Purchases Month Wise",
+      "description": "Purchases grouped by month for the current financial year.",
+      "width": 6,
+      "visible": true,
+      "position": {
+        "x": 6,
+        "y": 1
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "bill-purchases-month-wise"
+      },
+      "columns": [
+        {
+          "field": "Month",
+          "header": "Month"
+        },
+        {
+          "field": "Purchases",
+          "header": "Purchases"
+        }
+      ],
+      "filters": [],
+      "pageSize": 10,
+      "export": {
+        "enabled": true,
+        "formats": [
+          "csv",
+          "excel"
+        ],
+        "exportCurrentView": true,
+        "exportAll": true,
+        "filename": "purchases-month-wise"
+      }
+    },
+    {
+      "id": "top-10-categories",
+      "type": "table",
+      "title": "Top 10 Item Category Sales",
+      "description": "Ten highest selling item categories for the financial year.",
+      "width": 6,
+      "visible": true,
+      "position": {
+        "x": 0,
+        "y": 2
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "bill-top-10-categories"
+      },
+      "columns": [
+        {
+          "field": "Category",
+          "header": "Category"
+        },
+        {
+          "field": "Sales",
+          "header": "Sales"
+        }
+      ],
+      "filters": [],
+      "pageSize": 10,
+      "export": {
+        "enabled": true,
+        "formats": [
+          "csv",
+          "excel"
+        ],
+        "exportCurrentView": true,
+        "exportAll": true,
+        "filename": "top-10-categories"
+      }
+    },
+    {
+      "id": "category-sales-month-wise",
+      "type": "table",
+      "title": "Month Wise / Category Wise Sales",
+      "description": "Category sales by month for the current financial year.",
+      "width": 6,
+      "visible": true,
+      "position": {
+        "x": 6,
+        "y": 2
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "bill-category-sales-month-wise"
+      },
+      "columns": [
+        {
+          "field": "Month",
+          "header": "Month"
+        },
+        {
+          "field": "Category",
+          "header": "Category"
+        },
+        {
+          "field": "Sales",
+          "header": "Sales"
+        }
+      ],
+      "filters": [],
+      "pageSize": 10,
+      "export": {
+        "enabled": true,
+        "formats": [
+          "csv",
+          "excel"
+        ],
+        "exportCurrentView": true,
+        "exportAll": true,
+        "filename": "category-sales-month-wise"
+      }
+    },
+    {
+      "id": "total-sales",
+      "type": "stat",
+      "title": "Total Sales",
+      "description": "Total sales for the current financial year.",
+      "width": 4,
+      "height": 175,
+      "visible": true,
+      "position": {
+        "x": 0,
+        "y": 3
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "bill-total-sales"
+      },
+      "filters": []
+    },
+    {
+      "id": "total-purchases",
+      "type": "stat",
+      "title": "Total Purchases",
+      "description": "Total purchases for the current financial year.",
+      "width": 4,
+      "height": 175,
+      "visible": true,
+      "position": {
+        "x": 4,
+        "y": 3
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "bill-total-purchases"
+      },
+      "filters": []
+    }
+  ]
+}

@@ -16,12 +16,19 @@ vi.mock("../../api/request", () => ({
 }));
 
 vi.mock("../../components/Grid/GenericGrid", () => ({
-    default: () => <div data-testid="report-grid" />,
+    default: ({ columns, onSortChange }: {
+        columns: Array<{ field: string }>;
+        onSortChange?: (sort: Array<{ field: string; direction: "ASC" | "DESC" }>) => void;
+    }) => <div data-testid="report-grid" data-columns={columns.map(column => column.field).join(",")}>
+        <button type="button" onClick={() => onSortChange?.([{ field: "Item_Desc", direction: "DESC" }])}>
+            Sort test grid
+        </button>
+    </div>,
 }));
 
-function renderReport() {
+function renderReport(reportId = "item") {
     return render(
-        <MemoryRouter initialEntries={["/reports/item"]}>
+        <MemoryRouter initialEntries={[`/reports/${reportId}`]}>
             <GridProvider>
                 <FilterProvider>
                     <Routes>
@@ -44,7 +51,7 @@ describe("ReportViewer runtime", () => {
         });
     });
 
-    it("keeps the toolbar inside the report card and builds runtime filters", async () => {
+    it("sends an SQL resource reference with the existing runtime state", async () => {
         renderReport();
         await screen.findByTestId("report-grid");
         const toolbar = screen.getByRole("toolbar", { name: "Report actions" });
@@ -55,12 +62,32 @@ describe("ReportViewer runtime", () => {
         await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(2));
         const request = executeRequestMock.mock.calls.at(-1)?.[0];
         expect(request).toMatchObject({
-            action: "select",
-            source: { table: "ItemMasterTable" },
+            action: "sql",
+            resource: "item",
             pagination: { page: 1, pageSize: 25 },
         });
         expect(request.filters).toContainEqual({ field: "Item_Code", operator: "LIKE", value: "%A1%" });
         expect(JSON.stringify(request)).not.toContain("SELECT");
+
+        fireEvent.click(screen.getByRole("button", { name: "Sort test grid" }));
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(3));
+        expect(executeRequestMock.mock.calls.at(-1)?.[0].sort).toEqual([
+            { field: "Item_Desc", direction: "DESC" },
+        ]);
+        expect(screen.getByTestId("report-grid").getAttribute("data-columns"))
+            .toBe("Item_Code,Item_Desc,Item_MRP");
+    });
+
+    it("loads the customer report through its configured SQL resource", async () => {
+        renderReport("customer");
+        await screen.findByTestId("report-grid");
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(1));
+
+        expect(executeRequestMock.mock.calls[0][0]).toMatchObject({
+            action: "sql",
+            resource: "customer",
+            pagination: { page: 1, pageSize: 25 },
+        });
     });
 
     it("renders a cached report immediately without another request", async () => {

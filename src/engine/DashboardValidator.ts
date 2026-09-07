@@ -3,6 +3,7 @@ import type { FilterDefinition } from "../types/filter";
 import {
     validateFilters as validateFilterDefinitions,
 } from "./FilterEngine/validator";
+import { getReportValidationErrors } from "./ReportDefinitionEngine/validator";
 
 export interface DashboardValidationResult {
     valid: boolean;
@@ -359,12 +360,15 @@ function validateWidget(
     }
 
 
-    const commonKeys = ["id", "type", "title", "description", "width", "height", "visible", "position"];
+    const commonKeys = [
+        "id", "type", "title", "description", "width", "height", "visible", "position",
+    ];
+    const definitionKeys = ["queryDefinition", "columns", "filters", "grid", "toolbar"];
     const typeKeys: Record<string, string[]> = {
         report: ["reportId"],
-        stat: ["request", "reportId", "widgetId", "format", "valueField"],
-        table: ["request", "reportId", "widgetId", "pageSize", "pageSizeOptions", "export"],
-        chart: ["request", "reportId", "widgetId", "xField", "yField", "chartType", "showLegend", "showTooltip", "showGrid", "showLabels"],
+        stat: ["request", "reportId", "widgetId", "format", "valueField", ...definitionKeys],
+        table: ["request", "reportId", "widgetId", "pageSize", "pageSizeOptions", "export", ...definitionKeys],
+        chart: ["request", "reportId", "widgetId", "xField", "yField", "chartType", "showLegend", "showTooltip", "showGrid", "showLabels", ...definitionKeys],
     };
     rejectUnknownProperties(
         widget,
@@ -442,6 +446,7 @@ function validateWidget(
     const hasReportId = widget.reportId !== undefined;
     const hasWidgetId = widget.widgetId !== undefined;
     const hasRequest = widget.request !== undefined;
+    const hasInlineDefinition = widget.queryDefinition !== undefined;
 
     if (widget.type === "report") {
         if (!isNonEmptyString(widget.reportId)) {
@@ -453,10 +458,29 @@ function validateWidget(
                 `Report widget "${String(widget.id ?? "")}" references unknown reportId: ${widget.reportId}`
             );
         }
-    } else if ([hasReportId, hasWidgetId, hasRequest].filter(Boolean).length !== 1) {
+    } else if ([hasReportId, hasWidgetId, hasRequest, hasInlineDefinition].filter(Boolean).length !== 1) {
         errors.push(
-            `${widget.type} widget "${String(widget.id ?? "")}" requires exactly one of widgetId, reportId, or request.`
+            `${widget.type} widget "${String(widget.id ?? "")}" requires exactly one of queryDefinition, widgetId, reportId, or request.`
         );
+    } else if (hasInlineDefinition) {
+        const inlineErrors = getReportValidationErrors(
+            {
+                id: widget.id,
+                title: widget.title,
+                description: widget.description,
+                queryDefinition: widget.queryDefinition,
+                columns: widget.columns,
+                filters: widget.filters ?? [],
+                grid: widget.grid,
+                toolbar: widget.toolbar,
+                export: widget.export,
+            },
+            { columnsRequired: false }
+        );
+
+        inlineErrors.forEach(error => {
+            errors.push(`${widgetLabel} inline definition: ${error}`);
+        });
     } else if (hasWidgetId) {
         if (!isNonEmptyString(widget.widgetId)) {
             errors.push(`${widgetLabel} widgetId must be a non-empty string.`);

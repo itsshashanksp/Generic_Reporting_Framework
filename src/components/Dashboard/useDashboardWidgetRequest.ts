@@ -147,7 +147,15 @@ export function useDashboardWidgetRequest(
 
         void load();
 
-        return () => controller.abort();
+        return () => {
+            // Invalidate this effect even when the transport or backend cannot
+            // honor cancellation. A late response must never update a newer
+            // dashboard/widget view.
+            if (requestSequence.current === sequence) {
+                requestSequence.current += 1;
+            }
+            controller.abort();
+        };
     }, [request, requestPayload, queryKey, cacheKey, refreshKey, retryKey]);
 
     const retry = useCallback(() => {

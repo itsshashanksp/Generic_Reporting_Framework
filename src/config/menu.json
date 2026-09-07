@@ -3,7 +3,14 @@
     "id": "dashboard",
     "title": "Dashboard",
     "icon": "dashboard",
-    "dashboardId": "customer-dashboard",
+    "dashboardId": "item-dashboard",
+    "visible": true
+  },
+  {
+    "id": "dashboard2",
+    "title": "Dashboard",
+    "icon": "dashboard",
+    "dashboardId": "bill-dashboard",
     "visible": true
   },
   {

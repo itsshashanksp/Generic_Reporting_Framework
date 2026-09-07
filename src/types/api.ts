@@ -68,3 +68,14 @@ export interface UniversalQueryRequest {
     filterLogic?: "AND" | "OR";
     with?: unknown;
 }
+
+export interface SqlResourceRequest {
+    action: "sql";
+    resource: string;
+    filters?: QueryFilter[];
+    sort?: QuerySort[];
+    pagination?: { page: number; pageSize: number };
+    filterLogic?: "AND" | "OR";
+}
+
+export type DataRequest = UniversalQueryRequest | SqlResourceRequest;

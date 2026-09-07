@@ -6,11 +6,12 @@ import {
     resolveDashboardWidgetColumns,
     resolveDashboardWidgetRequest,
 } from "..";
+import { validateDashboard } from "../../DashboardValidator";
 
 describe("DashboardEngine", () => {
     it("loads layout, filters and widgets in configured order", () => {
-        expect(getDashboardIds()).toContain("customer-dashboard");
-        const result = getDashboard("customer-dashboard");
+        expect(getDashboardIds()).toContain("item-dashboard");
+        const result = getDashboard("item-dashboard");
         expect(result.status).toBe("valid");
         if (result.status !== "valid") return;
 
@@ -21,18 +22,75 @@ describe("DashboardEngine", () => {
         ]);
     });
 
-    it("maps table and stat widget IDs without embedded dashboard requests", () => {
-        const result = getDashboard("customer-dashboard");
+    it("maps inline table and stat SQL resources", () => {
+        const result = getDashboard("item-dashboard");
         if (result.status !== "valid") throw new Error("Expected valid production dashboard");
         const table = result.dashboard.widgets.find(widget => widget.type === "table")!;
         const stat = result.dashboard.widgets.find(widget => widget.type === "stat")!;
 
-        expect(resolveDashboardWidgetRequest(table)?.source).toEqual({ table: "ItemMasterTable" });
+        expect(resolveDashboardWidgetRequest(table)).toMatchObject({
+            action: "sql",
+            resource: "item-dashboard-table",
+        });
         expect(resolveDashboardWidgetColumns(table)?.[0]).toMatchObject({ field: "Item_Code", header: "Item Code" });
-        expect(resolveDashboardWidgetRequest(stat)?.fields).toEqual(expect.arrayContaining([
-            expect.objectContaining({ function: "COUNT", alias: "TotalItems" }),
-        ]));
+        expect(resolveDashboardWidgetRequest(stat)).toMatchObject({
+            action: "sql",
+            resource: "item-dashboard-stats",
+        });
         expect(stat.valueField).toBe("TotalItems");
-        expect("request" in table).toBe(false);
+        expect("widgetId" in table).toBe(false);
+    });
+
+    it("resolves every inline Bill widget through the shared backend SQL resource mode", () => {
+        const result = getDashboard("bill-dashboard");
+        if (result.status !== "valid") throw new Error("Expected valid Bill dashboard");
+
+        const resources = result.dashboard.widgets.map(widget => {
+            expect("widgetId" in widget).toBe(false);
+            expect(widget.queryDefinition?.format).toBe("sql");
+            const request = resolveDashboardWidgetRequest(widget);
+            expect(request?.action).toBe("sql");
+            expect(JSON.stringify(request)).not.toContain("SELECT");
+            return request && "resource" in request ? request.resource : undefined;
+        });
+
+        expect(resources).toEqual([
+            "bill-sales-month-wise",
+            "bill-purchases-month-wise",
+            "bill-top-10-categories",
+            "bill-category-sales-month-wise",
+            "bill-total-sales",
+            "bill-total-purchases",
+        ]);
+
+        const salesTable = result.dashboard.widgets[0];
+        expect(resolveDashboardWidgetColumns(salesTable)?.map(column => column.field))
+            .toEqual(["Month", "Sales"]);
+    });
+
+    it("validates inline definitions and rejects ambiguous widget sources", () => {
+        const baseWidget = {
+            id: "inline-stat",
+            type: "stat",
+            title: "Inline statistic",
+            queryDefinition: { format: "sql", resource: "inline-stat" },
+            filters: [],
+        };
+
+        expect(validateDashboard({
+            id: "inline-dashboard",
+            title: "Inline dashboard",
+            widgets: [baseWidget],
+        }).valid).toBe(true);
+
+        const ambiguous = validateDashboard({
+            id: "ambiguous-dashboard",
+            title: "Ambiguous dashboard",
+            widgets: [{ ...baseWidget, widgetId: "item-dashboard-stats" }],
+        });
+        expect(ambiguous.valid).toBe(false);
+        expect(ambiguous.errors).toContain(
+            "stat widget \"inline-stat\" requires exactly one of queryDefinition, widgetId, reportId, or request."
+        );
     });
 });

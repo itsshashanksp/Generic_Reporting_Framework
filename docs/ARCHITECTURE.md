@@ -1,59 +1,53 @@
-# Architecture
+# Frontend architecture
 
-The frontend turns declarative SQL and JSON resources into requests for the Generic SQL API and renders the returned rows as reports or dashboard widgets.
-
-## Responsibility Layers
-
-| Layer | Responsibility |
-| --- | --- |
-| `src/config` | Authored SQL data definitions and JSON presentation definitions |
-| Definition engines | Load and validate reports, widgets, dashboards, columns, filters, and navigation |
-| `ReportQueryEngine` | Validate and parse the supported SQL subset |
-| Runtime/query builders | Merge immutable SQL intent with user-selected filter, sort, and page state |
-| `src/api` | Send universal JSON requests and normalize request errors |
-| Response and state engines | Parse API responses, cache requests, and provide React state contexts |
-| Components and pages | Render grids, filters, toolbars, widgets, dashboards, and application states |
-
-## End-to-End Flow
+The application is a configuration-driven React client. It discovers JSON files at build time, validates and normalizes them, adds user-selected state to a request, calls one Generic SQL API endpoint, and renders rows.
 
 ```text
-report.sql / widget.sql
-          +
-presentation JSON
-          |
-          v
-configuration loader and validator
-          |
-          v
-parsed QueryDefinition + presentation definition
-          |
-       runtime state
- (filters, sort, page)
-          |
-          v
-UniversalQueryRequest -> Generic SQL API -> ApiResponse
-          |
-          v
-report grid or dashboard widget
+src/config/*.json
+  -> definition loader and validator
+  -> normalized report/dashboard/widget definition
+  -> filters, sort and page state
+  -> UniversalQueryRequest (JSON over HTTP)
+  -> API response validation and request cache
+  -> report grid or dashboard widget
 ```
 
-SQL-provided filters and sorting remain immutable base query rules. Runtime selections are combined during request conversion without rewriting the authored SQL.
+## Responsibility map
 
-## Main Subsystems
+| Area | Responsibility |
+| --- | --- |
+| `src/config` | Reports, dashboards, menu entries and optional reusable widgets |
+| `ReportDefinitionEngine` | Discovers, validates and defaults report definitions |
+| `DashboardEngine` | Discovers dashboards and resolves inline, report-backed or reusable widget requests |
+| `WidgetEngine` | Loads optional reusable widget JSON definitions |
+| `FilterEngine` | Validates filters and converts applied values to API filters |
+| `ReportEngine` | Builds report runtime requests |
+| `src/api` | Posts requests and validates the response envelope |
+| `RequestCache` | Caches successful responses and deduplicates identical in-flight calls |
+| pages/components/contexts | Own UI state and rendering |
 
-- `ReportDefinitionEngine` resolves paired report JSON/SQL files and produces runtime report definitions.
-- `ReportQueryEngine` owns the SQL contract, parsing, loading, and conversion to the universal API request.
-- `DashboardEngine` validates dashboards and resolves report-backed or reusable widget-backed data requests.
-- `WidgetEngine`, `ColumnEngine`, and `FilterEngine` load presentation configuration for their respective concerns.
-- `RequestCache` caches completed responses and deduplicates equivalent in-flight requests.
-- `GenericGrid`, filter components, toolbar components, and dashboard widgets render the configured experience.
+The active frontend never reads, parses or executes SQL. In SQL resource mode it sends an opaque resource identifier to the backend. SQL files, credentials, allowlisting and execution belong to the backend. `ReportQueryEngine` still contains a parser/converter, but that converter is not wired into report or dashboard execution and should be treated as legacy code.
 
-## Application State
+## Discovery and startup
 
-React contexts isolate dashboard, grid, filter, search, and theme state. The request cache stores completed responses and coordinates equivalent in-flight requests. Report views also persist explicitly saved view state in browser storage; it is presentation/runtime state, not query authorship.
+Vite `import.meta.glob` discovers reports in `src/config/reports/*.json`, dashboards in `src/config/dashboards/*.json`, and reusable widgets in `src/config/widgets/*.json`. The navigation loader validates `src/config/menu.json` and verifies referenced report/dashboard IDs. Invalid definitions fail loudly; warnings cover non-fatal conditions such as an empty dashboard.
 
-## Design Boundary
+The router opens reports and dashboards by ID. The sidebar hides entries with `visible: false`, persists collapse/group expansion in local storage, and renders one visible child level. Keep menu nesting to one level even though recursive validation accepts deeper children.
 
-The browser never executes SQL. It parses the supported authoring form into the backend's universal JSON request contract. The backend remains responsible for validating and executing that request against its configured data source.
+The `/` Home route redirects to the first visible dashboard entry in `menu.json`, including a dashboard nested in a visible group. With the current menu ordering this is the Item Dashboard.
 
-[Documentation index](README.md) · [SQL / JSON Separation](SQL-JSON-SEPARATION.md) · [Query Engine](QUERY-ENGINE.md)
+## Runtime data flow
+
+For a report, `ReportViewer` starts with the configured request, appends applied UI filters, replaces sort with the grid sort model, and adds pagination when grid pagination is enabled. Dashboard widgets follow the same API contract, with behavior varying by widget type. A refresh bypasses a completed cache entry; identical in-flight work may still be shared.
+
+The API endpoint is `VITE_API_URL` and receives a JSON POST. A successful response must contain `success`, `message`, an array of object rows in `data`, and valid `meta`. Pagination values in `meta` may be `null`; row counts are non-negative and `executionTime` is null or non-negative.
+
+## State boundaries
+
+- Filter form state is separate from applied filter state; **Search** applies it.
+- Sort and page state live in the report or widget component.
+- Theme, dashboard filters and grid state use React contexts.
+- Saved reports use browser local storage.
+- Request caching is in-memory and is cleared by a page reload.
+
+See [Configuration reference](CONFIGURATION.md), [Query modes](QUERY-MODES.md), and [Feature behavior](FEATURES.md).

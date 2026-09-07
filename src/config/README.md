@@ -1,54 +1,112 @@
 # Configuration format
 
-All files in this directory use the runtime configuration schema. Unknown properties are rejected so a misspelling or misplaced setting cannot be silently ignored.
+All files in this directory use the runtime configuration schema. Unknown
+properties are rejected so misspellings and misplaced settings fail during
+configuration loading.
 
-SQL is the single source of truth for data and query logic: selected fields,
-sources, joins, static filters, grouping, HAVING, static ordering, aggregates,
-aliases, and supported expressions belong in `.sql`. JSON is the single source
-of truth for UI/UX and interaction configuration: labels, visible columns,
-filter controls, pagination controls, toolbar/export behavior, grid behavior,
-dashboard layout, and widget presentation. A JSON `queryDefinition` is only a
-safe reference to the authoritative SQL resource; it is not query logic.
+The reporting runtime supports two data modes while sharing the same filters,
+grid, toolbar, export, cache, cancellation, and response handling.
+
+## Query modes
+
+Legacy JSON mode keeps the existing Universal JSON request in `request`:
+
+```json
+{
+  "request": {
+    "action": "select",
+    "source": { "table": "CustomerTable" },
+    "fields": ["Cust_Name"]
+  }
+}
+```
+
+It is sent unchanged, apart from the existing runtime filter, sort, and
+pagination merge, and is handled by the backend `QueryController`.
+
+Backend SQL mode uses only an approved resource identifier:
+
+```json
+{
+  "queryDefinition": {
+    "format": "sql",
+    "resource": "item"
+  }
+}
+```
+
+The loader normalizes this to `{ "action": "sql", "resource": "item" }`.
+The frontend neither loads nor parses SQL and never sends SQL text. The backend
+`SQLController` resolves the identifier through its controlled registry and
+owns the SQL/data logic. Report JSON continues to own the UI/UX configuration.
+A report must define exactly one of `request` or `queryDefinition`.
 
 ## Canonical order
 
-Report files use this top-level order: `id`, `title`, `description`, `queryDefinition`, `request`, `columns`, `filters`, `grid`, `toolbar`, `export`.
+Report files use this top-level order: `id`, `title`, `description`,
+`queryDefinition` or `request`, `columns`, `filters`, `grid`, `toolbar`,
+`export`.
 
-Dashboard files use: `id`, `title`, `description`, `layout`, `autoRefresh`, `filters`, `widgets`. Each widget starts with `id`, `type`, `title`, and `description`, followed by layout (`width`, `height`, `visible`, `position`), its widget/report reference, and then type-specific presentation settings.
+Dashboard files use: `id`, `title`, `description`, `layout`, `autoRefresh`,
+`filters`, `widgets`. Each widget starts with `id`, `type`, `title`, and
+`description`, followed by layout, its inline definition or widget/report
+reference, and type-specific presentation settings.
 
-Menu entries use: `id`, `title`, `icon`, one destination, `visible`, and `children` for groups. The file is an array because that is the structure consumed by `NavigationEngine`.
+## Supported report presentation
 
-## Supported report properties
-
-- Query source: production reports use `queryDefinition` with `format: "sql"` and a flat `.sql` resource filename. Legacy configurations remain readable through `request` for compatibility, but production query logic belongs exclusively in SQL. SQL-backed definitions are normalized to the existing Universal request shape during loading.
-- Request: `action`, `source`, `fields`, `filters`, `joins`, `groupBy`, `having`, `sort`, `pagination`, `distinct`, `limit`, `filterLogic`, and `with`.
 - Column: `field`, `header`, `visible`, `sortable`, `width`.
 - Filter: `field`, `label`, `type`, `operator`, `options`, `visible`, `required`, `placeholder`.
 - Grid: `pagination` (`enabled`, `pageSize`, `pageSizeOptions`), `rowSelection`, and `grouping` (`enabled`, `groups`, `aggregates`).
 - Toolbar: `export`, `refresh`, `settings`, `saveReport`.
 - Export: `enabled`, `formats`, `filename`, `exportAll`, `exportCurrentView`.
 
-`settings` currently controls whether the disabled settings placeholder is displayed; settings functionality is therefore only partially supported.
+Column visibility remains a frontend grid concern. It does not alter either a
+Universal JSON projection or a backend SQL resource.
 
-## Supported dashboard properties
+`settings` currently controls whether the disabled settings placeholder is
+displayed; settings functionality is only partially supported.
+
+## Dashboards and widgets
 
 - Layout: `columns`, `tabletColumns`, `mobileColumns`.
 - Auto refresh: `enabled`, `interval`.
 - Filters use the same schema and behavior as report filters.
-- Common widget properties: `id`, `type`, `title`, `description`, `width`, `height`, `visible`, `position` (`x`, `y`).
 - Report widget: `reportId`.
-- Stat widget: `widgetId` (or compatible `reportId`/legacy `request`), `valueField`, `format`.
-- Table widget: `widgetId` (or compatible `reportId`/legacy `request`), `pageSize`, `pageSizeOptions`, `export`.
-- Chart widget: `widgetId` (or compatible `reportId`/legacy `request`), `xField`, `yField`, `chartType`, `showLegend`, `showTooltip`, `showGrid`, `showLabels`.
-- Data-driven widgets resolve `widgetId` through the explicit widget loader. A widget definition's `.sql` file owns the data query, while dashboard JSON owns layout and presentation. Legacy embedded Universal requests remain accepted for compatibility, but a widget must provide exactly one query source. Table pagination is configured on the dashboard widget and is sent at runtime as `pagination: { page, pageSize }`.
-- Reusable stat definitions do not declare `columns`; each dashboard stat supplies its own `title`, `valueField`, `format`, visibility, and layout. The stat reads that named field from the SQL result. Table widget definitions retain `columns` because table column presentation is shared by the table definition.
+- Stat widget: inline `queryDefinition`/legacy `request`, or `widgetId`/compatible `reportId`, plus `valueField` and `format`.
+- Table widget: inline `queryDefinition`/legacy `request`, or `widgetId`/compatible `reportId`, plus `columns`, `pageSize`, `pageSizeOptions`, and `export`.
+- Chart widget: inline `queryDefinition`/legacy `request`, or `widgetId`/compatible `reportId`, plus `xField`, `yField`, `chartType`, `showLegend`, `showTooltip`, `showGrid`, and `showLabels`.
 
-Configuration directories have explicit responsibilities: `reports/` contains standalone report JSON/SQL pairs, `dashboards/` contains dashboard layout and widget placement, and `widgets/` contains reusable data-driven widget JSON/SQL pairs. Report and widget SQL use separate static registries but share the same parser, `QueryDefinition`, converter, and Universal JSON API pipeline. SQL text and resource names are never included in API requests.
+Data-driven widgets may contain their full definition inline. Inline definitions
+are loaded by the same report-definition pipeline as reusable widget files.
+Existing `widgetId` values continue to resolve through the widget loader for
+gradual migration. Each widget selects exactly one data source. Both forms use the
+same two request modes as reports; SQL-backed widgets contain a backend resource
+ID, not a frontend `.sql` file. Dashboard JSON continues to own layout and
+instance presentation. Table pagination is merged into the resolved request at
+runtime. Stat definitions need no `columns`; table definitions can retain them
+for table presentation.
 
-## Supported navigation properties
+Configuration directories have explicit responsibilities: `reports/` contains
+standalone report JSON, `dashboards/` contains dashboard layout plus optional
+inline widget definitions, and `widgets/` contains reusable widget JSON. SQL
+files live only in the backend controlled resource directories.
 
-Each item supports `id`, `title`, `icon`, `visible`, and exactly one of `route`, `reportId`, `dashboardId`, or `children`. Routes must start with `/`. Report and dashboard references are checked against the loaded configuration IDs; filenames are not routing IDs.
+## Navigation
 
-## Intentionally not configurable
+Each menu item supports `id`, `title`, `icon`, `visible`, and exactly one of
+`route`, `reportId`, `dashboardId`, or `children`. Routes must start with `/`.
+Report and dashboard references are checked against loaded configuration IDs;
+filenames are not routing IDs.
 
-The runtime does not expose `autoHeight`, `autoWidth`, `minHeight`, `minWidth`, `colSpan`, `size`, or `showSavedReports`. Likewise, the former type-only fields `icon` (report), `search` (toolbar), `filterable`, `exportable`, and `type` (column), `format` (filter), and `value` (widget) are not part of JSON configuration.
+## Current runtime boundaries
+
+The existing report runtime sends filters, sort, pagination, and `filterLogic`
+when present. Authored grouping stays in the query/resource and grid grouping
+stays presentation-side. Search state and AG Grid column filters are not wired
+into report API requests today, so SQL mode does not claim server support for
+them. Selection and column visibility are client-side UI state.
+
+The runtime does not expose `autoHeight`, `autoWidth`, `minHeight`, `minWidth`,
+`colSpan`, `size`, or `showSavedReports`. The former type-only fields `icon`
+(report), `search` (toolbar), `filterable`, `exportable`, and `type` (column),
+`format` (filter), and `value` (widget) are not JSON configuration properties.

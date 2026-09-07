@@ -1,5 +1,5 @@
 import type { ExportConfig } from "./export";
-import type { QueryFilter, QuerySort, UniversalQueryRequest } from "./api";
+import type { DataRequest } from "./api";
 import type { ColumnDefinition } from "./column";
 import type {
     ReportPresentationDefinition,
@@ -22,10 +22,7 @@ export type ChartType =
     | "line"
     | "pie";
 
-export interface WidgetRequest extends Omit<UniversalQueryRequest, "filters" | "sort"> {
-    filters?: QueryFilter[];
-    sort?: QuerySort[];
-}
+export type WidgetRequest = DataRequest;
 
 /** Reusable widget data plus optional shared presentation metadata. */
 export type WidgetDefinitionConfiguration =
@@ -36,7 +33,7 @@ export type WidgetDefinitionConfiguration =
         columns?: ColumnDefinition[];
     };
 
-export interface DashboardWidget {
+export interface DashboardWidgetPresentation {
     id: string;
 
     type: WidgetType;
@@ -85,3 +82,13 @@ export interface DashboardWidget {
         y: number;
     };
 }
+
+/**
+ * Dashboard-owned layout combined with an optional inline reusable widget
+ * definition. `widgetId` remains available for registry-backed widgets.
+ */
+export type DashboardWidget = DashboardWidgetPresentation
+    & Partial<Omit<
+        WidgetDefinitionConfiguration,
+        "id" | "title" | "description" | "export"
+    >>;

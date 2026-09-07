@@ -1,70 +1,47 @@
-# Development
+# Frontend development
 
-Start with [Getting Started](GETTING-STARTED.md) for installation and environment setup. This guide covers the repository layout and the workflows used to extend the frontend.
+See [Getting started](GETTING-STARTED.md) for installation.
 
-## Project Structure
+## Project structure
 
 ```text
 src/
-├── api/          Generic SQL API transport and request errors
-├── components/   shared UI, grids, filters, toolbars, and dashboard widgets
-├── config/       report/widget SQL, presentation JSON, dashboards, and menu
-├── engine/       parsing, loading, validation, runtime state, caching, and export
-├── pages/        route-level report, dashboard, and settings views
+├── api/          API transport and response validation
+├── components/   grids, filters, toolbars and dashboard widgets
+├── config/       report/dashboard/widget/menu JSON
+├── contexts/     dashboard, filter, grid, search and theme state
+├── engine/       definition validation, runtime state, cache and export
+├── pages/        route-level views
 ├── router/       application routes
-├── styles/       global styling
-├── test/         shared automated test setup
+├── test/         shared test setup
 └── types/        TypeScript contracts
 ```
 
-Current authored configuration is separated by feature:
+The active loaders discover JSON with Vite glob imports. There is no frontend SQL authoring step.
 
-```text
-src/config/
-├── dashboards/
-├── reports/
-├── widgets/
-├── menu.json
-└── README.md
-```
-
-Read `src/config/README.md` for the accepted JSON keys and ordering conventions.
-
-## Common Commands
+## Commands
 
 ```bash
-npm run dev          # Vite development server
-npm test             # deterministic Vitest run
-npm run lint         # ESLint
-npx tsc --noEmit     # standalone TypeScript check
-npm run build        # TypeScript project build and Vite production bundle
-npm run preview      # preview an existing production build
+npm run dev
+npm test
+npm run lint
+npx tsc --noEmit
+npm run build
+npm run preview
 ```
 
-Run all four validation commands before proposing a change: tests, lint, type-check, and build.
+Run tests, lint, standalone typecheck, and build after a documentation-adjacent configuration or runtime change.
 
-## Add or Change a Report
+## Configuration workflows
 
-1. Create matching `src/config/reports/<id>.sql` and `<id>.json` files.
-2. Keep query semantics in SQL and presentation in JSON.
-3. Reference the SQL file with `queryDefinition`.
-4. Add `menu.json` navigation only if the report should be directly reachable.
-5. Add focused parser, configuration, or component coverage for new behavior.
+To add a report, create `src/config/reports/<id>.json`, choose one [query mode](QUERY-MODES.md), declare columns and filters, and add a menu reference if it should be reachable.
 
-## Add or Change a Widget
+To add a dashboard, create `src/config/dashboards/<id>.json`, select its layout and give each widget exactly one valid source. Inline widgets are supported. To reuse a non-report widget definition through `widgetId`, create JSON under `src/config/widgets`. To reuse a report, prefer `reportId`.
 
-Create matching widget SQL/JSON when data should be reusable, then reference its ID from dashboard JSON. Stat presentation belongs to the dashboard and uses `valueField`; table columns remain JSON presentation. A report widget may instead reference an existing report.
+When changing a schema, update its TypeScript contracts, validator, loader/defaults, focused tests, example configuration, and this documentation together. Remember that accepted schema and wired UI behavior can differ; document both.
 
-## Add or Change a Dashboard
+## Safety boundaries
 
-Define layout and widget references in `src/config/dashboards`. Do not create dashboard SQL or embed query request objects. Confirm every referenced report or widget exists and that field mappings match the selected SQL aliases.
+Do not commit local `.env` files, credentials, `dist`, or coverage. Backend SQL resources are referenced only by ID from this frontend. Changes to the legacy `ReportQueryEngine` do not affect active requests unless a runtime integration is deliberately added.
 
-## Change the SQL Parser
-
-Parser work must remain representable by the public universal API contract. Update the authoring contract, validation, parser mapping, typed errors, converter tests, and documentation together. Reject unsupported syntax explicitly rather than producing an approximate request.
-
-## Scope and Configuration Safety
-
-Do not commit `.env` files, credentials, generated `dist` output, or coverage output. Frontend changes must not modify the backend repository. Preserve strict SQL/JSON ownership and avoid reintroducing legacy production `request` definitions.
-
-[Documentation index](README.md) · [Testing](TESTING.md) · [Contributing](../CONTRIBUTING.md)
+[Configuration reference](CONFIGURATION.md) · [Testing](TESTING.md) · [Contributing](../CONTRIBUTING.md)

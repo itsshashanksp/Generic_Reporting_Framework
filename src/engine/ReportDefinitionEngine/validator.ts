@@ -1,6 +1,5 @@
 import type { FilterType } from "../../types/filter";
 import { allowedOperators } from "../FilterEngine/validator";
-import { isValidSqlResourceReference } from "../ReportQueryEngine/sqlContract";
 
 const REPORT_KEYS = ["id", "title", "description", "queryDefinition", "request", "columns", "filters", "grid", "toolbar", "export"];
 const REQUEST_KEYS = ["action", "source", "fields", "filters", "joins", "groupBy", "having", "sort", "pagination", "distinct", "limit", "filterLogic", "with"];
@@ -51,9 +50,9 @@ function validateQueryDefinitionReference(value: unknown, errors: string[]) {
     if (
         typeof value.resource === "string"
         && value.resource.trim().length > 0
-        && !isValidSqlResourceReference(value.resource)
+        && !/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(value.resource)
     ) {
-        errors.push("Report queryDefinition resource must be a .sql filename without a path.");
+        errors.push("Report queryDefinition resource must be a safe backend resource identifier.");
     }
 }
 

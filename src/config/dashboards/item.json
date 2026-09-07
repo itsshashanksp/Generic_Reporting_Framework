@@ -1,5 +1,5 @@
 {
-  "id": "customer-dashboard",
+  "id": "item-dashboard",
   "title": "Item Dashboard",
   "description": "Item reporting dashboard.",
   "layout": {
@@ -34,7 +34,33 @@
         "x": 0,
         "y": 1
       },
-      "widgetId": "item-dashboard-table",
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "item-dashboard-table"
+      },
+      "columns": [
+        {
+          "field": "Item_Code",
+          "header": "Item Code"
+        },
+        {
+          "field": "Item_Desc",
+          "header": "Item Description"
+        },
+        {
+          "field": "Sale_Rate",
+          "header": "Sale Rate"
+        },
+        {
+          "field": "Item_MRP",
+          "header": "Item MRP"
+        },
+        {
+          "field": "Std_Vat",
+          "header": "GST %"
+        }
+      ],
+      "filters": [],
       "pageSize": 10,
       "export": {
         "enabled": true,
@@ -59,7 +85,11 @@
         "x": 0,
         "y": 2
       },
-      "widgetId": "item-dashboard-stats",
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "item-dashboard-stats"
+      },
+      "filters": [],
       "valueField": "TotalItems",
       "format": "number"
     },
@@ -67,6 +97,7 @@
       "id": "minimum-sp-item",
       "type": "stat",
       "title": "Minimum Sale Price",
+      "description": "Minimum sale price of items matching the selected filters.",
       "width": 4,
       "height": 175,
       "visible": true,
@@ -74,7 +105,11 @@
         "x": 4,
         "y": 2
       },
-      "widgetId": "item-dashboard-stats",
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "item-dashboard-stats"
+      },
+      "filters": [],
       "valueField": "MinimumSP",
       "format": "currency"
     },
@@ -82,6 +117,7 @@
       "id": "maximum-sp-item",
       "type": "stat",
       "title": "Maximum Sale Price",
+      "description": "Maximum sale price of items matching the selected filters.",
       "width": 4,
       "height": 175,
       "visible": true,
@@ -89,7 +125,11 @@
         "x": 8,
         "y": 2
       },
-      "widgetId": "item-dashboard-stats",
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "item-dashboard-stats"
+      },
+      "filters": [],
       "valueField": "MaximumSP",
       "format": "currency"
     },
@@ -97,6 +137,7 @@
       "id": "total-value",
       "type": "stat",
       "title": "Total Value",
+      "description": "Total value of items matching the selected filters.",
       "width": 4,
       "height": 175,
       "visible": true,
@@ -104,7 +145,11 @@
         "x": 0,
         "y": 3
       },
-      "widgetId": "item-dashboard-stats",
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "item-dashboard-stats"
+      },
+      "filters": [],
       "valueField": "TotalValue",
       "format": "currency"
     }

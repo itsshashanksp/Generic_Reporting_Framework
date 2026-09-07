@@ -28,7 +28,7 @@ import TableWidget from "../components/Dashboard/TableWidget";
 import ErrorState from "../components/Common/Error";
 
 export default function Dashboard({
-    dashboardId = "customer-dashboard",
+    dashboardId = "item-dashboard",
 }: {
     dashboardId?: string;
 }) {

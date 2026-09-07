@@ -2,7 +2,7 @@ import type { ColumnDefinition } from "./column";
 import type { FilterDefinition } from "./filter";
 import type { GroupingConfig } from "./grouping";
 import type { ExportConfig } from "./export";
-import type { QuerySort, UniversalQueryRequest } from "./api";
+import type { DataRequest, QuerySort } from "./api";
 export interface SortDefinition {
     field: string;
     direction: "ASC" | "DESC";
@@ -14,11 +14,9 @@ export interface PaginationConfig {
     pageSizeOptions?: number[];
 }
 
-export interface ReportRequest extends Omit<UniversalQueryRequest, "sort"> {
-    sort?: QuerySort[];
-}
+export type ReportRequest = DataRequest & { sort?: QuerySort[] };
 
-/** Static SQL authoring metadata. The referenced resource is authoritative. */
+/** Backend-owned SQL resource metadata. No SQL text is loaded by the frontend. */
 export interface ReportQueryDefinitionReference {
     format: "sql";
     resource: string;
@@ -68,7 +66,7 @@ export type ReportConfiguration = ReportPresentationDefinition & (
       }
 );
 
-/** Normalized definition consumed by the existing report runtime. */
+/** Normalized definition consumed by the shared report runtime. */
 export interface ReportDefinition extends ReportPresentationDefinition {
     queryDefinition?: ReportQueryDefinitionReference;
 

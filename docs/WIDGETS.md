@@ -1,22 +1,25 @@
-# Widgets
+# Dashboard widgets
 
-Reusable widget data definitions live in `src/config/widgets` as paired SQL and JSON resources. Widget SQL owns the query; widget JSON identifies the resource and may supply presentation metadata that is genuinely shared by all consumers.
+Dashboard widgets are either report renderers or focused stat, table, and chart views.
 
-Dashboard JSON owns the presentation and layout of each widget instance. The supported widget types are `report`, `stat`, `table`, and `chart`.
+## Source matrix
 
-## Widget Types
+| Widget type | Allowed source |
+| --- | --- |
+| `report` | Exactly `reportId` |
+| `stat`, `table`, `chart` | Exactly one of inline `request`, inline SQL `queryDefinition`, `reportId`, or reusable `widgetId` |
 
-- A `stat` selects one SQL result property through dashboard `valueField` and formats it as a number, decimal, or currency. It does not require `widget.json.columns`.
-- A `table` uses configured columns because headers, sizes, alignment, and formatting are table presentation. It supports server pagination, sorting, filters, and configured export behavior.
-- A `chart` maps SQL result properties through `xField` and `yField`, with dashboard-owned chart type and display options.
-- A `report` embeds an existing report definition in the dashboard.
+Inline definitions keep dashboard configuration self-contained. Reusable definitions in `src/config/widgets/*.json` remain supported for `widgetId` compatibility. Report reuse shares the report request and columns.
 
-For a stat, the flow is direct:
+## Runtime behavior
 
-```text
-dashboard valueField -> matching property in widget SQL result -> displayed value
-```
+Dashboard filters are appended to every widget request. Each widget has independent loading, empty, error and retry states and its own dashboard/widget cache scope.
 
-Keep fields needed by a widget in its SQL `SELECT`. Keep labels, formats, position, size, visibility, and chart options in dashboard JSON. Do not introduce JSON query objects as a replacement for SQL-backed widget definitions.
+- Stat reads `valueField` from the first row (or the first property) and formats using the Indian locale.
+- Table uses server pagination, supports sorting and optional CSV/Excel export. Missing columns are inferred from the first row.
+- Chart uses Recharts and supports bar, line and pie charts. Non-numeric Y values become zero.
+- Report renders a report grid inside its card.
 
-[Documentation index](README.md) · [Dashboards](DASHBOARDS.md) · [SQL / JSON Separation](SQL-JSON-SEPARATION.md)
+Although inline widget schema accepts `filters`, `grid`, and `toolbar`, the current dashboard renderer does not wire these widget-local controls through. Configure dashboard-level filters and type-specific widget settings instead.
+
+See [Configuration reference](CONFIGURATION.md#dashboard-widget-sources) and [Examples](EXAMPLES.md).

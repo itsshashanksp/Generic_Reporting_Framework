@@ -1,32 +1,20 @@
-# Documentation
+# Frontend documentation
 
-Use this page as the navigation hub for the Generic Reporting Framework frontend.
+These documents describe the behavior of the current frontend implementation.
 
-## Getting Started
+| Guide | Contents |
+| --- | --- |
+| [Architecture](ARCHITECTURE.md) | Discovery, validation, runtime flow and ownership boundaries |
+| [Configuration reference](CONFIGURATION.md) | Complete report, dashboard, widget and menu schemas |
+| [Query modes](QUERY-MODES.md) | Active JSON request and SQL resource modes |
+| [Feature behavior](FEATURES.md) | Filtering, grids, exports, saved reports and caching |
+| [Examples and recipes](EXAMPLES.md) | Copyable configurations and common tasks |
+| [Reports](REPORTS.md) | Report-specific authoring and runtime behavior |
+| [Widgets](WIDGETS.md) | Widget sources and type-specific options |
+| [Dashboards](DASHBOARDS.md) | Layout, filters and refresh behavior |
+| [Getting started](GETTING-STARTED.md) | Installation and local execution |
+| [Development](DEVELOPMENT.md) | Project layout and change workflow |
+| [Testing](TESTING.md) | Test, lint, typecheck and build commands |
+| [Supported and unsupported](SUPPORTED.md) | Explicit capability boundary and known gaps |
 
-- [Getting Started](GETTING-STARTED.md) — prerequisites, installation, configuration, and first run
-- [Development](DEVELOPMENT.md) — project structure and common development workflows
-
-## Architecture
-
-- [Architecture](ARCHITECTURE.md) — application layers and end-to-end request flow
-- [SQL / JSON Separation](SQL-JSON-SEPARATION.md) — ownership rules for data and presentation configuration
-- [Query Engine](QUERY-ENGINE.md) — supported SQL authoring contract and request conversion
-
-## Features
-
-- [Reports](REPORTS.md) — report definitions, grids, filters, exports, and saved views
-- [Widgets](WIDGETS.md) — reusable data definitions and dashboard widget types
-- [Dashboards](DASHBOARDS.md) — dashboard composition and widget runtime behavior
-
-## Quality
-
-- [Testing](TESTING.md) — automated test strategy, local commands, and CI checks
-- [Contributing](../CONTRIBUTING.md) — contribution workflow and review expectations
-
-## Project Planning
-
-- [Roadmap](ROADMAP.md) — completed phases and planned work
-- [License](../LICENSE) — MIT license terms
-
-[Back to project README](../README.md)
+`QUERY-ENGINE.md` and `SQL-JSON-SEPARATION.md` are retained as compatibility pointers; the active contract is documented in [Query modes](QUERY-MODES.md).

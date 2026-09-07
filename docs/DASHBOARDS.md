@@ -1,28 +1,21 @@
 # Dashboards
 
-Dashboard JSON in `src/config/dashboards` composes report-backed and reusable widget-backed views. A dashboard is a presentation container; it does not own SQL or query logic.
+A dashboard is one JSON file in `src/config/dashboards` containing layout, optional shared filters/refresh, and widgets.
 
-## Configuration Responsibilities
+## Layout
 
-Each dashboard widget declares its type, title, visibility, position, and dimensions. Type-specific properties select presentation behavior:
+The rendered column defaults are 12 desktop, 6 tablet and 1 mobile. Desktop honors widget `position.x` (zero-based), `position.y` (one-based CSS row), width and pixel height. Position and width must fit desktop columns. At 1024px and 768px breakpoints, explicit positions are removed and widths are proportionally scaled upward with `ceil`.
 
-- stat widgets use `widgetId`, `valueField`, and `format`
-- table widgets use a report or widget source plus paging and export options
-- chart widgets use `xField`, `yField`, `chartType`, and display flags
-- report widgets reference a configured report
+Widgets without explicit position flow through the CSS grid. Invisible widgets are omitted.
 
-The dashboard validator rejects unknown properties, invalid layouts, unresolved references, and incompatible widget settings before rendering.
+## Filters and refresh
 
-## Runtime Flow
+Dashboard filters use the same controls and operators as reports. **Search** applies the current form to all widgets; **Clear** removes applied dashboard filters.
 
-1. `DashboardEngine` loads and validates the requested dashboard JSON.
-2. Each visible widget resolves its report or reusable widget definition.
-3. SQL is parsed and combined with dashboard/runtime filters, sorting, and pagination where applicable.
-4. Equivalent requests share cached or in-flight results.
-5. The widget frame renders loading, error, empty, and success states.
+Auto-refresh requires a positive millisecond interval when enabled. The timer refreshes all widget request keys. Manual refresh does the same. The page indicator ends after a fixed one second and is not a promise that all widgets finished.
 
-Dashboard-level filters can feed compatible widget requests. Table widgets maintain server-side page and sort state; stats and charts map response fields specified by their dashboard definitions. Widget failures are contained so one failed request does not replace the entire dashboard.
+## Data composition
 
-There is intentionally no `dashboard.sql`: query ownership remains with the report or widget referenced by each dashboard entry.
+A dashboard may mix inline JSON requests, inline SQL resource references, report-backed widgets and reusable widget references. An empty widget list is allowed but warns during validation.
 
-[Documentation index](README.md) · [Widgets](WIDGETS.md) · [Architecture](ARCHITECTURE.md)
+See [Widgets](WIDGETS.md), [Configuration reference](CONFIGURATION.md#dashboard-definition), and the [responsive dashboard example](EXAMPLES.md#13-responsive-dashboard).

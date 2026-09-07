@@ -15,6 +15,19 @@ export function getNavigationRoute(item: NavigationItem): string {
     return "";
 }
 
+export function getFirstDashboardRoute(items: NavigationItem[]): string | null {
+    for (const item of items) {
+        if (item.visible === false) continue;
+        if (item.dashboardId) return getNavigationRoute(item);
+        if (item.children) {
+            const childRoute = getFirstDashboardRoute(item.children);
+            if (childRoute) return childRoute;
+        }
+    }
+
+    return null;
+}
+
 export function loadNavigation(value: unknown, options: NavigationLoadOptions = {}): NavigationItem[] {
     if (!Array.isArray(value)) throw new Error("Navigation configuration must be an array.");
     const ids = new Set<string>();

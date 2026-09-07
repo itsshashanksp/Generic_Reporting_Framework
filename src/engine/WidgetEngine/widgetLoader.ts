@@ -1,7 +1,6 @@
 import type { ReportDefinition } from "../../types/report";
 import type { WidgetDefinitionConfiguration } from "../../types/widget";
 import { loadDefinition } from "../ReportDefinitionEngine";
-import { getWidgetSqlDefinition } from "../ReportQueryEngine";
 
 const widgetModules = import.meta.glob(
     "../../config/widgets/*.json",
@@ -17,10 +16,7 @@ export function buildWidgetRegistry(
 
     Object.entries(modules).forEach(([source, configuration]) => {
         try {
-            const widget = loadDefinition(configuration, {
-                resolveSql: getWidgetSqlDefinition,
-                columnsRequired: false,
-            });
+            const widget = loadDefinition(configuration, { columnsRequired: false });
             if (Object.prototype.hasOwnProperty.call(registry, widget.id)) {
                 console.error(`Duplicate widget definition id "${widget.id}" in ${source}.`);
                 return;

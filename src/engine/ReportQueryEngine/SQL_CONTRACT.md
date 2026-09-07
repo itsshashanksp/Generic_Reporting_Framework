@@ -1,7 +1,12 @@
-# report.sql authoring contract (initial version)
+# Legacy frontend SQL parser contract (non-runtime)
 
-`report.sql` is a frontend authoring resource. The parser accepts one read-only
-statement with this grammar:
+This document describes the retained parser/converter test fixture from the
+former frontend SQL execution path. Production report and widget loading no
+longer imports this parser, loads `.sql` assets, or converts SQL into Universal
+JSON. New SQL-backed definitions send only an approved resource ID to the
+backend `SQLController`; backend documentation is authoritative for that mode.
+
+The legacy parser accepts one read-only statement with this grammar:
 
 ```text
 query       := SELECT [DISTINCT] [TOP positive_integer] select_item ("," select_item)* FROM table_ref join* [WHERE predicate (AND predicate)*] [GROUP BY field ("," field)*] [HAVING having_predicate (AND having_predicate)*] [ORDER BY sort_item ("," sort_item)*] [";"]
@@ -185,12 +190,12 @@ support. No such shape is added in this phase.
 Existing JSON reports may continue using Universal API features that are not
 yet part of this SQL subset.
 
-## Resources and safety
+## Historical resources and safety
 
-SQL resources live directly in `src/config/reports/` for standalone reports
-and `src/config/widgets/` for reusable data-driven widgets. Each category is
-bundled by its own explicit Vite static glob and resolved only through its
-corresponding registry. A reference is a case-sensitive basename, for example:
+Before backend SQL mode, resources lived in the frontend report/widget config
+directories and were bundled with Vite. Those production resources and loaders
+have been removed. The following reference is historical parser documentation,
+not the current configuration contract:
 
 ```json
 { "format": "sql", "resource": "customer.sql" }
@@ -203,13 +208,11 @@ and makes report/widget resolution fail clearly. The report loader never scans
 widget resources, and the widget loader never scans report resources. Duplicate
 basenames within a registry make registry construction fail.
 
-These SQL files are static authoring resources, not secrets. They must not
-contain credentials, passwords, connection strings, or API secrets. The loader
-does not execute SQL, connect to a database, or send SQL to the backend. The
-backend remains responsible for database access, credentials, parameterization,
-execution, and security.
+Current frontend references omit `.sql`, accept only a safe backend resource
+identifier, and never access file contents. Backend SQL files must not contain
+credentials; database configuration remains backend-only.
 
-## Runtime separation
+## Historical conversion model
 
 `QueryDefinition` contains the static source, fields, base filters, joins,
 grouping, HAVING, DISTINCT, TOP/limit, and authored base sorting. Runtime sorting
@@ -219,10 +222,8 @@ application state and future runtime grouping selections remain UI concerns.
 Neither authored nor runtime sorting uses positional values such as `ORDER BY
 1`. No runtime state is interpolated into SQL text.
 
-SQL is the only production authoring format for anything that changes database
-results or computation. Report and widget JSON may describe columns, labels,
-filter controls, grid behavior, pagination controls, export, and presentation,
-but must not duplicate SELECT fields, aggregates, joins, static filters,
-GROUP BY, HAVING, or static ORDER BY. The JSON `queryDefinition` object only
-identifies the statically bundled SQL resource. User-entered filters, sorting,
-and pagination remain runtime state and are merged only after SQL parsing.
+This `QueryDefinition` conversion remains covered only by its isolated legacy
+tests. It is not part of report or widget runtime. Current SQL/data logic lives
+in approved backend resources; JSON owns frontend presentation, and the shared
+runtime adds filters, sorting, and pagination to the resource request without
+parsing or modifying SQL.
