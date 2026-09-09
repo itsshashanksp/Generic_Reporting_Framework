@@ -9,6 +9,7 @@ import {
     defaultGridOptions,
     gridTheme,
 } from "../../engine/GridEngine";
+import { getContentMinWidth } from "../../engine/GridEngine/contentWidth";
 
 import type { GridConfig } from "../../types/report";
 import type { ColumnDefinition } from "../../types/column";
@@ -67,7 +68,13 @@ export default function GenericGrid({
                     headerName: group.header ?? group.field,
                     sortable: true,
                     filter: false,
-                    width: 200,
+                    initialWidth: 200,
+                    minWidth: getContentMinWidth(
+                        rows,
+                        group.field,
+                        group.header ?? group.field,
+                        true,
+                    ),
                 })),
                 ...aggregateColumns.map(aggregate => ({
                     field: aggregate.alias ?? `${aggregate.function}_${aggregate.field}`,
@@ -76,7 +83,15 @@ export default function GenericGrid({
                         ?? `${aggregate.function} ${aggregate.field}`,
                     sortable: true,
                     filter: false,
-                    width: 180,
+                    initialWidth: 180,
+                    minWidth: getContentMinWidth(
+                        rows,
+                        aggregate.alias ?? `${aggregate.function}_${aggregate.field}`,
+                        aggregate.header
+                            ?? aggregate.alias
+                            ?? `${aggregate.function} ${aggregate.field}`,
+                        true,
+                    ),
                 })),
             ]
             : columns
@@ -86,9 +101,15 @@ export default function GenericGrid({
                     headerName: column.header,
                     sortable: column.sortable,
                     filter: false,
-                    width: column.width,
+                    initialWidth: column.width,
+                    minWidth: getContentMinWidth(
+                        rows,
+                        column.field,
+                        column.header,
+                        column.sortable ?? true,
+                    ),
                 }));
-    }, [columns, gridConfig.grouping]);
+    }, [columns, gridConfig.grouping, rows]);
 
     const totalPages = serverPagination
         ? Math.max(1, Math.ceil(serverPagination.totalRows / serverPagination.pageSize))

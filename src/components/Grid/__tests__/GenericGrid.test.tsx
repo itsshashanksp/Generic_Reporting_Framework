@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GridProvider } from "../../../engine/GridContext";
 import { defaultColumn, defaultGridOptions } from "../../../engine/GridEngine";
+import { getContentMinWidth } from "../../../engine/GridEngine/contentWidth";
 import GenericGrid from "../GenericGrid";
 
 const { agGridProps } = vi.hoisted(() => ({ agGridProps: vi.fn() }));
@@ -31,6 +32,8 @@ describe("GenericGrid shared configuration", () => {
         const props = agGridProps.mock.calls.at(-1)?.[0];
         expect(props.columnDefs.map((column: { field: string }) => column.field)).toEqual(["Code", "Description"]);
         expect(props.columnDefs.map((column: { headerName: string }) => column.headerName)).toEqual(["Item Code", "Item Description"]);
+        expect(props.columnDefs.map((column: { initialWidth: number }) => column.initialWidth)).toEqual([150, 240]);
+        expect(props.columnDefs.every((column: { minWidth: number }) => column.minWidth >= 150)).toBe(true);
         expect(props.defaultColDef).toMatchObject({ resizable: true, suppressMovable: false });
         expect(props.maintainColumnOrder).toBe(true);
         expect(props.suppressMovableColumns).toBe(false);
@@ -61,11 +64,30 @@ describe("GenericGrid shared configuration", () => {
     });
 
     it("defines resizable and movable defaults", () => {
-        expect(defaultColumn).toMatchObject({ resizable: true, suppressMovable: false });
+        expect(defaultColumn).toMatchObject({
+            initialFlex: 1,
+            minWidth: 150,
+            resizable: true,
+            suppressMovable: false,
+        });
+        expect(defaultColumn).not.toHaveProperty("flex");
         expect(defaultGridOptions).toMatchObject({
             maintainColumnOrder: true,
             suppressMovableColumns: false,
             suppressDragLeaveHidesColumns: true,
         });
+    });
+
+    it("calculates independent content minimums for arbitrary fields", () => {
+        const rows = [{
+            Code: "A",
+            Description: "A description that is much longer than the other values",
+            Category: "Tools",
+        }];
+        const measureText = (value: string) => value.length * 8;
+
+        expect(getContentMinWidth(rows, "Code", "Code", true, measureText)).toBe(150);
+        expect(getContentMinWidth(rows, "Category", "Category", true, measureText)).toBe(150);
+        expect(getContentMinWidth(rows, "Description", "Description", true, measureText)).toBeGreaterThan(400);
     });
 });

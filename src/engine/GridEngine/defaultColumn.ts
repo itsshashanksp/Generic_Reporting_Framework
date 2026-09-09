@@ -7,6 +7,6 @@ export const defaultColumn: ColDef = {
     unSortIcon: true,
     resizable: true,
     suppressMovable: false,
-    flex: 1,
+    initialFlex: 1,
     minWidth: 150,
 };
