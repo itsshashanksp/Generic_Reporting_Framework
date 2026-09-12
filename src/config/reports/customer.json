@@ -4,9 +4,34 @@
   "description": "Displays all customers.",
 
   "queryDefinition": {
-  "format": "sql",
-  "resource": "customer"
-},
+    "format": "sql",
+    "resource": "reports/customer",
+    "execution": {
+      "columns": [
+        "Cust_Name",
+        "TotalCustomers",
+        "MinimumBill",
+        "MaximumBill"
+      ],
+      "filters": {
+        "Cust_Name": {
+          "expression": "Cust_Name",
+          "placement": "source"
+        },
+        "StDate": {
+          "expression": "StDate",
+          "placement": "source",
+          "valueType": "integer-date"
+        }
+      },
+      "defaultSort": [
+        {
+          "field": "Cust_Name",
+          "direction": "ASC"
+        }
+      ]
+    }
+  },
   "columns": [
     {
       "field": "Cust_Name",

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { getReportValidationErrors } from "../validator";
+import { loadDefinition } from "../loader";
 
 const presentation = {
     id: "capability-report",
@@ -10,6 +11,32 @@ const presentation = {
 };
 
 describe("report request contract alignment", () => {
+    it("copies reviewed SQL execution metadata and filter logic into the API request", () => {
+        const report = loadDefinition({
+            ...presentation,
+            columns: [{ field: "Cust_Name", header: "Customer" }],
+            queryDefinition: {
+                format: "sql",
+                resource: "reports/customer",
+                execution: {
+                    columns: ["Cust_Name"],
+                    defaultSort: [{ field: "Cust_Name", direction: "ASC" }],
+                },
+                filterLogic: "OR",
+            },
+        });
+
+        expect(report.request).toEqual({
+            action: "sql",
+            resource: "reports/customer",
+            execution: {
+                columns: ["Cust_Name"],
+                defaultSort: [{ field: "Cust_Name", direction: "ASC" }],
+            },
+            filterLogic: "OR",
+        });
+    });
+
     it("accepts backend-supported JSON joins, filters, grouping, HAVING, sorting, and pagination", () => {
         const errors = getReportValidationErrors({
             ...presentation,
@@ -36,7 +63,18 @@ describe("report request contract alignment", () => {
     it("accepts a backend SQL resource identifier and rejects SQL text or paths", () => {
         expect(getReportValidationErrors({
             ...presentation,
-            queryDefinition: { format: "sql", resource: "customer" },
+            queryDefinition: {
+                format: "sql",
+                resource: "reports/customer",
+                execution: {
+                    columns: ["CustomerName", "TotalAmount"],
+                    filters: {
+                        StDate: { expression: "StDate", placement: "source", valueType: "integer-date" },
+                    },
+                    defaultSort: [{ field: "CustomerName", direction: "ASC" }],
+                },
+                filterLogic: "OR",
+            },
         })).toEqual([]);
         expect(getReportValidationErrors({
             ...presentation,
@@ -50,10 +88,34 @@ describe("report request contract alignment", () => {
     it("enforces SQL Resource logical field identifiers", () => {
         expect(getReportValidationErrors({
             ...presentation,
-            queryDefinition: { format: "sql", resource: "customer" },
+            queryDefinition: { format: "sql", resource: "reports/customer" },
             filters: [{ field: "C.Cust_Name", label: "Customer", type: "text" }],
         })).toEqual(expect.arrayContaining([
             expect.stringContaining("SQL Resource logical field"),
+        ]));
+    });
+
+    it("rejects unsafe SQL execution metadata using the backend grammar", () => {
+        const errors = getReportValidationErrors({
+            ...presentation,
+            queryDefinition: {
+                format: "sql",
+                resource: "reports/customer",
+                execution: {
+                    columns: ["Cust_Name"],
+                    filters: {
+                        Unsafe: { expression: "Cust_Name OR 1=1", placement: "source" },
+                        BadAggregate: { expression: "STRING_AGG(Name, ',')", placement: "having" },
+                    },
+                    defaultSort: [{ field: "Missing", direction: "ASC" }],
+                },
+            },
+        });
+
+        expect(errors).toEqual(expect.arrayContaining([
+            expect.stringContaining("source expression"),
+            expect.stringContaining("HAVING expression"),
+            expect.stringContaining("must be an execution column"),
         ]));
     });
 

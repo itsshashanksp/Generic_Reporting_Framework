@@ -26,7 +26,7 @@ src/config/*.json
 | `RequestCache` | Caches successful responses and deduplicates identical in-flight calls |
 | pages/components/contexts | Own UI state and rendering |
 
-The frontend never reads, parses, generates, modifies, or executes SQL. In SQL Resource mode it sends an opaque resource identifier to the backend. SQL files, credentials, allowlisting, filter placement, parameterization, and execution belong to the backend. The obsolete frontend SQL parser/converter has been removed.
+The frontend never reads, parses, generates, modifies, or executes SQL. In SQL Resource mode it sends a discovered logical resource ID and, where runtime controls need it, reviewed metadata constrained to the backend's `execution` grammar. SQL discovery, files, credentials, validation, placement mechanics, parameterization, and execution belong to the backend. The obsolete frontend SQL parser/converter has been removed.
 
 ## Discovery and startup
 

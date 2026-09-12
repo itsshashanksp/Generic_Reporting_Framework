@@ -2,7 +2,7 @@ import type { ColumnDefinition } from "./column";
 import type { FilterDefinition } from "./filter";
 import type { GroupingConfig } from "./grouping";
 import type { ExportConfig } from "./export";
-import type { DataRequest, QuerySort } from "./api";
+import type { DataRequest, QuerySort, SqlExecutionMetadata } from "./api";
 export interface SortDefinition {
     field: string;
     direction: "ASC" | "DESC";
@@ -20,6 +20,8 @@ export type ReportRequest = DataRequest & { sort?: QuerySort[] };
 export interface ReportQueryDefinitionReference {
     format: "sql";
     resource: string;
+    execution?: SqlExecutionMetadata;
+    filterLogic?: "AND" | "OR";
 }
 
 export interface ToolbarConfig {

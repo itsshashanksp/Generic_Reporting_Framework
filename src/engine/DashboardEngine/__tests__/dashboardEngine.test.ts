@@ -30,12 +30,22 @@ describe("DashboardEngine", () => {
 
         expect(resolveDashboardWidgetRequest(table)).toMatchObject({
             action: "sql",
-            resource: "item-dashboard-table",
+            resource: "widgets/item-dashboard-table",
+            execution: {
+                columns: expect.arrayContaining(["Item_Code", "cl_stock", "stock_value"]),
+                defaultSort: [{ field: "Item_Code", direction: "ASC" }],
+            },
         });
         expect(resolveDashboardWidgetColumns(table)?.[0]).toMatchObject({ field: "Item_Code", header: "Item Code" });
         expect(resolveDashboardWidgetRequest(stat)).toMatchObject({
             action: "sql",
-            resource: "item-dashboard-stats",
+            resource: "widgets/item-dashboard-stats",
+            execution: {
+                filters: {
+                    Item_Desc: { expression: "Item_Desc", placement: "source" },
+                    Std_Vat: { expression: "Std_Vat", placement: "source" },
+                },
+            },
         });
         expect(stat.valueField).toBe("TotalItems");
         expect("widgetId" in table).toBe(false);
@@ -55,12 +65,13 @@ describe("DashboardEngine", () => {
         });
 
         expect(resources).toEqual([
-            "bill-sales-month-wise",
-            "bill-purchases-month-wise",
-            "bill-top-10-categories",
-            "bill-category-sales-month-wise",
-            "bill-total-sales",
-            "bill-total-purchases",
+            "widgets/bill-sales-month-wise",
+            "widgets/bill-purchases-month-wise",
+            "widgets/bill-top-10-categories",
+            "widgets/TOP-10-month-Wise-Category-wise",
+            "widgets/bill-category-sales-month-wise",
+            "widgets/bill-total-sales",
+            "widgets/bill-total-purchases",
         ]);
 
         const salesTable = result.dashboard.widgets[0];
@@ -73,7 +84,7 @@ describe("DashboardEngine", () => {
             id: "inline-stat",
             type: "stat",
             title: "Inline statistic",
-            queryDefinition: { format: "sql", resource: "inline-stat" },
+            queryDefinition: { format: "sql", resource: "widgets/inline-stat" },
             filters: [],
         };
 

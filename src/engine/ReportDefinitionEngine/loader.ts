@@ -34,6 +34,12 @@ export function resolveReportQuery(
         request: {
             action: "sql",
             resource: report.queryDefinition.resource,
+            ...(report.queryDefinition.execution !== undefined
+                ? { execution: report.queryDefinition.execution }
+                : {}),
+            ...(report.queryDefinition.filterLogic !== undefined
+                ? { filterLogic: report.queryDefinition.filterLogic }
+                : {}),
         },
     };
 }

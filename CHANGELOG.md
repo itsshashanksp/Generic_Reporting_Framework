@@ -10,6 +10,9 @@
 
 ### Changed
 
+- Migrated production SQL Resource references from legacy basename IDs to discovered `reports/...` and `widgets/...` IDs.
+- Added reviewed SQL `execution` metadata to definitions that need runtime filtering, sorting, or deterministic pagination.
+- Consolidated the repeated Item statistics SQL definition into one reusable widget configuration.
 - Aligned frontend JSON request validation with the backend public SELECT contract, including operators, joins, grouping, HAVING, functions, subqueries, CTEs, sorting, and pagination.
 - Standardized the default and examples on 10 records per page.
 - Clarified JSON Query and opaque SQL Resource ownership throughout frontend documentation.
@@ -34,5 +37,5 @@
 
 ### Documentation
 
-- Replaced stale and hypothetical examples with backend-verified JSON requests and actual `item`, `customer`, and dashboard SQL Resource IDs.
+- Replaced stale and hypothetical examples with backend-verified JSON requests and actual discovered `reports/item`, `reports/customer`, and `widgets/...` SQL Resource IDs.
 - Added explicit supported, unsupported, limitation, roadmap, and ownership boundaries.

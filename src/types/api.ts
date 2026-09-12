@@ -45,6 +45,18 @@ export interface SqlRuntimeFilter {
     value?: unknown;
 }
 
+export interface SqlExecutionFilter {
+    expression?: string;
+    placement?: "output" | "source" | "having";
+    valueType?: "integer-date";
+}
+
+export interface SqlExecutionMetadata {
+    columns?: string[];
+    filters?: Record<string, SqlExecutionFilter>;
+    defaultSort?: QuerySort[];
+}
+
 export type QueryField = string | {
     field?: string;
     fields?: string[];
@@ -86,6 +98,7 @@ export interface UniversalQueryRequest {
 export interface SqlResourceRequest {
     action: "sql";
     resource: string;
+    execution?: SqlExecutionMetadata;
     filters?: SqlRuntimeFilter[];
     sort?: QuerySort[];
     pagination?: { page: number; pageSize: number };

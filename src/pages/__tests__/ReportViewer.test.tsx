@@ -63,7 +63,11 @@ describe("ReportViewer runtime", () => {
         const request = executeRequestMock.mock.calls.at(-1)?.[0];
         expect(request).toMatchObject({
             action: "sql",
-            resource: "item",
+            resource: "reports/item",
+            execution: {
+                columns: ["Item_Code", "Item_Desc", "Item_MRP"],
+                defaultSort: [{ field: "Item_Code", direction: "ASC" }],
+            },
             pagination: { page: 1, pageSize: 10 },
         });
         expect(request.filters).toContainEqual({ field: "Item_Code", operator: "LIKE", value: "%A1%" });
@@ -85,7 +89,12 @@ describe("ReportViewer runtime", () => {
 
         expect(executeRequestMock.mock.calls[0][0]).toMatchObject({
             action: "sql",
-            resource: "customer",
+            resource: "reports/customer",
+            execution: {
+                filters: expect.objectContaining({
+                    StDate: { expression: "StDate", placement: "source", valueType: "integer-date" },
+                }),
+            },
             pagination: { page: 1, pageSize: 10 },
         });
     });

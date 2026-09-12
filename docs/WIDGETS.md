@@ -9,7 +9,7 @@ Dashboard widgets are either report renderers or focused stat, table, and chart 
 | `report` | Exactly `reportId` |
 | `stat`, `table`, `chart` | Exactly one of inline `request`, inline SQL `queryDefinition`, `reportId`, or reusable `widgetId` |
 
-Inline definitions keep dashboard configuration self-contained. Reusable definitions in `src/config/widgets/*.json` remain supported for `widgetId` compatibility. Report reuse shares the report request and columns.
+Inline definitions keep dashboard configuration self-contained. SQL widgets use discovered `widgets/...` IDs and carry constrained execution metadata when their runtime filters, sorting, or pagination need declared fields/default ordering. Reusable definitions in `src/config/widgets/*.json` remain supported for `widgetId` compatibility. Report reuse shares the report request and columns.
 
 ## Runtime behavior
 

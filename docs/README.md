@@ -6,7 +6,7 @@ These documents describe the behavior of the current frontend implementation.
 | --- | --- |
 | [Architecture](ARCHITECTURE.md) | Discovery, validation, runtime flow and ownership boundaries |
 | [Configuration reference](CONFIGURATION.md) | Complete report, dashboard, widget and menu schemas |
-| [Query modes](QUERY-MODES.md) | Active JSON request and SQL resource modes |
+| [Query modes](QUERY-MODES.md) | Active JSON request and discovered SQL Resource modes |
 | [Feature behavior](FEATURES.md) | Filtering, grids, exports, saved reports and caching |
 | [Examples and recipes](EXAMPLES.md) | Copyable configurations and common tasks |
 | [Reports](REPORTS.md) | Report-specific authoring and runtime behavior |

@@ -94,7 +94,7 @@ describe("dashboard widgets", () => {
             message: "ok",
             data: [{ TotalItems: 4, MinimumSP: 10, MaximumSP: 20, TotalValue: 30 }],
         });
-        const statsRequest = { action: "sql" as const, resource: "item-dashboard-stats" };
+        const statsRequest = { action: "sql" as const, resource: "widgets/item-dashboard-stats" };
         const filterDefinitions = [
             { field: "Item_Desc", label: "Item Name", type: "text" as const },
             { field: "Std_Vat", label: "GST %", type: "text" as const },

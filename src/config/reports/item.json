@@ -4,7 +4,20 @@
   "description": "Displays all items.",
   "queryDefinition": {
     "format": "sql",
-    "resource": "item"
+    "resource": "reports/item",
+    "execution": {
+      "columns": [
+        "Item_Code",
+        "Item_Desc",
+        "Item_MRP"
+      ],
+      "defaultSort": [
+        {
+          "field": "Item_Code",
+          "direction": "ASC"
+        }
+      ]
+    }
   },
   "columns": [
     {

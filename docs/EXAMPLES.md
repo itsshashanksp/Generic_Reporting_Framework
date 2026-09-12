@@ -1,6 +1,6 @@
 # Backend-verified examples
 
-These examples use only the backend public request contract. Physical table names in JSON Query examples must exist in the connected database. SQL Resource examples use IDs registered by the current backend.
+These examples use only the backend public request contract. Physical table names in JSON Query examples must exist in the connected database. SQL Resource examples use IDs discovered by the current backend.
 
 ## JSON Query: select, filter, sort, and page
 
@@ -169,7 +169,16 @@ The authored JSON Query contract additionally accepts `<>`, `EXISTS`, and `NOT E
 Frontend report source:
 
 ```json
-{ "queryDefinition": { "format": "sql", "resource": "item" } }
+{
+  "queryDefinition": {
+    "format": "sql",
+    "resource": "reports/item",
+    "execution": {
+      "columns": ["Item_Code", "Item_Desc", "Item_MRP"],
+      "defaultSort": [{ "field": "Item_Code", "direction": "ASC" }]
+    }
+  }
+}
 ```
 
 Runtime request:
@@ -177,14 +186,18 @@ Runtime request:
 ```json
 {
   "action": "sql",
-  "resource": "item",
+  "resource": "reports/item",
+  "execution": {
+    "columns": ["Item_Code", "Item_Desc", "Item_MRP"],
+    "defaultSort": [{ "field": "Item_Code", "direction": "ASC" }]
+  },
   "filters": [{ "field": "Item_Desc", "operator": "LIKE", "value": "%pen%" }],
   "sort": [{ "field": "Item_Code", "direction": "ASC" }],
   "pagination": { "page": 1, "pageSize": 10 }
 }
 ```
 
-Flow: frontend ID `item` → backend `config/sql-resources.php` → `queries/reports/item.sql` → its read-only ItemMasterTable SELECT → standard response with `Item_Code`, `Item_Desc`, and `Item_MRP`.
+Flow: frontend ID `reports/item` → backend discovery/resolution → server-owned resource → SQL Server → standard response with `Item_Code`, `Item_Desc`, and `Item_MRP`. The frontend never constructs or sends the server file path.
 
 The selected resource resolves on the backend to:
 
@@ -212,7 +225,20 @@ An abbreviated response is:
 Frontend report source:
 
 ```json
-{ "queryDefinition": { "format": "sql", "resource": "customer" } }
+{
+  "queryDefinition": {
+    "format": "sql",
+    "resource": "reports/customer",
+    "execution": {
+      "columns": ["Cust_Name", "TotalCustomers", "MinimumBill", "MaximumBill"],
+      "filters": {
+        "Cust_Name": { "expression": "Cust_Name", "placement": "source" },
+        "StDate": { "expression": "StDate", "placement": "source", "valueType": "integer-date" }
+      },
+      "defaultSort": [{ "field": "Cust_Name", "direction": "ASC" }]
+    }
+  }
+}
 ```
 
 Runtime request:
@@ -220,7 +246,15 @@ Runtime request:
 ```json
 {
   "action": "sql",
-  "resource": "customer",
+  "resource": "reports/customer",
+  "execution": {
+    "columns": ["Cust_Name", "TotalCustomers", "MinimumBill", "MaximumBill"],
+    "filters": {
+      "Cust_Name": { "expression": "Cust_Name", "placement": "source" },
+      "StDate": { "expression": "StDate", "placement": "source", "valueType": "integer-date" }
+    },
+    "defaultSort": [{ "field": "Cust_Name", "direction": "ASC" }]
+  },
   "filters": [
     { "field": "Cust_Name", "operator": "LIKE", "value": "A%" },
     { "field": "StDate", "operator": "BETWEEN", "value": ["2021-04-01", "2022-03-31"] }
@@ -231,7 +265,7 @@ Runtime request:
 }
 ```
 
-Flow: frontend ID `customer` → backend registry → `queries/reports/customer.sql` → backend-owned source filter placement and integer-date conversion → grouped response with `Cust_Name`, `TotalCustomers`, `MinimumBill`, and `MaximumBill`.
+Flow: frontend ID `reports/customer` → backend discovery/resolution → server-owned Customer resource → backend-validated source placement and integer-date conversion → grouped standard response. `execution` is copied from reviewed configuration; runtime users supply only filter values.
 
 The backend-owned SQL resource is:
 
@@ -246,18 +280,19 @@ FROM CustomerTable
 GROUP BY Cust_Name
 ```
 
-The marker is interpreted only by the backend SQL Resource service; it is never sent by the frontend.
+The existing marker is part of the backend-owned file and is harmless in discovered mode. It is neither known nor sent by the frontend.
 
 ## Actual dashboard SQL Resources
 
-The current dashboards use these registered IDs:
+The current dashboards use these discovered IDs:
 
-- `item-dashboard-table`, `item-dashboard-stats`
-- `bill-total-sales`, `bill-total-purchases`
-- `bill-sales-month-wise`, `bill-purchases-month-wise`
-- `bill-top-10-categories`, `bill-category-sales-month-wise`
+- `widgets/item-dashboard-table`, `widgets/item-dashboard-stats`
+- `widgets/bill-total-sales`, `widgets/bill-total-purchases`
+- `widgets/bill-sales-month-wise`, `widgets/bill-purchases-month-wise`
+- `widgets/bill-top-10-categories`, `widgets/bill-category-sales-month-wise`
+- `widgets/TOP-10-month-Wise-Category-wise`
 
-Dashboard JSON contains only `queryDefinition:{format:"sql",resource:"..."}` plus presentation fields. It never contains the backend file path or SQL text.
+Dashboard JSON contains a logical resource ID, reviewed execution metadata when runtime controls need it, and presentation fields. It never contains the backend file path or SQL text.
 
 ## Column visibility
 

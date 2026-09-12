@@ -16,8 +16,11 @@ function expectNoEmbeddedQueryLogic(value: unknown) {
 
 describe("production SQL and JSON responsibility separation", () => {
     it("supports JSON and backend SQL modes side by side", () => {
-        expect(item.queryDefinition).toEqual({ format: "sql", resource: "item" });
-        expect(customer.queryDefinition).toEqual({ format: "sql", resource: "customer" });
+        expect(item.queryDefinition).toMatchObject({ format: "sql", resource: "reports/item" });
+        expect(customer.queryDefinition).toMatchObject({ format: "sql", resource: "reports/customer" });
+        expect(customer.queryDefinition.execution.filters.StDate).toEqual({
+            expression: "StDate", placement: "source", valueType: "integer-date",
+        });
         expect(loadDefinition({
             id: "json-mode",
             title: "JSON mode",
@@ -36,7 +39,7 @@ describe("production SQL and JSON responsibility separation", () => {
         expect(Object.keys(frontendWidgetSql)).toEqual([]);
         const stats = itemDashboard.widgets.find(widget => widget.id === "total-Items")!;
         const table = itemDashboard.widgets.find(widget => widget.id === "item-table")!;
-        expect(stats.queryDefinition).toEqual({ format: "sql", resource: "item-dashboard-stats" });
+        expect(stats.widgetId).toBe("item-dashboard-stats");
         expect(table.columns?.map(column => column.field)).toEqual([
             "Item_Code", "Item_Desc", "Sale_Rate", "Item_MRP", "Std_Vat", "cl_stock", "stock_value",
         ]);
@@ -44,10 +47,17 @@ describe("production SQL and JSON responsibility separation", () => {
 
     it("keeps dashboards as widget-based presentation configuration", () => {
         expect(itemDashboard.widgets.length).toBeGreaterThan(0);
-        expect(itemDashboard.widgets.every(widget => !("widgetId" in widget))).toBe(true);
+        expect(itemDashboard.widgets.filter(widget => widget.type === "stat")
+            .every(widget => widget.widgetId === "item-dashboard-stats")).toBe(true);
         expect(itemDashboard.widgets.some(widget => widget.type === "stat" && "valueField" in widget)).toBe(true);
         expect(billDashboard.widgets.length).toBeGreaterThan(0);
         expectNoEmbeddedQueryLogic(itemDashboard);
         expectNoEmbeddedQueryLogic(billDashboard);
+        for (const widget of billDashboard.widgets.filter(widget => widget.type === "table")) {
+            expect(widget.queryDefinition.execution).toMatchObject({
+                columns: expect.any(Array),
+                defaultSort: expect.any(Array),
+            });
+        }
     });
 });

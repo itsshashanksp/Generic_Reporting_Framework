@@ -13,7 +13,7 @@ describe("apiClient", () => {
             meta: { page: 1, pageSize: 10, totalRows: 1, rowsReturned: 1, executionTime: 2.4 },
         }), { status: 200, headers: { "Content-Type": "application/json" } })));
 
-        await expect(apiClient({ action: "sql", resource: "item" })).resolves.toMatchObject({ success: true });
+        await expect(apiClient({ action: "sql", resource: "reports/item" })).resolves.toMatchObject({ success: true });
     });
 
     it("preserves backend error code, details, and status", async () => {

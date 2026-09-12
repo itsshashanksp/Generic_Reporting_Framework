@@ -35,7 +35,24 @@
       },
       "queryDefinition": {
         "format": "sql",
-        "resource": "item-dashboard-table"
+        "resource": "widgets/item-dashboard-table",
+        "execution": {
+          "columns": [
+            "Item_Code",
+            "Item_Desc",
+            "Sale_Rate",
+            "Item_MRP",
+            "Std_Vat",
+            "cl_stock",
+            "stock_value"
+          ],
+          "defaultSort": [
+            {
+              "field": "Item_Code",
+              "direction": "ASC"
+            }
+          ]
+        }
       },
       "columns": [
         {
@@ -67,7 +84,6 @@
           "header": "Stock Value"
         }
       ],
-      "filters": [],
       "pageSize": 10,
       "export": {
         "enabled": true,
@@ -92,11 +108,7 @@
         "x": 0,
         "y": 2
       },
-      "queryDefinition": {
-        "format": "sql",
-        "resource": "item-dashboard-stats"
-      },
-      "filters": [],
+      "widgetId": "item-dashboard-stats",
       "valueField": "TotalItems",
       "format": "number"
     },
@@ -112,11 +124,7 @@
         "x": 4,
         "y": 2
       },
-      "queryDefinition": {
-        "format": "sql",
-        "resource": "item-dashboard-stats"
-      },
-      "filters": [],
+      "widgetId": "item-dashboard-stats",
       "valueField": "MinimumSP",
       "format": "currency"
     },
@@ -132,11 +140,7 @@
         "x": 8,
         "y": 2
       },
-      "queryDefinition": {
-        "format": "sql",
-        "resource": "item-dashboard-stats"
-      },
-      "filters": [],
+      "widgetId": "item-dashboard-stats",
       "valueField": "MaximumSP",
       "format": "currency"
     },
@@ -152,11 +156,7 @@
         "x": 0,
         "y": 3
       },
-      "queryDefinition": {
-        "format": "sql",
-        "resource": "item-dashboard-stats"
-      },
-      "filters": [],
+      "widgetId": "item-dashboard-stats",
       "valueField": "StockValue",
       "format": "currency"
     }

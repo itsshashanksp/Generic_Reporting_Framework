@@ -33,7 +33,7 @@ Run tests, lint, standalone typecheck, and build after a documentation-adjacent 
 
 ## Configuration workflows
 
-To add a report, create `src/config/reports/<id>.json`, choose one [query mode](QUERY-MODES.md), declare columns and filters, and add a menu reference if it should be reachable.
+To add a report, create `src/config/reports/<id>.json`, choose one [query mode](QUERY-MODES.md), declare columns and filters, and add a menu reference if it should be reachable. SQL Resource definitions use the backend-published relative ID and include only the constrained execution metadata needed by active runtime controls.
 
 To add a dashboard, create `src/config/dashboards/<id>.json`, select its layout and give each widget exactly one valid source. Inline widgets are supported. To reuse a non-report widget definition through `widgetId`, create JSON under `src/config/widgets`. To reuse a report, prefer `reportId`.
 
@@ -41,6 +41,6 @@ When changing a schema, update its TypeScript contracts, validator, loader/defau
 
 ## Safety boundaries
 
-Do not commit local `.env` files, credentials, `dist`, or coverage. Backend SQL resources are referenced only by ID from this frontend. Do not introduce frontend SQL parsing, generation, file lookup, paths, placeholders, or raw SQL request fields.
+Do not commit local `.env` files, credentials, `dist`, or coverage. Backend SQL resources are referenced only by discovered logical ID from this frontend. Reviewed execution mappings must remain within the backend grammar; do not introduce SQL parsing, generation, file lookup, paths, placeholders, or raw SQL request fields.
 
 [Configuration reference](CONFIGURATION.md) · [Testing](TESTING.md) · [Contributing](../CONTRIBUTING.md)

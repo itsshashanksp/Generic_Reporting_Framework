@@ -2,10 +2,37 @@
 
 Only implemented frontend behavior appears in this inventory. Backend capabilities that are not exposed are listed separately.
 
+## Capability status inventory
+
+| Feature | Status | Current boundary |
+| --- | --- | --- |
+| JSON Query mode | Supported | Authored `select` requests using the public backend grammar |
+| SQL Resource mode | Supported | Discovered IDs plus reviewed execution metadata; no SQL text/path handling |
+| Filters and operator mapping | Supported | Configured operator per field; no interactive operator builder |
+| Filter logic | Partially supported | Flat configured AND/OR; no nested groups or runtime logic editor |
+| Search | Partially supported | Search applies configured backend filters; no global multi-field search |
+| Sorting | Supported | Report multi-sort; dashboard table sends its first active sort |
+| Query grouping | Supported | Authored JSON `groupBy`/HAVING; SQL grouping remains in the resource |
+| Interactive grouping | Not supported | No group builder or expandable client-generated groups |
+| Pagination | Supported | Server paging, page size 10, deterministic SQL Resource ordering |
+| Column visibility | Supported | Configuration-driven visibility |
+| Column ordering/sizing | Partially supported | Runtime grid interaction, not persisted |
+| Export | Supported | CSV/Excel current view and configured all-row flows |
+| Saved reports | Partially supported | Browser-local filter/sort/page views only |
+| Dashboards | Supported | Responsive JSON-authored layouts and shared filters |
+| Stat/table widgets | Supported | Shared request pipeline; table paging/sort/export |
+| Chart widgets | Partially supported | Basic bar/line/pie rendering only |
+| Report actions | Partially supported | Refresh, export, and local save; no write/CRUD actions |
+| Responsive/mobile UI | Supported | Labeled cards, compact paging, pull-to-refresh and action sheets |
+| Caching | Supported | In-memory TTL cache and in-flight deduplication |
+| Error handling | Supported | Validated envelopes, retry UI, status/code/details retention |
+| Frontend SQL parser/converter | Removed | Obsolete after server-owned resource discovery |
+| Email/scheduling/auth/roles/audit/favorites/drill-down/designers | Planned or deferred | See roadmap; not represented as implemented |
+
 ## Query
 
 - Validated JSON Query `select` configuration with fields/aliases, DISTINCT, limit, INNER/LEFT/RIGHT equality joins, flat filters, grouping, aggregate HAVING, sorting, pagination, supported functions, CASE, one-level arithmetic, filter subqueries, and one standard or recursive CTE.
-- Backend SQL Resource references using an opaque resource ID.
+- Backend SQL Resource references using slash-separated discovered IDs, with validated execution columns, logical filter mappings, and default sorting where runtime controls require them.
 - A shared POST client, standard read-response validation, public error messages, and structured `ApiClientError` status/code/details.
 - In-memory five-minute successful-response caching, bounded eviction, and identical in-flight request deduplication.
 
@@ -52,7 +79,7 @@ Only implemented frontend behavior appears in this inventory. Backend capabiliti
 
 ## Unsupported frontend features
 
-- Raw SQL, SQL files, SQL parsing/generation/manipulation, resource registration, database paths, credentials, filter placement, or placeholders.
+- Raw SQL, SQL files, SQL parsing/generation/manipulation, resource registration, database paths, credentials, or placeholders. Reviewed configuration may declare only the backend-validated execution expression/placement grammar.
 - Interactive nested filter groups, operator selection, global multi-field search, or AG Grid column-filter requests.
 - Interactive grouping, client aggregation, expandable group nodes, or grouping personalization.
 - Column chooser, runtime show/hide/reset, or persisted column layouts.

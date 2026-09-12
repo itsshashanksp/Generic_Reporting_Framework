@@ -55,14 +55,38 @@ Use `queryDefinition` with exactly this frontend shape:
   "title": "Monthly sales",
   "queryDefinition": {
     "format": "sql",
-    "resource": "monthly-sales"
+    "resource": "widgets/bill-sales-month-wise",
+    "execution": {
+      "columns": ["Month", "Sales"],
+      "defaultSort": [{ "field": "Month", "direction": "DESC" }]
+    }
   },
   "columns": [{ "field": "month", "header": "Month" }],
   "filters": []
 }
 ```
 
-The resource must match `[A-Za-z0-9][A-Za-z0-9_-]*`. The loader normalizes this to `{ "action": "sql", "resource": "monthly-sales" }`. The frontend does not resolve a `.sql` file. The backend must recognize the resource, expose output names matching configured columns and sort fields, explicitly allowlist any runtime filter fields (which may be source fields not returned by an aggregate resource), apply the runtime controls at the correct query level, and return the standard response envelope.
+The resource is a slash-separated logical ID such as `reports/customer` or
+`widgets/bill-sales-month-wise`, relative to the backend discovery root and
+without `.sql`. Each segment matches `[A-Za-z0-9][A-Za-z0-9_-]*`. The frontend
+does not construct a path or inspect the file.
+
+`queryDefinition.execution` is copied to the API action only when runtime
+controls require it. Its exact optional members are:
+
+- `columns`: non-empty, case-insensitively unique output identifiers used to
+  validate output filters and sorting;
+- `filters`: logical names mapped to an optional constrained `expression`, an
+  `output`/`source`/`having` placement, and optional `integer-date` value type;
+- `defaultSort`: a non-empty list over declared execution columns.
+
+Pagination requires an approved runtime sort or `execution.defaultSort`.
+Output mappings name a declared execution column, source mappings permit only
+an optionally qualified identifier, and HAVING mappings permit only
+COUNT/SUM/AVG/MIN/MAX over one identifier or `*`. This metadata is reviewed
+configuration, never runtime user input or arbitrary SQL.
+Optional `queryDefinition.filterLogic` is copied beside `execution` and selects
+the backend-supported flat `AND` or `OR` combination for applied filters.
 
 `queryDefinition.format: "json"` is not a supported JSON mode. Use top-level `request`.
 
@@ -72,7 +96,7 @@ The resource must match `[A-Za-z0-9][A-Za-z0-9_-]*`. The loader normalizes this 
 - Current grid sorting replaces configured `sort` after the user/grid state is established.
 - Enabled grid pagination supplies `pagination.page` and `pagination.pageSize`.
 - Disabling grid pagination stops the UI from adding pagination, but a manually authored `request.pagination` remains because the base request is spread first. Prefer `grid.pagination` for interactive reports.
-- SQL resource mode sends the same runtime fields beside `action` and `resource`; the backend owns their interpretation.
+- SQL resource mode sends the same runtime fields beside `action`, `resource`, and copied `execution` metadata; the backend validates and interprets them.
 
 ## Deliberately unexposed backend actions
 

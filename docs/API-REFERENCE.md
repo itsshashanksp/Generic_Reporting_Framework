@@ -38,7 +38,18 @@ Frontend configuration:
 
 ```json
 {
-  "queryDefinition": { "format": "sql", "resource": "customer" }
+  "queryDefinition": {
+    "format": "sql",
+    "resource": "reports/customer",
+    "execution": {
+      "columns": ["Cust_Name", "TotalCustomers", "MinimumBill", "MaximumBill"],
+      "filters": {
+        "Cust_Name": { "expression": "Cust_Name", "placement": "source" },
+        "StDate": { "expression": "StDate", "placement": "source", "valueType": "integer-date" }
+      },
+      "defaultSort": [{ "field": "Cust_Name", "direction": "ASC" }]
+    }
+  }
 }
 ```
 
@@ -47,7 +58,15 @@ Normalized runtime request:
 ```json
 {
   "action": "sql",
-  "resource": "customer",
+  "resource": "reports/customer",
+  "execution": {
+    "columns": ["Cust_Name", "TotalCustomers", "MinimumBill", "MaximumBill"],
+    "filters": {
+      "Cust_Name": { "expression": "Cust_Name", "placement": "source" },
+      "StDate": { "expression": "StDate", "placement": "source", "valueType": "integer-date" }
+    },
+    "defaultSort": [{ "field": "Cust_Name", "direction": "ASC" }]
+  },
   "filters": [{ "field": "Cust_Name", "operator": "LIKE", "value": "A%" }],
   "filterLogic": "AND",
   "sort": [{ "field": "MaximumBill", "direction": "DESC" }],
@@ -55,15 +74,33 @@ Normalized runtime request:
 }
 ```
 
-`customer` is an opaque, case-sensitive backend registry key. It is not SQL text, a filename, or a path. SQL action requests accept only `action`, `resource`, `filters`, `filterLogic`, `sort`, and `pagination`. Runtime fields must be allowlisted for that resource. SQL Resource filters do not accept subqueries or EXISTS.
+`reports/customer` is the case-sensitive logical ID discovered from the
+backend resource root. It is not SQL text, a client filesystem path, or a
+filename, and the frontend does not append `.sql`. SQL action requests accept
+only `action`, `resource`, `execution`, `filters`, `filterLogic`, `sort`, and
+`pagination`. SQL Resource filters do not accept subqueries or EXISTS.
 
-SQL Resource runtime filters accept every value/list/range/null operator above except EXISTS/NOT EXISTS. A non-empty runtime sort replaces the registered default sort; otherwise the backend resource default applies. Multiple sort entries are supported. Pagination requires positive integers and normally uses a separate total count.
+`execution` is reviewed report metadata, not end-user input. `columns` declares
+stable output aliases for output filtering/sorting. `filters` maps logical UI
+fields to the backend's constrained output/source/HAVING grammar and optional
+`integer-date` conversion. `defaultSort` supplies deterministic ordering when
+pagination is used without an active runtime sort. A simple resource without
+runtime controls omits `execution`.
+Frontend `queryDefinition.filterLogic` may be `AND` or `OR`; the loader copies
+it to the top-level SQL action. The backend default is `AND`, and cross-stage
+`OR` is rejected when it would change semantics.
+
+SQL Resource runtime filters accept every value/list/range/null operator above except EXISTS/NOT EXISTS. A non-empty runtime sort replaces `execution.defaultSort`. Multiple sort entries are supported. Pagination requires positive integers and an approved runtime/default sort.
 
 ## Runtime merge
 
 The runtime appends configured UI filters to static request filters, uses the current grid sort, and supplies page/pageSize when pagination is enabled. UI filter definitions select a fixed operator; there is no interactive operator builder or nested Boolean-group editor.
 
-Filter values are never SQL fragments. List and range values remain arrays. `IS NULL` and `IS NOT NULL` omit `value`. SQL Resource placement (`output`, `where`, or `having`), integer-date conversion, expressions, and parameter placeholders are backend registry concerns.
+Filter values are never SQL fragments. List and range values remain arrays.
+`IS NULL` and `IS NOT NULL` omit `value`. Reviewed configuration may select
+`output`, `source`, or `having` and a narrowly validated expression, but the
+backend validates the grammar, performs placement/conversion, creates parameter
+placeholders, resolves the discovered resource, and executes the SQL.
 
 ## Standard response
 

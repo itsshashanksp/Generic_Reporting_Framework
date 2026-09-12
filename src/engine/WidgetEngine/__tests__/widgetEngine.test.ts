@@ -8,26 +8,39 @@ describe("WidgetEngine", () => {
         "stats.json": {
             id: "item-dashboard-stats",
             title: "Item statistics",
-            queryDefinition: { format: "sql", resource: "item-dashboard-stats" },
+            queryDefinition: { format: "sql", resource: "widgets/item-dashboard-stats" },
             filters: [],
         },
         "table.json": {
             id: "item-dashboard-table",
             title: "Items",
-            queryDefinition: { format: "sql", resource: "item-dashboard-table" },
+            queryDefinition: {
+                format: "sql",
+                resource: "widgets/item-dashboard-table",
+                execution: {
+                    columns: ["Item_Code"],
+                    defaultSort: [{ field: "Item_Code", direction: "ASC" }],
+                },
+            },
             columns: [{ field: "Item_Code", header: "Item Code" }],
             filters: [],
         },
     });
 
-    it("supports an empty production registry after widgets moved inline", () => {
-        expect(getWidgetDefinitionIds()).toEqual([]);
+    it("discovers the shared production Item statistics definition", () => {
+        expect(getWidgetDefinitionIds()).toEqual(["item-dashboard-stats"]);
     });
 
     it("loads reusable backend SQL resource definitions without parsing SQL", () => {
         expect(registry["item-dashboard-stats"].request).toMatchObject({
             action: "sql",
-            resource: "item-dashboard-stats",
+            resource: "widgets/item-dashboard-stats",
+        });
+        expect(registry["item-dashboard-table"].request).toMatchObject({
+            execution: {
+                columns: ["Item_Code"],
+                defaultSort: [{ field: "Item_Code", direction: "ASC" }],
+            },
         });
     });
 
@@ -41,7 +54,7 @@ describe("WidgetEngine", () => {
         const base = {
             id: "sample",
             title: "Sample",
-            queryDefinition: { format: "sql", resource: "sample" },
+            queryDefinition: { format: "sql", resource: "reports/sample" },
             filters: [],
             toolbar: { export: false, refresh: false },
             grid: { pagination: { enabled: true, pageSize: 25 }, rowSelection: "single" },

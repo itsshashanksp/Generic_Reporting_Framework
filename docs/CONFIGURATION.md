@@ -10,7 +10,7 @@ All configuration is JSON. Unknown top-level report keys are rejected, and defin
 | `title` | yes | non-empty string | Page title and default saved-report name |
 | `description` | no | string | Supporting page text |
 | `request` | exactly one source | JSON request | Active JSON mode |
-| `queryDefinition` | exactly one source | `{format:"sql",resource:string}` | Active SQL resource mode |
+| `queryDefinition` | exactly one source | `{format:"sql",resource:string,execution?:object,filterLogic?:"AND"|"OR"}` | Active discovered SQL Resource mode |
 | `columns` | yes | non-empty array | Grid output columns; fields must be unique |
 | `filters` | yes | array | Filter form; use `[]` for none |
 | `grid` | no | object | Grid, paging and configured grouping |
@@ -18,6 +18,18 @@ All configuration is JSON. Unknown top-level report keys are rejected, and defin
 | `export` | no | object | Export formats/scope |
 
 Omitted report defaults are: export, refresh, and saved reports enabled; pagination enabled with page size `10` and options `[10,25,50,100]`; row selection `single`; each column visible and sortable with width `150`.
+
+SQL Resource IDs use slash-separated segments such as `reports/item` and
+`widgets/item-dashboard-table`, without `.sql`. Optional `execution` accepts
+only `columns`, `filters`, and `defaultSort`. Columns are non-empty unique output
+identifiers. Each filter mapping has optional `expression`, `placement`
+(`output`, `source`, or `having`), and `valueType` (`integer-date` only).
+Default-sort fields must be execution columns. Resources with no filters,
+sorting, or pagination can omit execution metadata.
+`queryDefinition.filterLogic` selects the backend's one flat `AND` or `OR`
+combination for applied SQL Resource filters and defaults to backend `AND`.
+Frontend validation also requires every configured SQL filter and sortable
+column to be declared by the corresponding execution metadata.
 
 ## Columns
 
@@ -102,7 +114,7 @@ Inline non-report widgets accept `columns`, `grid`, `toolbar`, and optional filt
 
 ## Reusable widget files
 
-Files under `src/config/widgets/*.json` are auto-discovered for `widgetId` references. The supported reusable definition has `id`, `title`, SQL `queryDefinition`, optional `description`, `columns`, `grid`, `toolbar`, `export`, and a `filters` array (use `[]`). The current repository may use inline dashboard widgets exclusively; the registry remains supported for backward compatibility.
+Files under `src/config/widgets/*.json` are auto-discovered for `widgetId` references. The supported reusable definition has `id`, `title`, SQL `queryDefinition`, optional `description`, `columns`, `grid`, `toolbar`, `export`, and a `filters` array (use `[]`). The Item dashboard uses one shared statistics definition so four cards do not duplicate the same resource and execution metadata.
 
 ## Menu
 
