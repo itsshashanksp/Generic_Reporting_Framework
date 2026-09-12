@@ -7,7 +7,6 @@ import {
     deleteSavedReport,
 } from "../../engine/SavedReportEngine";
 
-import "./SavedReports.css";
 
 interface SavedReportsProps {
     reportId: string;

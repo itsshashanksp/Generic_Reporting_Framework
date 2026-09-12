@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GridProvider } from "../../../engine/GridContext";
@@ -63,6 +63,31 @@ describe("GenericGrid shared configuration", () => {
         expect(screen.getByText(/Page/).textContent).toContain("2");
     });
 
+    it("paginates client-side rows in the shared mobile presentation", () => {
+        const rows = Array.from({ length: 12 }, (_, index) => ({
+            Code: `A${index + 1}`,
+            Description: `Item ${index + 1}`,
+        }));
+        render(
+            <GridProvider>
+                <GenericGrid
+                    rows={rows}
+                    columns={columns}
+                    gridConfig={{
+                        ...gridConfig,
+                        pagination: { enabled: true, pageSize: 10, pageSizeOptions: [10, 25] },
+                    }}
+                />
+            </GridProvider>
+        );
+
+        const records = screen.getByRole("listbox", { name: "Report records" });
+        expect(within(records).getAllByRole("option")).toHaveLength(10);
+        fireEvent.click(screen.getByLabelText("Next page"));
+        expect(within(records).getAllByRole("option")).toHaveLength(2);
+        expect(screen.getByText(/Page/).textContent).toContain("2");
+    });
+
     it("defines resizable and movable defaults", () => {
         expect(defaultColumn).toMatchObject({
             initialFlex: 1,
@@ -89,5 +114,51 @@ describe("GenericGrid shared configuration", () => {
         expect(getContentMinWidth(rows, "Code", "Code", true, measureText)).toBe(150);
         expect(getContentMinWidth(rows, "Category", "Category", true, measureText)).toBe(150);
         expect(getContentMinWidth(rows, "Description", "Description", true, measureText)).toBeGreaterThan(400);
+    });
+
+    it("renders every configured field in the generic mobile record presentation", () => {
+        const mobileColumns = [
+            ...columns,
+            { field: "Active", header: "Active", visible: true, sortable: true, width: 150 },
+            { field: "Stock", header: "Stock", visible: true, sortable: true, width: 150 },
+        ];
+        render(
+            <GridProvider>
+                <GenericGrid
+                    rows={[{ Code: "A1", Description: "Alpha", Active: true, Stock: null, Hidden: "not configured" }]}
+                    columns={mobileColumns}
+                    gridConfig={gridConfig}
+                />
+            </GridProvider>
+        );
+
+        const record = within(screen.getByRole("listbox", { name: "Report records" })).getByRole("option");
+        expect(within(record).getByLabelText("Item Code: A1")).toBeTruthy();
+        expect(within(record).getByLabelText("Item Description: Alpha")).toBeTruthy();
+        expect(record.textContent).toContain("ActiveYes");
+        expect(record.textContent).toContain("Stock—");
+        expect(record.textContent).not.toContain("not configured");
+
+        fireEvent.click(record);
+        expect(record.getAttribute("aria-selected")).toBe("true");
+    });
+
+    it("keeps non-descriptive columns in compact labeled detail rows", () => {
+        render(
+            <GridProvider>
+                <GenericGrid
+                    rows={[{ Code: 1, Total: 42 }]}
+                    columns={[
+                        { field: "Code", header: "Code", visible: true, sortable: true },
+                        { field: "Total", header: "Total", visible: true, sortable: true },
+                    ]}
+                    gridConfig={gridConfig}
+                />
+            </GridProvider>
+        );
+
+        const record = within(screen.getByRole("listbox", { name: "Report records" })).getByRole("option");
+        expect(record.querySelector(".mobile-report-record__secondary")).toBeNull();
+        expect(record.querySelector(".mobile-report-record__details")?.textContent).toContain("Total42");
     });
 });

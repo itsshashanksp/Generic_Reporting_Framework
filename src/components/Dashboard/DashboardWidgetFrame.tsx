@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 
-import "./DashboardWidgets.css";
 
 interface DashboardWidgetFrameProps {
     title: string;

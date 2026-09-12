@@ -17,8 +17,8 @@ export const defaultReportDefinition: Partial<ReportDefinition> = {
 grid: {
     pagination: {
         enabled: true,
-        pageSize: 50,
-        pageSizeOptions: [25, 50, 100],
+        pageSize: 10,
+        pageSizeOptions: [10, 25, 50, 100],
     },
 
     rowSelection: "single",

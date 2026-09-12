@@ -10,9 +10,6 @@ import {
 import type { ToolbarConfig } from "../../types/report";
 import { isSavedReportsEnabled } from "../../engine/ReportDefinitionEngine";
 
-import "./Toolbar.css";
-
-
 interface ReportToolbarProps {
 
     config: ToolbarConfig;
@@ -111,6 +108,21 @@ export default function ReportToolbar({
         }
     }
 
+    const mobileOptions: ExportMenuOption[] = [];
+    mobileOptions.push(...exportOptions);
+    if (isSavedReportsEnabled(config) && onSaveReport) mobileOptions.push({
+        id: "save-report",
+        label: "Save Report",
+        disabled: isRefreshing || isExporting,
+        onSelect: onSaveReport,
+    });
+    if (config.settings) mobileOptions.push({
+        id: "settings",
+        label: "Settings",
+        disabled: true,
+        onSelect: () => undefined,
+    });
+
 
     return (
 
@@ -120,7 +132,7 @@ export default function ReportToolbar({
             aria-label="Report actions"
         >
 
-            <div className="report-toolbar__actions">
+            <div className="report-toolbar__actions report-toolbar__actions--desktop">
 
                 {config.refresh && (
                     <ToolbarButton
@@ -157,6 +169,17 @@ export default function ReportToolbar({
 
                 )}
 
+            </div>
+
+            <div className="report-toolbar__actions report-toolbar__actions--mobile">
+                <ExportMenu
+                    options={mobileOptions}
+                    disabled={isRefreshing && !rows.length}
+                    busy={isExporting}
+                    triggerLabel="More"
+                    busyLabel="Working…"
+                    menuLabel="Report actions"
+                />
             </div>
 
         </div>

@@ -1,0 +1,156 @@
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+    gap: 14px;
+}
+
+.filter-field {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.filter-field > label,
+.filter-field > legend {
+    display: block;
+    margin-bottom: 5px;
+    padding: 0;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.filter-required {
+    color: #b91c1c;
+}
+
+.filter-field input:not([type="checkbox"]),
+.filter-field select {
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+    padding: 7px 9px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    color: #1f2937;
+}
+
+.filter-field select[multiple] {
+    min-height: 84px;
+}
+
+.filter-field input:hover,
+.filter-field select:hover {
+    border-color: #94a3b8;
+}
+
+.filter-range {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-range__separator {
+    color: #64748b;
+    font-size: 12px;
+}
+
+.filter-checkbox {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    cursor: pointer;
+}
+
+.responsive-filter-controls,
+.responsive-filter-panel__close {
+    display: none;
+}
+
+.responsive-filter-panel__header h2 {
+    margin-top: 0;
+}
+
+.responsive-filter-panel__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+@media (max-width: 900px) {
+    .responsive-filter-controls {
+        display: flex;
+        margin-bottom: 14px;
+    }
+
+    .responsive-filter-controls .app-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+    }
+
+    .responsive-filter-controls svg,
+    .responsive-filter-panel__close svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .responsive-filter-panel {
+        display: none;
+        max-height: calc(100dvh - 92px - env(safe-area-inset-bottom));
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .responsive-filter-panel[data-open="true"] {
+        display: block;
+    }
+
+    .responsive-filter-panel__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .responsive-filter-panel__close {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
+        margin: -8px -8px 0 0;
+        padding: 0;
+        place-items: center;
+        border: 0;
+        border-radius: 7px;
+        background: transparent;
+        color: #475569;
+        cursor: pointer;
+    }
+}
+
+@media (max-width: 480px) {
+    .filter-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .filter-range {
+        grid-template-columns: 1fr;
+    }
+
+    .filter-range__separator {
+        display: none;
+    }
+
+    .responsive-filter-panel__actions .app-button {
+        flex: 1 1 120px;
+    }
+}

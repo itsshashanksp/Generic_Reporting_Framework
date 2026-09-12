@@ -1,4 +1,3 @@
-import "./Feedback.css";
 
 interface EmptyProps {
     title?: string;

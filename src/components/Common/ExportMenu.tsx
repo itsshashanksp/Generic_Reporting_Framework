@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { createPortal } from "react-dom";
 
-import "./ExportMenu.css";
 
 export interface ExportMenuOption {
     id: string;
@@ -13,11 +13,25 @@ interface ExportMenuProps {
     options: ExportMenuOption[];
     disabled?: boolean;
     busy?: boolean;
+    triggerLabel?: string;
+    busyLabel?: string;
+    menuLabel?: string;
+    mobileTriggerLabel?: string;
 }
 
-export default function ExportMenu({ options, disabled = false, busy = false }: ExportMenuProps) {
+export default function ExportMenu({
+    options,
+    disabled = false,
+    busy = false,
+    triggerLabel = "Export",
+    busyLabel = "Exporting…",
+    menuLabel = "Export options",
+    mobileTriggerLabel,
+}: ExportMenuProps) {
     const [open, setOpen] = useState(false);
+    const [useMobilePortal, setUseMobilePortal] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLButtonElement>(null);
     const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -25,7 +39,11 @@ export default function ExportMenu({ options, disabled = false, busy = false }: 
         if (!open) return;
 
         const handleOutside = (event: PointerEvent) => {
-            if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+            const target = event.target as Node;
+            if (
+                !containerRef.current?.contains(target)
+                && !menuRef.current?.contains(target)
+            ) setOpen(false);
         };
         const handleEscape = (event: globalThis.KeyboardEvent) => {
             if (event.key === "Escape") {
@@ -71,6 +89,49 @@ export default function ExportMenu({ options, disabled = false, busy = false }: 
 
     if (!options.length) return null;
 
+    const menuContent = (
+        <>
+            <button
+                type="button"
+                className="export-menu__backdrop"
+                aria-label={`Close ${menuLabel.toLowerCase()}`}
+                onClick={() => {
+                    setOpen(false);
+                    triggerRef.current?.focus();
+                }}
+            />
+            <div ref={menuRef} className="export-menu__items" role="menu" aria-label={menuLabel} onKeyDown={handleKeyDown}>
+                {options.map((option, index) => (
+                    <button
+                        key={option.id}
+                        ref={element => { itemRefs.current[index] = element; }}
+                        type="button"
+                        role="menuitem"
+                        disabled={option.disabled}
+                        onClick={() => {
+                            setOpen(false);
+                            option.onSelect();
+                            triggerRef.current?.focus();
+                        }}
+                    >
+                        {option.label}
+                    </button>
+                ))}
+                <button
+                    type="button"
+                    role="menuitem"
+                    className="export-menu__cancel"
+                    onClick={() => {
+                        setOpen(false);
+                        triggerRef.current?.focus();
+                    }}
+                >
+                    Cancel
+                </button>
+            </div>
+        </>
+    );
+
     return (
         <div className="export-menu" ref={containerRef}>
             <button
@@ -80,30 +141,21 @@ export default function ExportMenu({ options, disabled = false, busy = false }: 
                 aria-haspopup="menu"
                 aria-expanded={open}
                 disabled={disabled || busy}
-                onClick={() => setOpen(previous => !previous)}
+                onClick={() => {
+                    if (!open) setUseMobilePortal(window.matchMedia?.("(max-width: 720px)").matches ?? false);
+                    setOpen(previous => !previous);
+                }}
             >
-                {busy ? "Exporting…" : "Export"}<span aria-hidden="true"> ▾</span>
+                {busy ? busyLabel : (
+                    <>
+                        <span className="export-menu__trigger-label export-menu__trigger-label--desktop">{triggerLabel}</span>
+                        <span className="export-menu__trigger-label export-menu__trigger-label--mobile" aria-hidden="true">{mobileTriggerLabel ?? triggerLabel}</span>
+                    </>
+                )}<span aria-hidden="true"> ▾</span>
             </button>
-            {open && (
-                <div className="export-menu__items" role="menu" aria-label="Export options" onKeyDown={handleKeyDown}>
-                    {options.map((option, index) => (
-                        <button
-                            key={option.id}
-                            ref={element => { itemRefs.current[index] = element; }}
-                            type="button"
-                            role="menuitem"
-                            disabled={option.disabled}
-                            onClick={() => {
-                                setOpen(false);
-                                option.onSelect();
-                                triggerRef.current?.focus();
-                            }}
-                        >
-                            {option.label}
-                        </button>
-                    ))}
-                </div>
-            )}
+            {open && (useMobilePortal
+                ? createPortal(menuContent, document.body)
+                : menuContent)}
         </div>
     );
 }

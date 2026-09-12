@@ -1,0 +1,118 @@
+.report-table-frame {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 200px;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 5%);
+    color: #1f2937;
+}
+
+.report-table-frame__header {
+    display: flex;
+    min-height: 58px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #fff;
+}
+
+.report-table-frame__heading {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.report-table-frame__heading h2 {
+    margin: 0;
+    overflow: hidden;
+    color: #1f2937;
+    font-size: 18px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.report-table-frame__heading p {
+    margin: 3px 0 0;
+    color: #6b7280;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.report-table-frame__actions {
+    display: flex;
+    min-width: 0;
+    flex: 0 1 auto;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+}
+
+.report-table-frame__status {
+    flex: 0 0 auto;
+    color: #2563eb;
+    font-size: 12px;
+}
+
+.report-table-frame__actions .report-status,
+.report-table-frame__actions .form-error {
+    margin: 0;
+}
+
+.report-table-frame__body {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+}
+
+.report-table-frame__body > .universal-grid:not(.universal-grid--natural-height) {
+    height: 100%;
+    padding: 16px;
+}
+
+.report-table-frame__loading {
+    position: absolute;
+    z-index: 10;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgb(255 255 255 / 72%);
+    backdrop-filter: blur(1px);
+}
+
+@media (max-width: 720px) {
+    .report-table-frame__header {
+        padding: 11px 12px;
+        flex-wrap: nowrap;
+    }
+
+    .report-table-frame__heading h2 {
+        overflow: visible;
+        font-size: 16px;
+        text-overflow: clip;
+        white-space: normal;
+    }
+
+    .report-table-frame__actions {
+        flex-wrap: nowrap;
+        margin-left: auto;
+    }
+
+    .report-table-frame__body > .universal-grid:not(.universal-grid--natural-height) {
+        padding: 10px;
+    }
+}

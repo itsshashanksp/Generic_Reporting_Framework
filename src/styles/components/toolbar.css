@@ -1,0 +1,30 @@
+.report-toolbar {
+    display: flex;
+    align-items: center;
+}
+
+.report-toolbar__actions {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.report-toolbar__actions--mobile {
+    display: none;
+}
+
+@media (max-width: 720px) {
+    .report-toolbar__actions--desktop {
+        display: none;
+    }
+
+    .report-toolbar__actions--mobile {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .report-toolbar__actions--mobile .export-menu__items {
+        right: 0;
+    }
+}

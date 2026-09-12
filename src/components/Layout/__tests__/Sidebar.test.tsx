@@ -20,7 +20,7 @@ describe("Sidebar", () => {
 
     it("renders branding and nested report navigation", () => {
         render(<MemoryRouter><Sidebar items={items} /></MemoryRouter>);
-        expect(screen.getByText("Generic Reporting Framework")).toBeTruthy();
+        expect(screen.getAllByText("Generic Reporting Framework")).toHaveLength(2);
         fireEvent.click(screen.getByRole("button", { name: "Reports" }));
         expect(screen.getByRole("link", { name: "Customer Report" })).toBeTruthy();
         expect(screen.getByRole("link", { name: "Item Report" })).toBeTruthy();
@@ -32,5 +32,27 @@ describe("Sidebar", () => {
         expect(container.querySelector("nav")?.getAttribute("data-collapsed")).toBe("true");
         expect(screen.getByText("Dashboard")).toBeTruthy();
         expect(screen.getByRole("button", { name: "Expand navigation" })).toBeTruthy();
+    });
+
+    it("closes mobile navigation after selecting a destination", () => {
+        const { container } = render(<MemoryRouter><Sidebar items={items} /></MemoryRouter>);
+        fireEvent.click(screen.getByRole("button", { name: "Open navigation" }));
+        expect(container.querySelector("nav")?.getAttribute("data-mobile-open")).toBe("true");
+
+        fireEvent.click(screen.getByRole("link", { name: "Dashboard" }));
+        expect(container.querySelector("nav")?.getAttribute("data-mobile-open")).toBe("false");
+    });
+
+    it("closes mobile navigation from the backdrop and Escape key", () => {
+        const { container } = render(<MemoryRouter><Sidebar items={items} /></MemoryRouter>);
+        const open = screen.getByRole("button", { name: "Open navigation" });
+
+        fireEvent.click(open);
+        fireEvent.keyDown(document, { key: "Escape" });
+        expect(container.querySelector("nav")?.getAttribute("data-mobile-open")).toBe("false");
+
+        fireEvent.click(open);
+        fireEvent.click(container.querySelector(".app-sidebar-backdrop") as HTMLElement);
+        expect(container.querySelector("nav")?.getAttribute("data-mobile-open")).toBe("false");
     });
 });

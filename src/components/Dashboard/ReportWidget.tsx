@@ -3,7 +3,7 @@ import type { FilterDefinition } from "../../types/filter";
 import Empty from "../Common/Empty";
 import ErrorState from "../Common/Error";
 import Loading from "../Common/Loading";
-import DashboardWidgetFrame from "./DashboardWidgetFrame";
+import ReportTableFrame from "../Grid/ReportTableFrame";
 import ReportDataGrid from "./ReportDataGrid";
 import { useDashboardWidgetRequest } from "./useDashboardWidgetRequest";
 
@@ -33,10 +33,14 @@ export default function ReportWidget({
     const rows = response?.data ?? [];
 
     return (
-        <DashboardWidgetFrame
+        <ReportTableFrame
+            className="dashboard-report"
             title={title}
             description={description}
-            refreshing={loading && rows.length > 0}
+            busy={loading}
+            actions={loading && rows.length > 0
+                ? <span className="report-table-frame__status" role="status">Refreshing…</span>
+                : undefined}
         >
             {!report && (
                 <ErrorState title="Report unavailable" message="The configured report was not found." compact />
@@ -57,10 +61,8 @@ export default function ReportWidget({
                 <Empty title="No records found" message="The current filters returned no data." compact />
             )}
             {report && rows.length > 0 && (
-                <div className="dashboard-widget-content__grid">
-                    <ReportDataGrid rows={rows} columns={report.columns} gridConfig={report.grid} />
-                </div>
+                <ReportDataGrid rows={rows} columns={report.columns} gridConfig={report.grid} />
             )}
-        </DashboardWidgetFrame>
+        </ReportTableFrame>
     );
 }

@@ -1,0 +1,15 @@
+@import "./global/base.css";
+
+@import "./components/layout.css";
+@import "./components/feedback.css";
+@import "./components/filters.css";
+@import "./components/export-menu.css";
+@import "./components/toolbar.css";
+@import "./components/saved-reports.css";
+@import "./components/generic-grid.css";
+@import "./components/report-table-frame.css";
+@import "./components/dashboard-widgets.css";
+@import "./components/table-widget.css";
+
+@import "./pages/dashboard.css";
+@import "./pages/report-viewer.css";

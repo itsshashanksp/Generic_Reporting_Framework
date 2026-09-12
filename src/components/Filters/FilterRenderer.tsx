@@ -1,7 +1,6 @@
 import type { FilterDefinition } from "../../types/filter";
 
 import FilterField from "./FilterField";
-import "./Filters.css";
 
 interface Props {
     filters: FilterDefinition[];

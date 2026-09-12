@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ChevronDown, ChevronRight, FileBarChart, FolderKanban, LayoutDashboard, PanelLeftClose, PanelLeftOpen, Settings, UserRound } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ChevronDown, ChevronRight, FileBarChart, FolderKanban, LayoutDashboard, Menu, PanelLeftClose, PanelLeftOpen, Settings, UserRound, X } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 
 import menu from "../../config/menu.json";
@@ -24,6 +24,7 @@ const icons: Record<NavigationIcon, typeof LayoutDashboard> = {
 
 export default function Sidebar({ items = configuredItems }: { items?: NavigationItem[] }) {
     const location = useLocation();
+    const [mobileOpen, setMobileOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(() => {
         try {
             return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
@@ -39,6 +40,22 @@ export default function Sidebar({ items = configuredItems }: { items?: Navigatio
             return {};
         }
     });
+
+    useEffect(() => {
+        if (!mobileOpen) return;
+
+        const handleEscape = (event: KeyboardEvent) => {
+            if (event.key === "Escape") setMobileOpen(false);
+        };
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        document.addEventListener("keydown", handleEscape);
+
+        return () => {
+            document.body.style.overflow = previousOverflow;
+            document.removeEventListener("keydown", handleEscape);
+        };
+    }, [mobileOpen]);
 
     const toggleCollapsed = () => {
         setCollapsed(previous => {
@@ -68,7 +85,7 @@ export default function Sidebar({ items = configuredItems }: { items?: Navigatio
     };
 
     const activateGroup = (id: string, activeChild: boolean) => {
-        if (!collapsed) {
+        if (mobileOpen || !collapsed) {
             toggleGroup(id, activeChild);
             return;
         }
@@ -91,11 +108,41 @@ export default function Sidebar({ items = configuredItems }: { items?: Navigatio
         .filter(item => !item.children || item.children.some(child => child.visible !== false));
 
     return (
+        <>
+        <header className="mobile-app-header">
+            <button
+                type="button"
+                className="mobile-app-header__menu"
+                aria-label="Open navigation"
+                aria-expanded={mobileOpen}
+                aria-controls="primary-navigation"
+                onClick={() => setMobileOpen(true)}
+            >
+                <Menu aria-hidden="true" />
+            </button>
+            <strong>Generic Reporting Framework</strong>
+        </header>
 
-        <nav className="app-sidebar" data-collapsed={collapsed} aria-label="Primary navigation">
+        <button
+            type="button"
+            className="app-sidebar-backdrop"
+            data-open={mobileOpen}
+            aria-label="Close navigation"
+            aria-hidden={!mobileOpen}
+            tabIndex={mobileOpen ? 0 : -1}
+            onClick={() => setMobileOpen(false)}
+        />
+
+        <nav
+            className="app-sidebar"
+            id="primary-navigation"
+            data-collapsed={collapsed}
+            data-mobile-open={mobileOpen}
+            aria-label="Primary navigation"
+        >
 
             <div className="app-sidebar__header">
-                <div className="app-sidebar__brand" aria-hidden={collapsed || undefined}>
+                <div className="app-sidebar__brand">
                     <span className="app-sidebar__brand-name"><strong>Generic Reporting Framework</strong></span>
                 </div>
 
@@ -109,6 +156,15 @@ export default function Sidebar({ items = configuredItems }: { items?: Navigatio
                 >
                     {collapsed ? <PanelLeftOpen aria-hidden="true" /> : <PanelLeftClose aria-hidden="true" />}
                 </button>
+
+                <button
+                    type="button"
+                    className="app-sidebar__mobile-close"
+                    onClick={() => setMobileOpen(false)}
+                    aria-label="Close navigation"
+                >
+                    <X aria-hidden="true" />
+                </button>
             </div>
 
             <div className="app-sidebar__links" id="primary-navigation-links">
@@ -119,7 +175,7 @@ export default function Sidebar({ items = configuredItems }: { items?: Navigatio
                 const childRoutes = visibleChildren.map(getNavigationRoute);
                 const activeChild = childRoutes.includes(location.pathname);
                 const groupExpanded = expandedGroups[item.id] ?? activeChild;
-                const showChildren = !collapsed && groupExpanded;
+                const showChildren = (mobileOpen || !collapsed) && groupExpanded;
                 const route = getNavigationRoute(item);
 
                 return <div key={item.id} className="app-sidebar__section">
@@ -128,11 +184,12 @@ export default function Sidebar({ items = configuredItems }: { items?: Navigatio
                         <NavLink
                             to={route}
                             end={route === "/"}
-                            title={collapsed ? item.title : undefined}
+                            title={collapsed && !mobileOpen ? item.title : undefined}
                             className={({ isActive }) => isActive ? "is-active" : undefined}
+                            onClick={() => setMobileOpen(false)}
                         >
                             <Icon aria-hidden="true" />
-                            <span className="app-sidebar__label" aria-hidden={collapsed || undefined}>{item.title}</span>
+                            <span className="app-sidebar__label" aria-hidden={collapsed && !mobileOpen || undefined}>{item.title}</span>
                         </NavLink>
                     )}
 
@@ -143,13 +200,13 @@ export default function Sidebar({ items = configuredItems }: { items?: Navigatio
                             <button
                                 type="button"
                                 className="app-sidebar__group"
-                                title={collapsed ? item.title : undefined}
-                                aria-expanded={!collapsed && groupExpanded}
+                                title={collapsed && !mobileOpen ? item.title : undefined}
+                                aria-expanded={(mobileOpen || !collapsed) && groupExpanded}
                                 aria-controls={`navigation-group-${item.id}`}
                                 onClick={() => activateGroup(item.id, activeChild)}
                             >
                                 <Icon aria-hidden="true" />
-                                <span className="app-sidebar__label" aria-hidden={collapsed || undefined}>{item.title}</span>
+                                <span className="app-sidebar__label" aria-hidden={collapsed && !mobileOpen || undefined}>{item.title}</span>
                                 {groupExpanded
                                     ? <ChevronDown className="app-sidebar__chevron" aria-hidden="true" />
                                     : <ChevronRight className="app-sidebar__chevron" aria-hidden="true" />}
@@ -170,7 +227,8 @@ export default function Sidebar({ items = configuredItems }: { items?: Navigatio
                                             key={child.id}
                                             to={childRoute}
                                             tabIndex={showChildren ? undefined : -1}
-                                            className={({ isActive }) => isActive ? "is-active app-sidebar__child" : "app-sidebar__child"}
+                                        className={({ isActive }) => isActive ? "is-active app-sidebar__child" : "app-sidebar__child"}
+                                        onClick={() => setMobileOpen(false)}
                                         >
                                             <ChildIcon aria-hidden="true" />
                                             <span className="app-sidebar__label">{child.title}</span>
@@ -190,6 +248,7 @@ export default function Sidebar({ items = configuredItems }: { items?: Navigatio
             </div>
 
         </nav>
+        </>
 
     );
 

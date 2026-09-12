@@ -1,0 +1,66 @@
+.dashboard-table {
+    height: 100%;
+}
+
+.dashboard-table__export-progress {
+    margin: 10px 16px 0;
+    color: #2563eb;
+    font-size: 12px;
+}
+
+.dashboard-table__state {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 120px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 7px;
+    padding: 20px;
+    color: #6b7280;
+    text-align: center;
+}
+
+.dashboard-table__state--error {
+    color: #b91c1c;
+}
+
+.dashboard-table__state span {
+    font-size: 12px;
+}
+
+.dashboard-table__inline-error {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 10px 16px 0;
+    padding: 7px 9px;
+    border-radius: 5px;
+    background: #fef2f2;
+    color: #991b1b;
+    font-size: 12px;
+}
+
+.dashboard-table__inline-error button {
+    min-height: 28px;
+    padding: 3px 8px;
+}
+
+@media (max-width: 640px) {
+    .dashboard-table__inline-error {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .dashboard-table__inline-error .app-button {
+        width: 100%;
+    }
+
+    .dashboard-table__export-progress,
+    .dashboard-table__inline-error {
+        margin-right: 10px;
+        margin-left: 10px;
+    }
+}

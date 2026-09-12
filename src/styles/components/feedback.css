@@ -63,3 +63,15 @@
         animation: none;
     }
 }
+
+@media (max-width: 520px) {
+    .ui-state {
+        min-height: 140px;
+        padding: 20px 14px;
+    }
+
+    .ui-state--compact {
+        min-height: 88px;
+        padding: 14px;
+    }
+}

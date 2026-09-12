@@ -97,3 +97,19 @@
     min-height: 28px;
     padding: 3px 8px;
 }
+
+@media (max-width: 520px) {
+    .dashboard-widget-content__header h2 {
+        overflow: visible;
+        white-space: normal;
+    }
+
+    .dashboard-widget-content__chart {
+        min-height: 240px;
+    }
+
+    .dashboard-widget-inline-error {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}

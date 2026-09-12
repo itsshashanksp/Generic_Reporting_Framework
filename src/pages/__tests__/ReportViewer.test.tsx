@@ -64,7 +64,7 @@ describe("ReportViewer runtime", () => {
         expect(request).toMatchObject({
             action: "sql",
             resource: "item",
-            pagination: { page: 1, pageSize: 25 },
+            pagination: { page: 1, pageSize: 10 },
         });
         expect(request.filters).toContainEqual({ field: "Item_Code", operator: "LIKE", value: "%A1%" });
         expect(JSON.stringify(request)).not.toContain("SELECT");
@@ -86,7 +86,7 @@ describe("ReportViewer runtime", () => {
         expect(executeRequestMock.mock.calls[0][0]).toMatchObject({
             action: "sql",
             resource: "customer",
-            pagination: { page: 1, pageSize: 25 },
+            pagination: { page: 1, pageSize: 10 },
         });
     });
 

@@ -1,4 +1,4 @@
-import FilterRenderer from "../components/Filters/FilterRenderer";
+import { ResponsiveFilterPanel } from "../components/Filters";
 import {
     getDashboard,
     resolveDashboardWidgetColumns,
@@ -20,7 +20,6 @@ import type { DashboardDefinition } from "../types/dashboard";
 
 import { useEffect, useMemo, useState } from "react";
 
-import "./Dashboard.css";
 
 import type { CSSProperties } from "react";
 
@@ -145,11 +144,12 @@ function DashboardContent({
 
         if (missing.length > 0) {
             setFilterError(`Complete the required filter${missing.length > 1 ? "s" : ""}: ${missing.map(filter => filter.label).join(", ")}.`);
-            return;
+            return false;
         }
 
         setFilterError("");
         applyFilters(filters);
+        return true;
     };
 
     const handleClearFilters = () => {
@@ -200,37 +200,13 @@ function DashboardContent({
 
             {dashboard.filters &&
                 dashboard.filters.length > 0 && (
-                    <section className="dashboard-filters" aria-labelledby="dashboard-filters-title">
-
-                        <h2 id="dashboard-filters-title">Filters</h2>
-
-                        <FilterRenderer
-                            filters={dashboard.filters}
-                        />
-
-                        {filterError && <p className="form-error" role="alert">{filterError}</p>}
-
-                        <div className="dashboard-filter-actions">
-
-                            <button
-                                type="button"
-                                className="app-button app-button--primary"
-                                onClick={handleSearch}
-                            >
-                                Search
-                            </button>
-
-                            <button
-                                type="button"
-                                className="app-button"
-                                onClick={handleClearFilters}
-                            >
-                                Clear Filters
-                            </button>
-
-                        </div>
-
-                    </section>
+                    <ResponsiveFilterPanel
+                        filters={dashboard.filters}
+                        className="dashboard-filters"
+                        error={filterError}
+                        onApply={handleSearch}
+                        onClear={handleClearFilters}
+                    />
                 )}
 
             {visibleWidgets.length === 0 ? (
@@ -333,7 +309,7 @@ function DashboardContent({
                             return (
                                 <div
                                     key={widget.id}
-                                    className="dashboard-widget"
+                                    className={`dashboard-widget${widget.type === "table" || widget.type === "report" ? " dashboard-widget--table" : ""}`}
                                     style={{
                                         /*
                                          * Use configured X

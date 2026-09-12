@@ -1,0 +1,99 @@
+.export-menu {
+    position: relative;
+}
+
+.export-menu__backdrop,
+.export-menu__cancel {
+    display: none;
+}
+
+.export-menu__trigger-label--mobile {
+    display: none;
+}
+
+.export-menu__items {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 6px);
+    right: 0;
+    display: grid;
+    min-width: 190px;
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 12px 28px rgb(15 23 42 / 16%);
+}
+
+.export-menu__items button {
+    width: 100%;
+    padding: 10px 12px;
+    border: 0;
+    border-bottom: 1px solid #f1f5f9;
+    background: transparent;
+    color: #1e293b;
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.export-menu__items button:last-child { border-bottom: 0; }
+.export-menu__items button:hover,
+.export-menu__items button:focus-visible { outline: none; background: #eff6ff; color: #1d4ed8; }
+.export-menu__items button:disabled { color: #94a3b8; cursor: not-allowed; }
+
+@media (max-width: 720px) {
+    .export-menu__trigger-label--desktop {
+        display: none;
+    }
+
+    .export-menu__trigger-label--mobile {
+        display: inline;
+    }
+    .export-menu__backdrop {
+        position: fixed;
+        z-index: 55;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: rgb(15 23 42 / 32%);
+        cursor: default;
+        touch-action: none;
+    }
+
+    .export-menu__items {
+        position: fixed;
+        z-index: 60;
+        top: auto;
+        right: max(16px, env(safe-area-inset-right));
+        bottom: max(16px, env(safe-area-inset-bottom));
+        left: max(16px, env(safe-area-inset-left));
+        width: auto;
+        min-width: 0;
+        max-width: none;
+        max-height: calc(100dvh - max(32px, env(safe-area-inset-top)) - max(32px, env(safe-area-inset-bottom)));
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        border-radius: 10px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .export-menu__items button {
+        min-height: 44px;
+        overflow-wrap: anywhere;
+        white-space: normal;
+    }
+
+    .export-menu__cancel {
+        display: block;
+        color: #475569;
+        font-weight: 650;
+        text-align: center;
+    }
+}

@@ -28,7 +28,6 @@
       "id": "item-table",
       "type": "table",
       "title": "Item Details",
-      "description": "Item records matching the selected filters.",
       "visible": true,
       "position": {
         "x": 0,
@@ -58,6 +57,14 @@
         {
           "field": "Std_Vat",
           "header": "GST %"
+        },
+        {
+          "field": "cl_stock",
+          "header": "Closing Stock"
+        },
+        {
+          "field": "stock_value",
+          "header": "Stock Value"
         }
       ],
       "filters": [],
@@ -134,10 +141,10 @@
       "format": "currency"
     },
     {
-      "id": "total-value",
+      "id": "stock-value",
       "type": "stat",
-      "title": "Total Value",
-      "description": "Total value of items matching the selected filters.",
+      "title": "Stock Value",
+      "description": "Stock value of items matching the selected filters.",
       "width": 4,
       "height": 175,
       "visible": true,
@@ -150,7 +157,7 @@
         "resource": "item-dashboard-stats"
       },
       "filters": [],
-      "valueField": "TotalValue",
+      "valueField": "StockValue",
       "format": "currency"
     }
   ]

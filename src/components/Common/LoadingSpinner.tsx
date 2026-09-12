@@ -1,4 +1,3 @@
-import "./Feedback.css";
 
 interface LoadingSpinnerProps {
     label?: string;

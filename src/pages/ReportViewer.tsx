@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useParams } from "react-router-dom";
 
 import {
@@ -9,8 +9,10 @@ import {
 import Empty from "../components/Common/Empty";
 import ErrorState from "../components/Common/Error";
 import Loading from "../components/Common/Loading";
-import { FilterRenderer } from "../components/Filters";
+import usePullToRefresh from "../components/Common/usePullToRefresh";
+import { ResponsiveFilterPanel } from "../components/Filters";
 import GenericGrid from "../components/Grid/GenericGrid";
+import ReportTableFrame from "../components/Grid/ReportTableFrame";
 import SavedReports from "../components/SavedReports/SavedReports";
 import { ReportToolbar } from "../components/Toolbar";
 import { useFilters } from "../engine/FilterContext";
@@ -27,7 +29,6 @@ import type { FilterValue } from "../engine/FilterContext/FilterContext";
 import type { SavedReport } from "../types/savedReport";
 import type { SortDefinition } from "../types/report";
 
-import "./ReportViewer.css";
 
 export default function ReportViewer() {
     const { reportId } = useParams();
@@ -37,7 +38,7 @@ export default function ReportViewer() {
     const reportConfigurationError = getReportError(reportId || "");
     const [initialRequestState] = useState(() => {
         if (!report) {
-            return { response: null, pageSize: 50 };
+            return { response: null, pageSize: 10 };
         }
 
         const pageSize = report.grid.pagination.pageSize;
@@ -75,7 +76,7 @@ export default function ReportViewer() {
     const loadReport = useCallback(async (
         activeFilters: Record<string, unknown> = {},
         activePage = 1,
-        activePageSize = report?.grid.pagination.pageSize ?? 50,
+        activePageSize = report?.grid.pagination.pageSize ?? 10,
         activeSorting: SortDefinition[] = report?.request.sort ?? [],
         bypassCache = false
     ) => {
@@ -200,12 +201,13 @@ export default function ReportViewer() {
 
     const handleSearch = () => {
         if (!validateRequiredFilters()) {
-            return;
+            return false;
         }
 
         setCurrentPage(1);
         setAppliedFilters({ ...filters });
         void loadReport(filters, 1, undefined, getGridSorting());
+        return true;
     };
 
     const handleClear = () => {
@@ -216,9 +218,18 @@ export default function ReportViewer() {
         void loadReport({}, 1, undefined, getGridSorting());
     };
 
-    const handleRefresh = () => {
+    const handleRefresh = useCallback(() => {
         void loadReport(appliedFilters, currentPage, currentPageSize, currentSorting, true);
-    };
+    }, [appliedFilters, currentPage, currentPageSize, currentSorting, loadReport]);
+
+    const {
+        containerRef: reportPageRef,
+        pullDistance,
+        armed: pullToRefreshArmed,
+    } = usePullToRefresh({
+        onRefresh: handleRefresh,
+        disabled: isGridLoading,
+    });
 
     const handleSaveReport = () => {
         if (!report) {
@@ -350,38 +361,30 @@ export default function ReportViewer() {
     }
 
     return (
-        <main className="report-page">
+        <main ref={reportPageRef} className="report-page">
+            <div
+                className="pull-to-refresh"
+                style={{ "--pull-distance": `${pullDistance}px` } as CSSProperties}
+                aria-hidden={pullDistance === 0}
+            >
+                {pullToRefreshArmed ? "Release to refresh" : "Pull to refresh"}
+            </div>
             <header className="report-page__header">
                 <div>
                     <h1>{report.title}</h1>
                     {report.description && <p>{report.description}</p>}
                 </div>
-                <dl className="report-metrics" aria-label="Report request information">
-                    <div>
-                        <dt>Rows returned</dt>
-                        <dd>{result?.meta?.rowsReturned ?? rows.length}</dd>
-                    </div>
-                    <div>
-                        <dt>Execution time</dt>
-                        <dd>{result?.meta?.executionTime ?? "—"}{result?.meta?.executionTime != null ? " ms" : ""}</dd>
-                    </div>
-                </dl>
             </header>
 
             {report.filters.length > 0 && (
-                <section className="report-section" aria-labelledby="report-filters-title">
-                    <h2 id="report-filters-title">Filters</h2>
-                    <FilterRenderer filters={report.filters} />
-                    {filterError && <p className="form-error" role="alert">{filterError}</p>}
-                    <div className="report-actions">
-                        <button type="button" className="app-button app-button--primary" onClick={handleSearch} disabled={isGridLoading}>
-                            Search
-                        </button>
-                        <button type="button" className="app-button" onClick={handleClear} disabled={isGridLoading}>
-                            Clear filters
-                        </button>
-                    </div>
-                </section>
+                <ResponsiveFilterPanel
+                    filters={report.filters}
+                    className="report-section"
+                    error={filterError}
+                    disabled={isGridLoading}
+                    onApply={handleSearch}
+                    onClear={handleClear}
+                />
             )}
 
             {isSavedReportsEnabled(report.toolbar) && (
@@ -392,10 +395,12 @@ export default function ReportViewer() {
                 />
             )}
 
-            <section className="report-grid-card" aria-label="Report results" aria-busy={isGridLoading}>
-                <div className="report-grid-card__toolbar">
-                    <h2>Report results</h2>
-                    <div className="report-grid-card__actions">
+            <ReportTableFrame
+                title="Report Result"
+                ariaLabel="Report results"
+                busy={isGridLoading}
+                actions={(
+                    <>
                         {exportStatus && (
                             <p
                                 className={exportStatus === "Preparing export…" ? "report-status" : "form-error"}
@@ -414,10 +419,9 @@ export default function ReportViewer() {
                             onSaveReport={handleSaveReport}
                             rows={rows}
                         />
-                    </div>
-                </div>
-
-                <div className="report-grid-card__body">
+                    </>
+                )}
+            >
                     {gridError && rows.length > 0 && (
                         <div className="report-inline-error" role="alert">
                             <span>{gridError}</span>
@@ -449,12 +453,11 @@ export default function ReportViewer() {
                     {!isGridLoading && !gridError && rows.length === 0 && <Empty />}
 
                     {isGridLoading && (
-                        <div className="report-grid-card__loading">
+                        <div className="report-table-frame__loading">
                             <Loading label={rows.length ? "Refreshing report data…" : "Loading report data…"} compact />
                         </div>
                     )}
-                </div>
-            </section>
+            </ReportTableFrame>
         </main>
     );
 }

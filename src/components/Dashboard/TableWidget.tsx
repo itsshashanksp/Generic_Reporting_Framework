@@ -24,8 +24,8 @@ import type { WidgetRequest } from "../../types/widget";
 import ExportMenu, { type ExportMenuOption } from "../Common/ExportMenu";
 import Loading from "../Common/Loading";
 import GenericGrid from "../Grid/GenericGrid";
+import ReportTableFrame from "../Grid/ReportTableFrame";
 
-import "./TableWidget.css";
 
 const EMPTY_FILTER_DEFINITIONS: FilterDefinition[] = [];
 const DEFAULT_PAGE_SIZE = 10;
@@ -434,23 +434,25 @@ export default function TableWidget({
                 : "success";
 
     return (
-        <section
+        <ReportTableFrame
             className="dashboard-table"
-            aria-busy={isViewLoading || tableState === "loading"}
-        >
-            <header className="dashboard-table__header">
-                <div className="dashboard-table__heading">
-                    <h2>{title}</h2>
-                    {description && <p>{description}</p>}
-                </div>
-
-                <div className="dashboard-table__header-actions">
+            title={title}
+            description={description}
+            busy={isViewLoading || tableState === "loading"}
+            actions={(
+                <>
                     {isViewLoading && visibleRows.length > 0 && (
-                        <span className="dashboard-table__refreshing" role="status">Refreshing…</span>
+                        <span className="report-table-frame__status" role="status">Refreshing…</span>
                     )}
-                    <ExportMenu options={exportOptions} disabled={isViewLoading && !visibleRows.length} busy={exporting} />
-                </div>
-            </header>
+                    <ExportMenu
+                        options={exportOptions}
+                        disabled={isViewLoading && !visibleRows.length}
+                        busy={exporting}
+                        mobileTriggerLabel="More"
+                    />
+                </>
+            )}
+        >
 
             {exportProgress && (
                 <div className="dashboard-table__export-progress" role="status">{exportProgress}</div>
@@ -516,6 +518,6 @@ export default function TableWidget({
                     />
                 </>
             )}
-        </section>
+        </ReportTableFrame>
     );
 }

@@ -1,5 +1,3 @@
-import "./ReportViewer.css";
-
 export default function Settings() {
     return (
         <main className="report-page">

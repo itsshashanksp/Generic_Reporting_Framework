@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
 import { AgGridReact } from "ag-grid-react";
 
@@ -13,10 +13,10 @@ import { getContentMinWidth } from "../../engine/GridEngine/contentWidth";
 
 import type { GridConfig } from "../../types/report";
 import type { ColumnDefinition } from "../../types/column";
+import MobileReportView from "./MobileReportView";
 
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
-import "./GenericGrid.css";
 
 interface Props {
     rows: Record<string, unknown>[];
@@ -47,6 +47,10 @@ export default function GenericGrid({
     const usesNaturalHeight = height === undefined;
 
     const gridRef = useRef<AgGridReact>(null);
+    const [selectedRows, setSelectedRows] = useState<Set<Record<string, unknown>>>(() => new Set());
+    const [mobileSort, setMobileSort] = useState<{ field: string; direction: "asc" | "desc" } | null>(null);
+    const [mobileClientPage, setMobileClientPage] = useState(1);
+    const [mobileClientPageSize, setMobileClientPageSize] = useState(gridConfig.pagination.pageSize);
 
     useEffect(() => () => setApi(null), [setApi]);
 
@@ -111,15 +115,94 @@ export default function GenericGrid({
                 }));
     }, [columns, gridConfig.grouping, rows]);
 
-    const totalPages = serverPagination
-        ? Math.max(1, Math.ceil(serverPagination.totalRows / serverPagination.pageSize))
+    const mobileColumns = columnDefs.map(column => ({
+        field: column.field,
+        headerName: column.headerName,
+        sortable: column.sortable !== false,
+    }));
+
+    const mobileRows = useMemo(() => {
+        if (!mobileSort) return rows;
+
+        return [...rows].sort((left, right) => {
+            const leftValue = left[mobileSort.field];
+            const rightValue = right[mobileSort.field];
+            const numericLeft = Number(leftValue);
+            const numericRight = Number(rightValue);
+            const comparison = Number.isFinite(numericLeft) && Number.isFinite(numericRight)
+                ? numericLeft - numericRight
+                : String(leftValue ?? "").localeCompare(String(rightValue ?? ""), undefined, { numeric: true, sensitivity: "base" });
+            return mobileSort.direction === "desc" ? -comparison : comparison;
+        });
+    }, [mobileSort, rows]);
+
+    const usesClientPagination = gridConfig.pagination.enabled && !serverPagination;
+    const clientTotalPages = Math.max(1, Math.ceil(mobileRows.length / mobileClientPageSize));
+    const activeClientPage = Math.min(mobileClientPage, clientTotalPages);
+    const displayedMobileRows = usesClientPagination
+        ? mobileRows.slice(
+            (activeClientPage - 1) * mobileClientPageSize,
+            activeClientPage * mobileClientPageSize,
+        )
+        : mobileRows;
+    const pagination = serverPagination
+        ? {
+            page: serverPagination.page,
+            pageSize: serverPagination.pageSize,
+            totalRows: serverPagination.totalRows,
+            disabled: serverPagination.disabled ?? false,
+            onPageChange: serverPagination.onPageChange,
+            onPageSizeChange: serverPagination.onPageSizeChange,
+        }
+        : usesClientPagination
+            ? {
+                page: activeClientPage,
+                pageSize: mobileClientPageSize,
+                totalRows: mobileRows.length,
+                disabled: false,
+                onPageChange: setMobileClientPage,
+                onPageSizeChange: (pageSize: number) => {
+                    setMobileClientPageSize(pageSize);
+                    setMobileClientPage(1);
+                },
+            }
+            : null;
+    const totalPages = pagination
+        ? Math.max(1, Math.ceil(pagination.totalRows / pagination.pageSize))
         : 1;
-    const rangeStart = serverPagination && serverPagination.totalRows > 0
-        ? (serverPagination.page - 1) * serverPagination.pageSize + 1
+    const rangeStart = pagination && pagination.totalRows > 0
+        ? (pagination.page - 1) * pagination.pageSize + 1
         : 0;
-    const rangeEnd = serverPagination
-        ? Math.min(rangeStart + rows.length - 1, serverPagination.totalRows)
+    const rangeEnd = pagination
+        ? Math.min(rangeStart + displayedMobileRows.length - 1, pagination.totalRows)
         : 0;
+
+    const applyMobileSort = (field: string, direction: "asc" | "desc") => {
+        const nextSort = field ? { field, direction } : null;
+        setMobileSort(nextSort);
+        setMobileClientPage(1);
+        gridRef.current?.api.applyColumnState({
+            state: nextSort ? [{ colId: nextSort.field, sort: nextSort.direction }] : [],
+            defaultState: { sort: null },
+        });
+        if (!gridRef.current?.api && onSortChange) {
+            onSortChange(nextSort ? [{ field: nextSort.field, direction: nextSort.direction === "desc" ? "DESC" : "ASC" }] : []);
+        }
+    };
+
+    const toggleMobileSelection = (row: Record<string, unknown>) => {
+        const nextSelected = !selectedRows.has(row);
+        const singleSelection = gridConfig.rowSelection === "single";
+        gridRef.current?.api.forEachNode(node => {
+            if (node.data === row) node.setSelected(nextSelected, singleSelection);
+        });
+        setSelectedRows(previous => {
+            const next = singleSelection ? new Set<Record<string, unknown>>() : new Set(previous);
+            if (nextSelected) next.add(row);
+            else next.delete(row);
+            return next;
+        });
+    };
 
     return (
 
@@ -141,6 +224,10 @@ export default function GenericGrid({
                     setApi(params.api);
                 }}
 
+                onSelectionChanged={event => {
+                    setSelectedRows(new Set(event.api.getSelectedRows()));
+                }}
+
                 rowData={rows}
                 columnDefs={columnDefs}
 
@@ -158,45 +245,64 @@ export default function GenericGrid({
 
                 rowSelection={gridConfig.rowSelection}
 
-                onSortChanged={onSortChange ? event => {
-                    onSortChange(event.api.getColumnState()
+                onSortChanged={event => {
+                    const sorting: Array<{ field: string; direction: "ASC" | "DESC" }> = event.api.getColumnState()
                         .filter(column => column.sort === "asc" || column.sort === "desc")
                         .map(column => ({
                             field: column.colId,
                             direction: column.sort === "desc" ? "DESC" : "ASC",
-                        })));
-                } : undefined}
+                        }));
+                    const firstSort = sorting[0];
+                    setMobileSort(firstSort ? {
+                        field: firstSort.field,
+                        direction: firstSort.direction === "DESC" ? "desc" : "asc",
+                    } : null);
+                    onSortChange?.(sorting);
+                }}
             />
 
             </div>
 
-            {serverPagination && gridConfig.pagination.enabled && (
-                <footer className="universal-grid__pagination" aria-label="Grid pagination">
+            <MobileReportView
+                rows={displayedMobileRows}
+                columns={mobileColumns}
+                selectable={gridConfig.rowSelection === "single" || gridConfig.rowSelection === "multiple"}
+                sort={mobileSort}
+                isSelected={row => selectedRows.has(row)}
+                onToggleSelection={toggleMobileSelection}
+                onSortFieldChange={field => applyMobileSort(field, mobileSort?.direction ?? "asc")}
+                onSortDirectionChange={() => {
+                    if (mobileSort) applyMobileSort(mobileSort.field, mobileSort.direction === "asc" ? "desc" : "asc");
+                }}
+            />
+
+            {pagination && gridConfig.pagination.enabled && (
+                <footer className={`universal-grid__pagination${serverPagination ? "" : " universal-grid__pagination--client"}`} aria-label="Grid pagination">
                     <span className="universal-grid__range">
-                        Showing {rangeStart}–{Math.max(rangeStart, rangeEnd)} of {serverPagination.totalRows}
+                        Showing {rangeStart}–{Math.max(rangeStart, rangeEnd)} of {pagination.totalRows}
                     </span>
                     <label className="universal-grid__page-size">
                         <span>Rows per page</span>
                         <select
                             aria-label="Rows per page"
-                            value={serverPagination.pageSize}
-                            disabled={serverPagination.disabled}
-                            onChange={event => serverPagination.onPageSizeChange(Number(event.target.value))}
+                            value={pagination.pageSize}
+                            disabled={pagination.disabled}
+                            onChange={event => pagination.onPageSizeChange(Number(event.target.value))}
                         >
                             {[...new Set([
                                 ...(gridConfig.pagination.pageSizeOptions ?? []),
-                                serverPagination.pageSize,
+                                pagination.pageSize,
                             ])].sort((left, right) => left - right).map(option => (
                                 <option key={option} value={option}>{option}</option>
                             ))}
                         </select>
                     </label>
                     <div className="universal-grid__page-buttons" role="group" aria-label="Page navigation">
-                        <button type="button" aria-label="First page" title="First page" disabled={serverPagination.disabled || serverPagination.page <= 1} onClick={() => serverPagination.onPageChange(1)}>«</button>
-                        <button type="button" aria-label="Previous page" title="Previous page" disabled={serverPagination.disabled || serverPagination.page <= 1} onClick={() => serverPagination.onPageChange(serverPagination.page - 1)}>‹</button>
-                        <span className="universal-grid__page-indicator">Page <strong>{serverPagination.page}</strong> of {totalPages}</span>
-                        <button type="button" aria-label="Next page" title="Next page" disabled={serverPagination.disabled || serverPagination.page >= totalPages} onClick={() => serverPagination.onPageChange(serverPagination.page + 1)}>›</button>
-                        <button type="button" aria-label="Last page" title="Last page" disabled={serverPagination.disabled || serverPagination.page >= totalPages} onClick={() => serverPagination.onPageChange(totalPages)}>»</button>
+                        <button type="button" className="universal-grid__page-button--first" aria-label="First page" title="First page" disabled={pagination.disabled || pagination.page <= 1} onClick={() => pagination.onPageChange(1)}>«</button>
+                        <button type="button" className="universal-grid__page-button--previous" aria-label="Previous page" title="Previous page" disabled={pagination.disabled || pagination.page <= 1} onClick={() => pagination.onPageChange(pagination.page - 1)}>‹</button>
+                        <span className="universal-grid__page-indicator">Page <strong>{pagination.page}</strong> of {totalPages}</span>
+                        <button type="button" className="universal-grid__page-button--next" aria-label="Next page" title="Next page" disabled={pagination.disabled || pagination.page >= totalPages} onClick={() => pagination.onPageChange(pagination.page + 1)}>›</button>
+                        <button type="button" className="universal-grid__page-button--last" aria-label="Last page" title="Last page" disabled={pagination.disabled || pagination.page >= totalPages} onClick={() => pagination.onPageChange(totalPages)}>»</button>
                     </div>
                 </footer>
             )}

@@ -5,7 +5,6 @@ interface Props {
     onRetry?: () => void;
 }
 
-import "./Feedback.css";
 
 export default function Error({
     message,
