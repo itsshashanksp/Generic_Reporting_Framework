@@ -43,7 +43,7 @@ describe("WidgetEngine", () => {
             title: "Sample",
             queryDefinition: { format: "sql", resource: "sample" },
             filters: [],
-            toolbar: { export: false, refresh: false, settings: false },
+            toolbar: { export: false, refresh: false },
             grid: { pagination: { enabled: true, pageSize: 25 }, rowSelection: "single" },
         };
         expect(getReportValidationErrors(base).some(error => error.includes("columns"))).toBe(true);

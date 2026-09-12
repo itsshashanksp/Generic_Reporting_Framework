@@ -1,32 +1,65 @@
-# Supported and unsupported behavior
+# Supported features
 
-This table distinguishes active UI/runtime behavior from schemas or code that merely exist.
+Only implemented frontend behavior appears in this inventory. Backend capabilities that are not exposed are listed separately.
 
-| Area | Supported now | Not supported / important limitation |
-| --- | --- | --- |
-| Query source | Top-level JSON select request; backend SQL resource ID | Frontend SQL files; active SQL parsing; `queryDefinition.format:"json"` |
-| Filtering | Configured text, number, select, multiselect, date, range and null controls | Advanced/nested filter UI; UI logic selector; global search |
-| Sorting | Server sorting from grid headers; multiple sort on reports | Table widgets send only the first sort |
-| Paging | Server paging for reports and table widgets | Report-widget footer/server pager |
-| Columns | Configured visibility/sortability/width; drag reorder and resize | Column chooser, runtime show/hide/reset, persisted personalization |
-| Grouping | Display columns for backend-grouped output | Client aggregation, expandable groups, interactive group builder |
-| Charts | Bar, line, pie with one X and one numeric Y | Additional chart types, series configuration or chart export |
-| Export | CSV/Excel, current/all where configured | PDF, print; batched all-row export for reports |
-| Saved reports | Browser-local save/load/delete of filters/sort/page | Rename/update UI, sync, column restoration, dynamic grouping restoration |
-| Dashboards | Responsive grid, shared filters, manual/interval refresh | Saved dashboards; widget-local filter/grid/toolbar wiring |
-| Cache | Five-minute in-memory successful-response cache and in-flight dedup | Persistence, production controls, manual UI invalidation, backend cache guarantee |
-| Navigation | Routes/reports/dashboards and one visible child level | Reliable rendering of deeper nested groups |
-| Selection | Single/multiple grid highlighting | Actions consuming selected rows |
-| Toolbar settings | Schema flag/default | Settings panel |
-| Legacy query engine | Isolated parser/converter tests | Active report/dashboard request path |
+## Query
 
-## Known implementation gaps
+- Validated JSON Query `select` configuration with fields/aliases, DISTINCT, limit, INNER/LEFT/RIGHT equality joins, flat filters, grouping, aggregate HAVING, sorting, pagination, supported functions, CASE, one-level arithmetic, filter subqueries, and one standard or recursive CTE.
+- Backend SQL Resource references using an opaque resource ID.
+- A shared POST client, standard read-response validation, public error messages, and structured `ApiClientError` status/code/details.
+- In-memory five-minute successful-response caching, bounded eviction, and identical in-flight request deduplication.
 
-- Successful response parsing requires `meta`, while a TypeScript API declaration marks it optional.
-- Inline widget `filters`, `grid`, and `toolbar` pass schema validation but are not used by dashboard rendering.
-- Saved state records grouping but load does not apply it, and does not store column state.
-- Search context/engine exists without a user-facing global search feature.
-- Report all-row export makes one unpaginated request and may be unsuitable for very large data sets.
-- Dashboard refresh feedback uses a one-second timer rather than request completion.
+## Filtering
 
-Treat these as current constraints, not promised roadmap items.
+- Configured text, number, select, multiselect, boolean, date, date-range, and null-check controls.
+- Friendly operators covering comparisons, LIKE/NOT LIKE contains/start/end variants, IN/NOT IN, BETWEEN/NOT BETWEEN, and IS NULL/IS NOT NULL.
+- Typed select/boolean values, numeric conversion, required-field validation, and one-sided inclusive date-range filtering.
+- Static JSON requests may use IN/NOT IN subqueries and EXISTS/NOT EXISTS.
+- Static `filterLogic` supports one flat `AND` or `OR` value.
+
+## Sorting and pagination
+
+- Multi-column server sorting on reports and first-column server sorting on dashboard tables.
+- Sortable backend output aliases where permitted.
+- Server pagination for report pages/dashboard tables with page size 10 by default and first/previous/next/last controls.
+- Shared compact mobile pagination; report widgets use it client-side over their returned rows.
+
+## Grouping and presentation
+
+- Backend JSON Query grouping and aggregate HAVING in authored requests.
+- Configured grouped-result columns for responses already aggregated by the backend.
+- Configured column visibility, sortability, initial width, drag reordering, resizing, selectable rows, and text selection.
+- One shared report/table frame, grid, mobile sort, compact labeled record cards, pagination, and responsive menu behavior for reports and dashboard tables/widgets.
+- Every mobile value remains associated with its configured column header.
+
+## Reports
+
+- JSON and SQL Resource data sources, configured filters, refresh, CSV/Excel export, loading/empty/error states, pull-to-refresh, and browser-local saved views.
+- Saved views restore applied filters, sorting, page, and page size; users can save, load, and delete them.
+
+## Dashboards and widgets
+
+- Responsive configured dashboard layout, shared dashboard filters, manual refresh, and interval refresh.
+- Inline JSON/SQL Resource definitions, report-backed widgets, and optional reusable widget definitions.
+- Report, stat, table, and bar/line/pie chart widgets.
+- Table widget server paging, sorting, multiple selection, current-view export, and batched all-row export.
+
+## Export
+
+- CSV and Excel.
+- Configurable filenames and current/all scopes.
+- Mobile More/Export bottom-sheet presentation using the existing action state/handlers.
+
+## Unsupported frontend features
+
+- Raw SQL, SQL files, SQL parsing/generation/manipulation, resource registration, database paths, credentials, filter placement, or placeholders.
+- Interactive nested filter groups, operator selection, global multi-field search, or AG Grid column-filter requests.
+- Interactive grouping, client aggregation, expandable group nodes, or grouping personalization.
+- Column chooser, runtime show/hide/reset, or persisted column layouts.
+- PDF/print/email export, chart export, or scheduled delivery.
+- Report create/edit/delete/upsert actions. The backend Write API exists, but the frontend has no mutation schema, forms, or handlers.
+- UNION/UNION ALL report configuration, routines, metadata browser, transactions, or bulk writes.
+- Authentication, authorization, roles, tenants, favorites, drill-down, audit UI, report designer, or dashboard builder.
+- Saved dashboard views, synchronized saved reports, or saved-report rename/update.
+
+See [Backend capability matrix](BACKEND-CAPABILITY-MATRIX.md) for mode-by-mode details and [Roadmap](ROADMAP.md) for planned work.

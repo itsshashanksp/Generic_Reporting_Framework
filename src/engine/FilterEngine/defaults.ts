@@ -20,6 +20,7 @@ export const defaultFilterOperators: Record<
     number: "equals",
     select: "equals",
     multiselect: "in",
+    boolean: "equals",
     date: "equals",
     daterange: "between",
 };

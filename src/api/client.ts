@@ -1,6 +1,20 @@
-import type { ApiResponse } from "../types/api";
+import type { ApiError, ApiResponse } from "../types/api";
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+export class ApiClientError extends Error {
+    readonly status: number;
+    readonly code?: string;
+    readonly details: ApiError["details"];
+
+    constructor(message: string, status: number, error?: ApiError) {
+        super(message);
+        this.name = "ApiClientError";
+        this.status = status;
+        this.code = error?.code;
+        this.details = error?.details ?? [];
+    }
+}
 
 export async function apiClient(
     body: object,
@@ -37,7 +51,7 @@ export async function apiClient(
                 ? payload.message
                 : `The API returned HTTP ${response.status}.`;
 
-        throw new Error(message);
+        throw new ApiClientError(message, response.status, getApiError(payload));
     }
 
     if (
@@ -67,10 +81,19 @@ export async function apiClient(
     }
 
     if (!payload.success) {
-        throw new Error(payload.message);
+        throw new ApiClientError(payload.message, response.status, getApiError(payload));
     }
 
     return payload as ApiResponse;
+}
+
+function getApiError(payload: unknown): ApiError | undefined {
+    if (typeof payload !== "object" || payload === null || !("error" in payload)) return undefined;
+    const error = payload.error;
+    if (typeof error !== "object" || error === null) return undefined;
+    const value = error as Record<string, unknown>;
+    if (typeof value.code !== "string" || !Array.isArray(value.details)) return undefined;
+    return { code: value.code, details: value.details as ApiError["details"] };
 }
 
 function isApiMeta(value: unknown): boolean {

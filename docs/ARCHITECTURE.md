@@ -26,7 +26,7 @@ src/config/*.json
 | `RequestCache` | Caches successful responses and deduplicates identical in-flight calls |
 | pages/components/contexts | Own UI state and rendering |
 
-The active frontend never reads, parses or executes SQL. In SQL resource mode it sends an opaque resource identifier to the backend. SQL files, credentials, allowlisting and execution belong to the backend. `ReportQueryEngine` still contains a parser/converter, but that converter is not wired into report or dashboard execution and should be treated as legacy code.
+The frontend never reads, parses, generates, modifies, or executes SQL. In SQL Resource mode it sends an opaque resource identifier to the backend. SQL files, credentials, allowlisting, filter placement, parameterization, and execution belong to the backend. The obsolete frontend SQL parser/converter has been removed.
 
 ## Discovery and startup
 
@@ -46,7 +46,7 @@ The API endpoint is `VITE_API_URL` and receives a JSON POST. A successful respon
 
 - Filter form state is separate from applied filter state; **Search** applies it.
 - Sort and page state live in the report or widget component.
-- Theme, dashboard filters and grid state use React contexts.
+- Dashboard filters and grid state use React contexts.
 - Saved reports use browser local storage.
 - Request caching is in-memory and is cleared by a page reload.
 

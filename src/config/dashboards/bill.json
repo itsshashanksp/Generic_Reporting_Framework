@@ -11,7 +11,6 @@
     "enabled": false,
     "interval": 30000
   },
-  "filters": [],
   "widgets": [
     {
       "id": "sales-month-wise",
@@ -38,7 +37,6 @@
           "header": "Sales"
         }
       ],
-      "filters": [],
       "pageSize": 10,
       "export": {
         "enabled": true,
@@ -76,7 +74,6 @@
           "header": "Purchases"
         }
       ],
-      "filters": [],
       "pageSize": 10,
       "export": {
         "enabled": true,
@@ -114,7 +111,6 @@
           "header": "Sales"
         }
       ],
-      "filters": [],
       "pageSize": 10,
       "export": {
         "enabled": true,
@@ -156,7 +152,6 @@
           "header": "Sales"
         }
       ],
-      "filters": [],
       "pageSize": 10,
       "export": {
         "enabled": true,
@@ -185,7 +180,8 @@
         "format": "sql",
         "resource": "bill-total-sales"
       },
-      "filters": []
+      "valueField": "TotalSales",
+      "format": "currency"
     },
     {
       "id": "total-purchases",
@@ -203,7 +199,8 @@
         "format": "sql",
         "resource": "bill-total-purchases"
       },
-      "filters": []
+      "valueField": "TotalPurchases",
+      "format": "currency"
     }
   ]
 }

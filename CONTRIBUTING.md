@@ -29,8 +29,8 @@ npm run build
 - Preserve TypeScript type safety and existing component accessibility.
 - Keep SQL as the source of query/data logic and JSON as the source of UI/UX presentation.
 - Do not add backend-specific implementation details or change backend code from this repository.
-- Keep parser behavior deterministic and limited to requests the universal API can represent.
-- Do not reintroduce legacy production JSON `request` definitions for SQL-backed resources.
+- Keep JSON Query configuration within the documented backend public contract.
+- Do not introduce frontend SQL parsing or use JSON `request` definitions to carry SQL-backed resource logic.
 - Avoid unrelated formatting or refactors in a focused change.
 - Do not change tests only to make a failure disappear; fix the production behavior or update an assertion when the intended contract genuinely changed.
 

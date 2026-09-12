@@ -3,6 +3,7 @@ export type FilterType =
     | "number"
     | "select"
     | "multiselect"
+    | "boolean"
     | "date"
     | "daterange";
 
@@ -11,8 +12,11 @@ export type FilterOperator =
     | "equals"
     | "notEquals"
     | "contains"
+    | "notContains"
     | "startsWith"
+    | "notStartsWith"
     | "endsWith"
+    | "notEndsWith"
     | "greaterThan"
     | "greaterThanOrEqual"
     | "lessThan"

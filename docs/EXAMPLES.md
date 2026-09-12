@@ -1,250 +1,273 @@
-# Examples and recipes
+# Backend-verified examples
 
-The snippets below use only properties accepted by the current frontend. Full report files include the required `columns` and `filters` properties.
+These examples use only the backend public request contract. Physical table names in JSON Query examples must exist in the connected database. SQL Resource examples use IDs registered by the current backend.
 
-## 1. Minimal JSON report
+## JSON Query: select, filter, sort, and page
 
 ```json
 {
-  "id": "customers",
-  "title": "Customers",
+  "id": "items-json",
+  "title": "Items",
   "request": {
     "action": "select",
-    "source": { "table": "customers" },
-    "fields": ["id", "name"]
+    "source": { "table": "ItemMasterTable", "alias": "I" },
+    "fields": [
+      { "field": "I.Item_Code", "alias": "ItemCode" },
+      { "field": "I.Item_Desc", "alias": "Description" },
+      { "field": "I.Item_MRP", "alias": "MRP" }
+    ],
+    "filters": [{ "field": "I.Item_MRP", "operator": ">", "value": 0 }],
+    "filterLogic": "AND",
+    "sort": [{ "field": "ItemCode", "direction": "ASC" }]
   },
   "columns": [
-    { "field": "id", "header": "ID" },
-    { "field": "name", "header": "Name", "width": 240 }
+    { "field": "ItemCode", "header": "Item Code" },
+    { "field": "Description", "header": "Description" },
+    { "field": "MRP", "header": "MRP" }
   ],
-  "filters": []
-}
-```
-
-## 2. Minimal SQL resource report
-
-```json
-{
-  "id": "revenue",
-  "title": "Revenue",
-  "queryDefinition": { "format": "sql", "resource": "revenue-report" },
-  "columns": [
-    { "field": "period", "header": "Period" },
-    { "field": "revenue", "header": "Revenue" }
+  "filters": [
+    { "field": "I.Item_Desc", "label": "Description", "type": "text", "operator": "contains" }
   ],
-  "filters": []
-}
-```
-
-## 3. Text and numeric filters
-
-```json
-[
-  { "field": "name", "label": "Name", "type": "text", "operator": "contains", "placeholder": "Part of a name" },
-  { "field": "amount", "label": "Minimum amount", "type": "number", "operator": "greaterThanOrEqual" }
-]
-```
-
-## 4. Select and multiselect filters
-
-```json
-[
-  {
-    "field": "status",
-    "label": "Status",
-    "type": "select",
-    "options": [{ "label": "Open", "value": "OPEN" }, { "label": "Closed", "value": "CLOSED" }]
-  },
-  {
-    "field": "region_id",
-    "label": "Regions",
-    "type": "multiselect",
-    "operator": "in",
-    "options": [{ "label": "North", "value": 1 }, { "label": "South", "value": 2 }]
+  "grid": {
+    "pagination": { "enabled": true, "pageSize": 10, "pageSizeOptions": [10, 25, 50, 100] },
+    "rowSelection": "multiple"
   }
-]
+}
 ```
 
-## 5. Date range and null filters
+The runtime adds `pagination:{page,pageSize}` and maps `contains` to a prepared `LIKE "%value%"` filter.
 
-```json
-[
-  { "field": "created_at", "label": "Created", "type": "daterange", "operator": "between" },
-  { "field": "deleted_at", "label": "Is deleted", "type": "date", "operator": "isNotNull" }
-]
-```
-
-## 6. Request with a join, grouping and having
+## JSON Query: joins, grouping, aggregation, and HAVING
 
 ```json
 {
   "action": "select",
-  "source": { "table": "orders", "alias": "o" },
+  "source": { "table": "Orders", "alias": "O" },
   "fields": [
-    { "field": "o.customer_id", "alias": "customer_id" },
-    { "function": "SUM", "field": "o.total", "alias": "total_amount" }
+    "C.CustomerName",
+    { "function": "SUM", "field": "O.Amount", "alias": "TotalAmount" }
   ],
-  "joins": [
-    { "type": "LEFT", "source": { "table": "customers", "alias": "c" }, "on": { "left": "o.customer_id", "operator": "=", "right": "c.id" } }
-  ],
-  "groupBy": ["o.customer_id"],
-  "having": [{ "function": "SUM", "field": "o.total", "operator": ">", "value": 1000 }],
-  "sort": [{ "field": "total_amount", "direction": "DESC" }],
-  "limit": 100
+  "joins": [{
+    "type": "INNER",
+    "source": { "table": "Customers", "alias": "C" },
+    "on": { "left": "O.CustomerId", "operator": "=", "right": "C.CustomerId" }
+  }],
+  "groupBy": ["C.CustomerName"],
+  "having": [{ "function": "SUM", "field": "O.Amount", "operator": ">", "value": 1000 }],
+  "sort": [{ "field": "TotalAmount", "direction": "DESC" }],
+  "pagination": { "page": 1, "pageSize": 10 }
 }
 ```
 
-## 7. Grid and export configuration
+JSON joins are limited to INNER/LEFT/RIGHT and one equality condition. HAVING entries are aggregate comparisons combined with AND.
+
+## JSON Query: DISTINCT, CASE, arithmetic, and functions
 
 ```json
 {
-  "grid": {
-    "pagination": { "enabled": true, "pageSize": 25, "pageSizeOptions": [25, 50] },
-    "rowSelection": "multiple"
-  },
-  "toolbar": { "export": true, "refresh": true, "settings": false, "saveReport": true },
-  "export": {
-    "enabled": true,
-    "formats": ["csv", "excel"],
-    "filename": "customer-orders",
-    "exportCurrentView": true,
-    "exportAll": true
-  }
-}
-```
-
-## 8. Configured grouping columns
-
-```json
-{
-  "enabled": true,
-  "groups": [{ "field": "region", "header": "Region" }],
-  "aggregates": [
-    { "field": "order_count", "function": "COUNT", "header": "Orders" },
-    { "field": "amount", "function": "SUM", "alias": "total_amount", "header": "Total" }
-  ]
-}
-```
-
-The response must already contain `region`, `order_count`, and `total_amount`.
-
-## 9. Inline stat widget
-
-```json
-{
-  "id": "open-total",
-  "type": "stat",
-  "title": "Open value",
-  "width": 3,
-  "request": {
-    "action": "select",
-    "source": { "table": "orders" },
-    "fields": [{ "function": "SUM", "field": "total", "alias": "open_total" }],
-    "filters": [{ "field": "status", "operator": "=", "value": "OPEN" }]
-  },
-  "valueField": "open_total",
-  "format": "currency"
-}
-```
-
-## 10. Inline table widget
-
-```json
-{
-  "id": "recent-orders",
-  "type": "table",
-  "title": "Recent orders",
-  "width": 8,
-  "height": 420,
-  "queryDefinition": { "format": "sql", "resource": "recent-orders" },
-  "columns": [
-    { "field": "id", "header": "Order" },
-    { "field": "total", "header": "Total" }
-  ],
-  "pageSize": 10,
-  "pageSizeOptions": [10, 25, 50],
-  "export": { "enabled": true, "formats": ["csv"], "exportAll": true }
-}
-```
-
-## 11. Inline chart widget
-
-```json
-{
-  "id": "sales-by-month",
-  "type": "chart",
-  "title": "Sales by month",
-  "width": 6,
-  "height": 360,
-  "queryDefinition": { "format": "sql", "resource": "sales-by-month" },
-  "chartType": "line",
-  "xField": "month",
-  "yField": "sales",
-  "showLegend": false,
-  "showTooltip": true,
-  "showGrid": true,
-  "showLabels": false
-}
-```
-
-## 12. Report-backed widget
-
-```json
-{
-  "id": "customer-report-panel",
-  "type": "report",
-  "title": "Customers",
-  "reportId": "customers",
-  "width": 12
-}
-```
-
-## 13. Responsive dashboard
-
-```json
-{
-  "id": "operations",
-  "title": "Operations",
-  "layout": { "columns": 12, "tabletColumns": 6, "mobileColumns": 1 },
-  "autoRefresh": { "enabled": true, "interval": 60000 },
-  "filters": [
-    { "field": "region", "label": "Region", "type": "select", "options": [{ "label": "North", "value": "N" }] }
-  ],
-  "widgets": [
+  "action": "select",
+  "source": { "table": "Items" },
+  "distinct": true,
+  "limit": 100,
+  "fields": [
+    "ItemCode",
     {
-      "id": "operations-total",
-      "type": "stat",
-      "title": "Operations",
-      "width": 3,
-      "position": { "x": 0, "y": 1 },
-      "queryDefinition": { "format": "sql", "resource": "operations-total" },
-      "valueField": "total",
-      "format": "number"
-    }
+      "case": {
+        "when": [{ "condition": { "field": "Status", "operator": "=", "value": "A" }, "then": "Active" }],
+        "else": "Inactive"
+      },
+      "alias": "StatusText"
+    },
+    { "expression": { "left": "Amount", "operator": "*", "right": 1.18 }, "alias": "GrossAmount" },
+    { "function": "COALESCE", "fields": ["PreferredName", "Name"], "default": "Unknown", "alias": "DisplayName" },
+    { "function": "ROUND", "field": "Amount", "precision": 2, "alias": "RoundedAmount" }
   ]
 }
 ```
 
-## 14. Navigation group
+## JSON Query: subqueries and CTE
+
+```json
+{
+  "action": "select",
+  "source": { "table": "Customers", "alias": "C" },
+  "fields": ["C.CustomerCode", "C.Name"],
+  "filters": [{
+    "field": "C.CustomerCode",
+    "operator": "IN",
+    "query": {
+      "source": { "table": "Bills" },
+      "fields": ["CustomerCode"],
+      "filters": [{ "field": "Amount", "operator": ">", "value": 1000 }]
+    }
+  }]
+}
+```
+
+```json
+{
+  "action": "select",
+  "with": {
+    "name": "ActiveItems",
+    "query": {
+      "source": { "table": "Items" },
+      "fields": ["ItemCode"],
+      "filters": [{ "field": "Active", "operator": "=", "value": true }]
+    }
+  },
+  "source": { "table": "ActiveItems" },
+  "fields": ["ItemCode"]
+}
+```
+
+Only IN/NOT IN/EXISTS/NOT EXISTS accept filter subqueries. Nested bodies cannot sort, paginate, or define another CTE.
+
+## Runtime filter configurations
 
 ```json
 [
-  { "id": "home", "title": "Home", "icon": "dashboard", "dashboardId": "operations" },
-  {
-    "id": "reporting",
-    "title": "Reporting",
-    "icon": "reports",
-    "children": [
-      { "id": "customers-link", "title": "Customers", "icon": "report", "reportId": "customers" }
-    ]
-  }
+  { "field": "Name", "label": "Name", "type": "text", "operator": "notContains" },
+  { "field": "Amount", "label": "Amount", "type": "number", "operator": "between" },
+  { "field": "Status", "label": "Status", "type": "multiselect", "operator": "notIn", "options": [{ "label": "Closed", "value": "Closed" }] },
+  { "field": "Active", "label": "Active", "type": "boolean", "operator": "equals" },
+  { "field": "BillDate", "label": "Bill date", "type": "daterange", "operator": "between" },
+  { "field": "DeletedAt", "label": "Deleted", "type": "date", "operator": "isNull" }
 ]
 ```
 
-## Common recipes
+Representative emitted filters:
 
-- **Add a report:** create `src/config/reports/<id>.json`, choose one query mode, add output columns and `filters` (even if empty), then add a `reportId` menu entry.
-- **Add a dashboard:** create `src/config/dashboards/<id>.json`, choose the layout and widget sources, then add a `dashboardId` menu entry.
-- **Reuse data:** point a report widget at `reportId`; for stat/table/chart, use `reportId` or register a reusable widget and use `widgetId`.
-- **Add a backend SQL resource:** register it on the backend, then reference its opaque ID with `{ "format":"sql", "resource":"..." }`; do not add frontend SQL.
-- **Add filtering:** ensure the backend accepts the filter field, add a filter definition, and test empty, populated and required states.
+```json
+[
+  { "field": "Name", "operator": "NOT LIKE", "value": "%Acme%" },
+  { "field": "Amount", "operator": "BETWEEN", "value": [10, 20] },
+  { "field": "Status", "operator": "NOT IN", "value": ["Closed"] },
+  { "field": "Active", "operator": "=", "value": true },
+  { "field": "DeletedAt", "operator": "IS NULL" }
+]
+```
+
+The UI uses a configured operator per filter. EXISTS/NOT EXISTS are available only in an authored JSON request because they require a query rather than an end-user value.
+
+All configurable UI operators map as follows:
+
+| UI operator | Backend operator/value |
+| --- | --- |
+| `equals`, `notEquals` | `=`, `!=` |
+| `contains`, `notContains` | `LIKE`, `NOT LIKE` with `%value%` |
+| `startsWith`, `notStartsWith` | `LIKE`, `NOT LIKE` with `value%` |
+| `endsWith`, `notEndsWith` | `LIKE`, `NOT LIKE` with `%value` |
+| `greaterThan`, `lessThan`, `greaterThanOrEqual`, `lessThanOrEqual` | `>`, `<`, `>=`, `<=` |
+| `in`, `notIn` | `IN`, `NOT IN` with an array |
+| `between`, `notBetween` | `BETWEEN`, `NOT BETWEEN` with two values |
+| `isNull`, `isNotNull` | `IS NULL`, `IS NOT NULL` with no `value` property |
+
+The authored JSON Query contract additionally accepts `<>`, `EXISTS`, and `NOT EXISTS`.
+
+## Actual SQL Resource: item
+
+Frontend report source:
+
+```json
+{ "queryDefinition": { "format": "sql", "resource": "item" } }
+```
+
+Runtime request:
+
+```json
+{
+  "action": "sql",
+  "resource": "item",
+  "filters": [{ "field": "Item_Desc", "operator": "LIKE", "value": "%pen%" }],
+  "sort": [{ "field": "Item_Code", "direction": "ASC" }],
+  "pagination": { "page": 1, "pageSize": 10 }
+}
+```
+
+Flow: frontend ID `item` → backend `config/sql-resources.php` → `queries/reports/item.sql` → its read-only ItemMasterTable SELECT → standard response with `Item_Code`, `Item_Desc`, and `Item_MRP`.
+
+The selected resource resolves on the backend to:
+
+```sql
+SELECT
+    Item_Code,
+    Item_Desc,
+    Item_MRP
+FROM ItemMasterTable
+```
+
+An abbreviated response is:
+
+```json
+{
+  "success": true,
+  "message": "Query executed successfully.",
+  "data": [{ "Item_Code": "PEN-01", "Item_Desc": "Blue pen", "Item_MRP": 20 }],
+  "meta": { "page": 1, "pageSize": 10, "totalRows": 1, "rowsReturned": 1, "executionTime": 4 }
+}
+```
+
+## Actual SQL Resource: customer
+
+Frontend report source:
+
+```json
+{ "queryDefinition": { "format": "sql", "resource": "customer" } }
+```
+
+Runtime request:
+
+```json
+{
+  "action": "sql",
+  "resource": "customer",
+  "filters": [
+    { "field": "Cust_Name", "operator": "LIKE", "value": "A%" },
+    { "field": "StDate", "operator": "BETWEEN", "value": ["2021-04-01", "2022-03-31"] }
+  ],
+  "filterLogic": "AND",
+  "sort": [{ "field": "MaximumBill", "direction": "DESC" }],
+  "pagination": { "page": 1, "pageSize": 10 }
+}
+```
+
+Flow: frontend ID `customer` → backend registry → `queries/reports/customer.sql` → backend-owned source filter placement and integer-date conversion → grouped response with `Cust_Name`, `TotalCustomers`, `MinimumBill`, and `MaximumBill`.
+
+The backend-owned SQL resource is:
+
+```sql
+SELECT
+    Cust_Name,
+    COUNT(Cust_Name) AS TotalCustomers,
+    MIN(Bill_Amt) AS MinimumBill,
+    MAX(Bill_Amt) AS MaximumBill
+FROM CustomerTable
+/*__RUNTIME_FILTERS__*/
+GROUP BY Cust_Name
+```
+
+The marker is interpreted only by the backend SQL Resource service; it is never sent by the frontend.
+
+## Actual dashboard SQL Resources
+
+The current dashboards use these registered IDs:
+
+- `item-dashboard-table`, `item-dashboard-stats`
+- `bill-total-sales`, `bill-total-purchases`
+- `bill-sales-month-wise`, `bill-purchases-month-wise`
+- `bill-top-10-categories`, `bill-category-sales-month-wise`
+
+Dashboard JSON contains only `queryDefinition:{format:"sql",resource:"..."}` plus presentation fields. It never contains the backend file path or SQL text.
+
+## Column visibility
+
+```json
+{
+  "columns": [
+    { "field": "Item_Code", "header": "Item Code", "visible": true },
+    { "field": "InternalNote", "header": "Internal note", "visible": false }
+  ]
+}
+```
+
+Visibility affects only `GenericGrid`; it does not change a JSON projection or SQL Resource query.

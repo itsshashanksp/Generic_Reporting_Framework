@@ -9,7 +9,6 @@ src/
 ├── api/          API transport and response validation
 ├── components/   grids, filters, toolbars and dashboard widgets
 ├── config/       report/dashboard/widget/menu JSON
-├── contexts/     dashboard, filter, grid, search and theme state
 ├── engine/       definition validation, runtime state, cache and export
 ├── pages/        route-level views
 ├── router/       application routes
@@ -42,6 +41,6 @@ When changing a schema, update its TypeScript contracts, validator, loader/defau
 
 ## Safety boundaries
 
-Do not commit local `.env` files, credentials, `dist`, or coverage. Backend SQL resources are referenced only by ID from this frontend. Changes to the legacy `ReportQueryEngine` do not affect active requests unless a runtime integration is deliberately added.
+Do not commit local `.env` files, credentials, `dist`, or coverage. Backend SQL resources are referenced only by ID from this frontend. Do not introduce frontend SQL parsing, generation, file lookup, paths, placeholders, or raw SQL request fields.
 
 [Configuration reference](CONFIGURATION.md) · [Testing](TESTING.md) · [Contributing](../CONTRIBUTING.md)

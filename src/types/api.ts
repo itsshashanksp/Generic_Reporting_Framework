@@ -24,11 +24,25 @@ export interface QuerySort {
     direction: "ASC" | "DESC";
 }
 
+export type QueryOperator =
+    | "=" | "!=" | "<>" | ">" | "<" | ">=" | "<="
+    | "LIKE" | "NOT LIKE" | "IN" | "NOT IN"
+    | "BETWEEN" | "NOT BETWEEN" | "IS NULL" | "IS NOT NULL"
+    | "EXISTS" | "NOT EXISTS";
+
+export type SqlRuntimeOperator = Exclude<QueryOperator, "EXISTS" | "NOT EXISTS">;
+
 export interface QueryFilter {
     field?: string;
-    operator: string;
+    operator: QueryOperator;
     value?: unknown;
     query?: Omit<UniversalQueryRequest, "action">;
+}
+
+export interface SqlRuntimeFilter {
+    field: string;
+    operator: SqlRuntimeOperator;
+    value?: unknown;
 }
 
 export type QueryField = string | {
@@ -72,7 +86,7 @@ export interface UniversalQueryRequest {
 export interface SqlResourceRequest {
     action: "sql";
     resource: string;
-    filters?: QueryFilter[];
+    filters?: SqlRuntimeFilter[];
     sort?: QuerySort[];
     pagination?: { page: number; pageSize: number };
     filterLogic?: "AND" | "OR";

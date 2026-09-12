@@ -14,8 +14,11 @@ export const allowedOperators: Record<
         "equals",
         "notEquals",
         "contains",
+        "notContains",
         "startsWith",
+        "notStartsWith",
         "endsWith",
+        "notEndsWith",
         "isNull",
         "isNotNull",
     ],
@@ -43,6 +46,13 @@ export const allowedOperators: Record<
     multiselect: [
         "in",
         "notIn",
+        "isNull",
+        "isNotNull",
+    ],
+
+    boolean: [
+        "equals",
+        "notEquals",
         "isNull",
         "isNotNull",
     ],

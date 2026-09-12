@@ -10,7 +10,7 @@ import { getReportValidationErrors } from "./validator";
 
 export type ResolvedReportQuery =
     | {
-          kind: "legacy";
+          kind: "json";
           request: ReportRequest;
       }
     | {
@@ -26,7 +26,7 @@ export function resolveReportQuery(
     report: ReportConfiguration
 ): ResolvedReportQuery {
     if (report.queryDefinition === undefined) {
-        return { kind: "legacy", request: report.request };
+        return { kind: "json", request: report.request };
     }
 
     return {

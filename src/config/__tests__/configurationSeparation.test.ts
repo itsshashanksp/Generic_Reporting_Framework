@@ -38,7 +38,7 @@ describe("production SQL and JSON responsibility separation", () => {
         const table = itemDashboard.widgets.find(widget => widget.id === "item-table")!;
         expect(stats.queryDefinition).toEqual({ format: "sql", resource: "item-dashboard-stats" });
         expect(table.columns?.map(column => column.field)).toEqual([
-            "Item_Code", "Item_Desc", "Sale_Rate", "Item_MRP", "Std_Vat",
+            "Item_Code", "Item_Desc", "Sale_Rate", "Item_MRP", "Std_Vat", "cl_stock", "stock_value",
         ]);
     });
 

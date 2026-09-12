@@ -9,7 +9,7 @@ grid, toolbar, export, cache, cancellation, and response handling.
 
 ## Query modes
 
-Legacy JSON mode keeps the existing Universal JSON request in `request`:
+JSON Query mode uses the backend's public SELECT request in `request`:
 
 ```json
 {
@@ -57,14 +57,11 @@ reference, and type-specific presentation settings.
 - Column: `field`, `header`, `visible`, `sortable`, `width`.
 - Filter: `field`, `label`, `type`, `operator`, `options`, `visible`, `required`, `placeholder`.
 - Grid: `pagination` (`enabled`, `pageSize`, `pageSizeOptions`), `rowSelection`, and `grouping` (`enabled`, `groups`, `aggregates`).
-- Toolbar: `export`, `refresh`, `settings`, `saveReport`.
+- Toolbar: `export`, `refresh`, `saveReport`.
 - Export: `enabled`, `formats`, `filename`, `exportAll`, `exportCurrentView`.
 
 Column visibility remains a frontend grid concern. It does not alter either a
 Universal JSON projection or a backend SQL resource.
-
-`settings` currently controls whether the disabled settings placeholder is
-displayed; settings functionality is only partially supported.
 
 ## Dashboards and widgets
 
@@ -72,9 +69,9 @@ displayed; settings functionality is only partially supported.
 - Auto refresh: `enabled`, `interval`.
 - Filters use the same schema and behavior as report filters.
 - Report widget: `reportId`.
-- Stat widget: inline `queryDefinition`/legacy `request`, or `widgetId`/compatible `reportId`, plus `valueField` and `format`.
-- Table widget: inline `queryDefinition`/legacy `request`, or `widgetId`/compatible `reportId`, plus `columns`, `pageSize`, `pageSizeOptions`, and `export`.
-- Chart widget: inline `queryDefinition`/legacy `request`, or `widgetId`/compatible `reportId`, plus `xField`, `yField`, `chartType`, `showLegend`, `showTooltip`, `showGrid`, and `showLabels`.
+- Stat widget: inline SQL `queryDefinition`/JSON `request`, or `widgetId`/compatible `reportId`, plus `valueField` and `format`.
+- Table widget: inline SQL `queryDefinition`/JSON `request`, or `widgetId`/compatible `reportId`, plus `columns`, `pageSize`, `pageSizeOptions`, and `export`.
+- Chart widget: inline SQL `queryDefinition`/JSON `request`, or `widgetId`/compatible `reportId`, plus `xField`, `yField`, `chartType`, `showLegend`, `showTooltip`, `showGrid`, and `showLabels`.
 
 Data-driven widgets may contain their full definition inline. Inline definitions
 are loaded by the same report-definition pipeline as reusable widget files.

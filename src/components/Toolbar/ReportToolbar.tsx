@@ -116,14 +116,6 @@ export default function ReportToolbar({
         disabled: isRefreshing || isExporting,
         onSelect: onSaveReport,
     });
-    if (config.settings) mobileOptions.push({
-        id: "settings",
-        label: "Settings",
-        disabled: true,
-        onSelect: () => undefined,
-    });
-
-
     return (
 
         <div
@@ -159,15 +151,6 @@ export default function ReportToolbar({
 
                 )}
 
-
-                {config.settings && (
-
-                    <ToolbarButton
-                        label="Settings"
-                        title="Report settings are not available yet"
-                    />
-
-                )}
 
             </div>
 

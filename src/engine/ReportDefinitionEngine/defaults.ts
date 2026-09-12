@@ -8,8 +8,6 @@ export const defaultReportDefinition: Partial<ReportDefinition> = {
 
         refresh: true,
 
-        settings: true,
-
         saveReport: true,
 
     },

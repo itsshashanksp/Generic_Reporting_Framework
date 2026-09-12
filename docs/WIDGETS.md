@@ -18,8 +18,8 @@ Dashboard filters are appended to every widget request. Each widget has independ
 - Stat reads `valueField` from the first row (or the first property) and formats using the Indian locale.
 - Table uses server pagination, supports sorting and optional CSV/Excel export. Missing columns are inferred from the first row.
 - Chart uses Recharts and supports bar, line and pie charts. Non-numeric Y values become zero.
-- Report renders a report grid inside its card.
+- Report renders through the shared report/table frame and grid, including compact mobile pagination over returned rows.
 
-Although inline widget schema accepts `filters`, `grid`, and `toolbar`, the current dashboard renderer does not wire these widget-local controls through. Configure dashboard-level filters and type-specific widget settings instead.
+Inline reusable definitions may carry presentation-compatible `filters`, `grid`, and `toolbar`, but dashboard-level filters are the active controls. Configure paging/export and chart/stat behavior with the widget's type-specific settings.
 
 See [Configuration reference](CONFIGURATION.md#dashboard-widget-sources) and [Examples](EXAMPLES.md).

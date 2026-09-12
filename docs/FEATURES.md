@@ -4,7 +4,7 @@
 
 Reports and dashboards render only configured filter controls. Editing a control does not fetch data; **Search** validates required controls and applies the form as a batch. **Clear** applies an empty state. Dashboard filters are appended to every visible widget request.
 
-The interface has no global free-text search box. `SearchEngine` and its context exist in source but have no current UI consumer or request integration. “Search” on the filter form means apply configured filters; it has no debounce behavior.
+The interface has no global free-text search box. The previous unused search context was removed. “Search” on the filter form means apply configured filters; it has no debounce behavior.
 
 There is no advanced/nested filter builder. Authored JSON requests can choose one flat `filterLogic` of `AND` or `OR`, but the UI neither edits that value nor builds nested condition groups. A static request filter may carry backend-owned `query` content.
 
@@ -16,15 +16,15 @@ Clicking a sortable report column updates the API sort and returns to page 1. Re
 
 Reports use configured server pagination and show the current row range, rows-per-page choice, and first/previous/next/last controls. Dashboard table widgets always use server pagination. A report with pagination disabled has no paging footer or injected runtime page; avoid a base `request.pagination` if an unpaged report is intended.
 
-Report widgets render their returned rows in a report grid but do not use the report page footer. Their grid may use AG Grid's client pagination setting over the response.
+Report widgets render through the same grid and compact mobile pager. Desktop retains AG Grid client pagination over the returned response.
 
 ## Columns and personalization
 
-Configured visible columns can be resized and reordered in AG Grid. `sortable` controls whether a header can sort. `visible:false` prevents column creation. The current UI has no column chooser, show/hide action, reset action, or persisted column width/order/visibility. The toolbar `settings` flag is accepted/defaulted but does not currently expose a settings panel.
+Configured visible columns can be resized and reordered in AG Grid. `sortable` controls whether a header can sort. `visible:false` prevents column creation. The current UI has no column chooser, show/hide action, reset action, or persisted column width/order/visibility. The former disabled Settings placeholder and schema flag were removed.
 
 ## Grouping
 
-Configured grouping replaces the displayed columns with group and aggregate output columns. It does not aggregate rows on the client, create expandable group nodes, or inject `groupBy`; data must already have matching output fields. There is no interactive group-by control. A saved report records the configured grouping snapshot, but loading it does not apply a different grouping.
+Configured grouping replaces the displayed columns with group and aggregate output columns. It does not aggregate rows on the client, create expandable group nodes, or inject `groupBy`; data must already have matching output fields. There is no interactive group-by control. The unused saved-report grouping snapshot was removed.
 
 ## Exports
 
@@ -39,7 +39,7 @@ Current-view actions default on unless `exportCurrentView:false`; all-row action
 
 ## Saved reports
 
-When `toolbar.saveReport` is enabled (the default), the report toolbar can save, load, and delete browser-local views. A saved view records applied filters, sorting, current page/page size, and a grouping snapshot. Loading restores filters, sort and pagination; it does not restore columns or dynamically apply grouping. Each UI save creates a new timestamped record—there is no rename/update workflow.
+When `toolbar.saveReport` is enabled (the default), the report toolbar can save, load, and delete browser-local views. A saved view records applied filters, sorting, and current page/page size. Loading restores those fields. It does not restore columns or grouping. Each UI save creates a new timestamped record—there is no rename/update workflow.
 
 Records live under local-storage key `generic-report-saved-reports`. They are neither account-synced nor shared, and there is no storage schema migration. Invalid records are filtered and storage errors fall back to an empty list. Dashboards do not have saved views.
 

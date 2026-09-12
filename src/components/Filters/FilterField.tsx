@@ -10,6 +10,7 @@ import MultiSelectFilter from "./Fields/MultiSelectFilter";
 
 import NullFilter from "./Fields/NullFilter";
 import NumberFilter from "./Fields/NumberFilter";
+import BooleanFilter from "./Fields/BooleanFilter";
 
 interface Props {
     filter: FilterDefinition;
@@ -91,6 +92,16 @@ export default function FilterField({
                     required={filter.required}
                 />
             )
+
+        case "boolean":
+
+            return (
+                <BooleanFilter
+                    field={filter.field}
+                    label={filter.label}
+                    required={filter.required}
+                />
+            );
 
         case "daterange":
 

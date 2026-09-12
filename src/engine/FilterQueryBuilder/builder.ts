@@ -2,22 +2,23 @@ import type {
     FilterDefinition,
     FilterOperator,
 } from "../../types/filter";
+import type { SqlRuntimeOperator } from "../../types/api";
 
 
 export interface FilterCondition {
 
     field: string;
 
-    operator: string;
+    operator: SqlRuntimeOperator;
 
-    value: unknown;
+    value?: unknown;
 
 }
 
 
 function getSqlOperator(
     operator: FilterOperator
-): string {
+): SqlRuntimeOperator {
 
     switch (operator) {
 
@@ -28,13 +29,14 @@ function getSqlOperator(
             return "<>";
 
         case "contains":
-            return "LIKE";
-
         case "startsWith":
-            return "LIKE";
-
         case "endsWith":
             return "LIKE";
+
+        case "notContains":
+        case "notStartsWith":
+        case "notEndsWith":
+            return "NOT LIKE";
 
         case "greaterThan":
             return ">";
@@ -80,7 +82,7 @@ function formatValue(
 ): unknown {
 
     if (
-        operator === "contains"
+        operator === "contains" || operator === "notContains"
     ) {
 
         return `%${value}%`;
@@ -89,7 +91,7 @@ function formatValue(
 
 
     if (
-        operator === "startsWith"
+        operator === "startsWith" || operator === "notStartsWith"
     ) {
 
         return `${value}%`;
@@ -98,7 +100,7 @@ function formatValue(
 
 
     if (
-        operator === "endsWith"
+        operator === "endsWith" || operator === "notEndsWith"
     ) {
 
         return `%${value}`;
@@ -170,8 +172,6 @@ export function buildFilters(
                             operator
                         ),
 
-                    value: null,
-
                 });
 
                 return;
@@ -190,6 +190,22 @@ export function buildFilters(
 
                 return;
 
+            }
+
+            if (definition?.type === "number") {
+                if (Array.isArray(value)) {
+                    value = value.map(item => typeof item === "string" && item.trim() !== "" ? Number(item) : item);
+                } else if (typeof value === "string" && value.trim() !== "") {
+                    value = Number(value);
+                }
+
+                const containsInvalidNumber = Array.isArray(value)
+                    ? value.some(item => typeof item === "number" && !Number.isFinite(item))
+                    : typeof value === "number" && !Number.isFinite(value);
+
+                if (containsInvalidNumber) {
+                    return;
+                }
             }
 
 
@@ -256,7 +272,6 @@ export function buildFilters(
                 return;
 
             }
-
 
             /*
              * IN / NOT IN expect

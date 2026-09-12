@@ -16,5 +16,9 @@ These documents describe the behavior of the current frontend implementation.
 | [Development](DEVELOPMENT.md) | Project layout and change workflow |
 | [Testing](TESTING.md) | Test, lint, typecheck and build commands |
 | [Supported and unsupported](SUPPORTED.md) | Explicit capability boundary and known gaps |
+| [Backend capability matrix](BACKEND-CAPABILITY-MATRIX.md) | Backend capability vs frontend exposure and limitations |
+| [Frontend API reference](API-REFERENCE.md) | Backend request/response contract for report authors |
+| [Roadmap](ROADMAP.md) | Evidence-based delivery status and future work |
+| [Changelog](../CHANGELOG.md) | Frontend release notes |
 
-`QUERY-ENGINE.md` and `SQL-JSON-SEPARATION.md` are retained as compatibility pointers; the active contract is documented in [Query modes](QUERY-MODES.md).
+The active contract is documented in [Query modes](QUERY-MODES.md). [SQL/JSON separation](SQL-JSON-SEPARATION.md) records the ownership boundary.

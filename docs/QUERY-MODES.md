@@ -41,9 +41,9 @@ The source requires `table`; `alias` is optional. `fields` must be non-empty and
 | `distinct` | boolean |
 | `limit` | positive integer |
 | `filterLogic` | `AND` or `OR` for the flat request filter list |
-| `with` | backend-owned structure |
+| `with` | One standard `{name,query}` or recursive `{name,anchor,recursive}` CTE; branches are nested SELECT bodies |
 
-The frontend validator checks the outer request, fields, filters, group names, sort and pagination. It currently passes `joins`, `having`, `with`, and most expression internals without deep runtime validation; the TypeScript shapes above express the intended public contract. Verify backend-shaped structures against the backend implementation.
+The frontend validator checks identifiers, the public operator/function allowlists, fields, filters and subqueries, joins, grouping, HAVING, CTE branches, sort, pagination, DISTINCT, and limit. The backend remains authoritative and additionally validates live table/column metadata.
 
 ## SQL resource mode
 
@@ -74,6 +74,6 @@ The resource must match `[A-Za-z0-9][A-Za-z0-9_-]*`. The loader normalizes this 
 - Disabling grid pagination stops the UI from adding pagination, but a manually authored `request.pagination` remains because the base request is spread first. Prefer `grid.pagination` for interactive reports.
 - SQL resource mode sends the same runtime fields beside `action` and `resource`; the backend owns their interpretation.
 
-## Legacy query engine
+## Deliberately unexposed backend actions
 
-`src/engine/ReportQueryEngine` includes a SQL parser, SQL loader helpers and conversion tests from an earlier architecture. Its converter explicitly is not wired into report execution. Do not author paired frontend `.sql` files or rely on its supported SQL subset for production behavior.
+The backend also accepts UNION/UNION ALL, routines, metadata, and registered write actions. Report and widget configuration currently supports read-only `select` and `sql` only. Use a backend-owned SQL Resource for complex read-only SQL outside the JSON SELECT allowlist. Do not add another frontend SQL parser or converter.

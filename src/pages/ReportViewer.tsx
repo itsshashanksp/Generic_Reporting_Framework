@@ -250,14 +250,6 @@ export default function ReportViewer() {
             state: {
                 filters: appliedFilters,
                 sorting,
-                grouping: report.grid.grouping ? {
-                    groups: report.grid.grouping.groups?.map(group => ({ field: group.field })) ?? [],
-                    aggregates: report.grid.grouping.aggregates?.map(aggregate => ({
-                        field: aggregate.field,
-                        function: aggregate.function,
-                        alias: aggregate.alias,
-                    })) ?? [],
-                } : undefined,
                 pagination: { page: savedPage, pageSize: savedPageSize },
             },
         });

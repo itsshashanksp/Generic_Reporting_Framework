@@ -8,9 +8,9 @@ A report is a validated JSON definition in `src/config/reports`. It must have an
 2. `ReportDefinitionEngine` validates and applies defaults.
 3. `ReportViewer` combines the base request with applied filters, current sort and enabled pagination.
 4. The request cache supplies or fetches a validated API response.
-5. `GenericGrid`, the pager, metrics and configured toolbar actions render.
+5. The shared report/table frame, `GenericGrid`, pager, and configured toolbar actions render.
 
-The filter form applies only on **Search**. Sorting returns to page 1. Refresh bypasses completed cache. Response metrics display rows returned and execution time.
+The filter form applies only on **Search**. Sorting returns to page 1. Refresh bypasses completed cache. Backend metadata drives paging but is not shown as a separate metrics panel.
 
 ## Authoring notes
 

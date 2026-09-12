@@ -18,7 +18,7 @@ describe("DashboardEngine", () => {
         expect(result.dashboard.layout).toMatchObject({ columns: 12, tabletColumns: 6, mobileColumns: 1 });
         expect(result.dashboard.filters?.map(filter => filter.field)).toEqual(["Item_Desc", "Std_Vat"]);
         expect(result.dashboard.widgets.map(widget => widget.id)).toEqual([
-            "item-table", "total-Items", "minimum-sp-item", "maximum-sp-item", "total-value",
+            "item-table", "total-Items", "minimum-sp-item", "maximum-sp-item", "stock-value",
         ]);
     });
 

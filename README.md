@@ -72,6 +72,10 @@ npm run build
 | [Dashboards](docs/DASHBOARDS.md) | Dashboard configuration and runtime behavior |
 | [Testing](docs/TESTING.md) | Test strategy, commands, and CI |
 | [Supported behavior](docs/SUPPORTED.md) | Capability matrix and known gaps |
+| [Backend capability matrix](docs/BACKEND-CAPABILITY-MATRIX.md) | Backend capabilities and frontend exposure |
+| [API reference](docs/API-REFERENCE.md) | Exact read requests, runtime merge, responses and errors |
+| [Roadmap](docs/ROADMAP.md) | Implemented, next, planned and deferred work |
+| [Changelog](CHANGELOG.md) | Frontend change history |
 
 ## Contributing
 

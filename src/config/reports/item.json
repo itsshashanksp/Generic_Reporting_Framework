@@ -48,7 +48,6 @@
   "toolbar": {
     "export": true,
     "refresh": true,
-    "settings": false,
     "saveReport": false
   },
   "export": {

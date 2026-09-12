@@ -25,7 +25,6 @@ export interface ReportQueryDefinitionReference {
 export interface ToolbarConfig {
     export: boolean;
     refresh: boolean;
-    settings: boolean;
     saveReport?: boolean;
 }
 

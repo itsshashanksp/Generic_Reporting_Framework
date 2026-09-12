@@ -6,18 +6,6 @@ export interface SavedReportState {
 
     sorting: SortDefinition[];
 
-    grouping?: {
-        groups: {
-            field: string;
-        }[];
-
-        aggregates: {
-            field: string;
-            function: string;
-            alias?: string;
-        }[];
-    };
-
     pagination: {
         page: number;
         pageSize: number;

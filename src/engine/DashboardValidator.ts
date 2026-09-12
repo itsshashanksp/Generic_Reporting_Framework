@@ -40,6 +40,7 @@ const filterTypes = [
     "number",
     "select",
     "multiselect",
+    "boolean",
     "date",
     "daterange",
 ] as const;
@@ -499,6 +500,19 @@ function validateWidget(
             `${widget.type} widget "${String(widget.id ?? "")}"`,
             errors
         );
+        getReportValidationErrors(
+            {
+                id: widget.id,
+                title: widget.title,
+                request: widget.request,
+                columns: widget.columns,
+                filters: widget.filters ?? [],
+                grid: widget.grid,
+                toolbar: widget.toolbar,
+                export: widget.export,
+            },
+            { columnsRequired: false }
+        ).forEach(error => errors.push(`${widgetLabel} inline definition: ${error}`));
     }
 
     if (widget.type === "chart") {

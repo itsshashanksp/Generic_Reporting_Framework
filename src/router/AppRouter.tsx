@@ -4,7 +4,6 @@ import Layout from "../components/Layout/Layout";
 
 import Dashboard from "../pages/Dashboard";
 import ReportViewer from "../pages/ReportViewer";
-import Settings from "../pages/Settings";
 import DashboardViewer from "../pages/DashboardViewer";
 import menu from "../config/menu.json";
 import { getDashboardIds } from "../engine/DashboardEngine";
@@ -41,11 +40,6 @@ export default function AppRouter() {
                     <Route
                         path="/report/:reportId"
                         element={<ReportViewer />}
-                    />
-
-                    <Route
-                        path="/settings"
-                        element={<Settings />}
                     />
 
                 </Route>

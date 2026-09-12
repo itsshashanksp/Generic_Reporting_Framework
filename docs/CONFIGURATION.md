@@ -17,7 +17,7 @@ All configuration is JSON. Unknown top-level report keys are rejected, and defin
 | `toolbar` | no | object | Toolbar feature switches |
 | `export` | no | object | Export formats/scope |
 
-Omitted report defaults are: all toolbar flags enabled; pagination enabled with page size `50` and options `[25,50,100]`; row selection `single`; each column visible and sortable with width `150`.
+Omitted report defaults are: export, refresh, and saved reports enabled; pagination enabled with page size `10` and options `[10,25,50,100]`; row selection `single`; each column visible and sortable with width `150`.
 
 ## Columns
 
@@ -33,21 +33,22 @@ Each filter requires `field`, `label`, and `type`. Optional properties are `oper
 
 | Type | Default operator | Allowed operators |
 | --- | --- | --- |
-| `text` | `contains` | `equals`, `notEquals`, `contains`, `startsWith`, `endsWith`, `isNull`, `isNotNull` |
+| `text` | `contains` | `equals`, `notEquals`, `contains`, `notContains`, `startsWith`, `notStartsWith`, `endsWith`, `notEndsWith`, `isNull`, `isNotNull` |
 | `number` | `equals` | `equals`, `notEquals`, `greaterThan`, `greaterThanOrEqual`, `lessThan`, `lessThanOrEqual`, `between`, `notBetween`, `isNull`, `isNotNull` |
 | `select` | `equals` | `equals`, `notEquals`, `isNull`, `isNotNull` |
 | `multiselect` | `in` | `in`, `notIn`, `isNull`, `isNotNull` |
+| `boolean` | `equals` | `equals`, `notEquals`, `isNull`, `isNotNull` |
 | `date` | `equals` | `equals`, `notEquals`, comparison operators, `isNull`, `isNotNull` |
 | `daterange` | `between` | `between`, `notBetween`, `isNull`, `isNotNull` |
 
-`select` and `multiselect` require non-empty `options` except for null operators. The runtime maps friendly operators to `=`, `<>`, `>`, `>=`, `<`, `<=`, `LIKE`, `BETWEEN`, `NOT BETWEEN`, `IN`, `NOT IN`, `IS NULL`, and `IS NOT NULL`. Contains/start/end operators add `%` wildcards. Empty controls are omitted. A one-sided date `between` becomes `>=` or `<=`; `notBetween` requires both endpoints. Null filters are applied only when their checkbox is selected.
+`select` and `multiselect` require non-empty `options` except for null operators. The runtime maps friendly operators to `=`, `<>`, `>`, `>=`, `<`, `<=`, `LIKE`, `NOT LIKE`, `BETWEEN`, `NOT BETWEEN`, `IN`, `NOT IN`, `IS NULL`, and `IS NOT NULL`. Contains/start/end variants add `%` wildcards. Numbers are emitted as numbers and boolean options as booleans. Empty controls are omitted. A one-sided date `between` becomes `>=` or `<=`; `notBetween` requires both endpoints. Null filters are applied only when their checkbox is selected and omit `value`.
 
 ## Grid
 
 ```json
 {
   "grid": {
-    "pagination": { "enabled": true, "pageSize": 25, "pageSizeOptions": [25, 50, 100] },
+    "pagination": { "enabled": true, "pageSize": 10, "pageSizeOptions": [10, 25, 50, 100] },
     "rowSelection": "multiple",
     "grouping": {
       "enabled": true,
@@ -62,7 +63,7 @@ Pagination fields use positive integers. Row selection is `single` or `multiple`
 
 ## Toolbar and export
 
-Toolbar boolean keys are `export`, `refresh`, `settings`, and `saveReport`, all defaulting to `true`.
+Toolbar boolean keys are `export`, `refresh`, and `saveReport`, all defaulting to `true`. There is no report-settings action until column personalization has a real implementation.
 
 Export requires `enabled`; optional keys are `formats` (non-empty subset of `csv`, `excel`), `filename`, `exportAll`, and `exportCurrentView`. Export controls appear only when both toolbar export and export configuration are enabled.
 
@@ -88,7 +89,7 @@ A `report` widget must have only `reportId`. A `stat`, `table`, or `chart` widge
 - `reportId`: reuse a report's request and columns.
 - `widgetId`: resolve an external reusable widget definition.
 
-Inline non-report widgets accept `columns`, `filters`, `grid`, and `toolbar` for schema compatibility. Currently the dashboard renderer consumes the normalized request and columns but does not pass widget-level filters, grid, or toolbar to the widget UI. Dashboard-level filters are the active controls.
+Inline non-report widgets accept `columns`, `grid`, `toolbar`, and optional filter definitions for reusable-definition compatibility. The current dashboard renderer consumes the normalized request and columns; dashboard-level filters are the active controls. Table paging/export and chart/stat properties are configured on the widget instance.
 
 ### Type-specific widget options
 
@@ -118,7 +119,7 @@ See [Query modes](QUERY-MODES.md) for request sections and merge rules. The API 
   "data": [{ "id": 1 }],
   "meta": {
     "page": 1,
-    "pageSize": 50,
+    "pageSize": 10,
     "totalRows": 1,
     "rowsReturned": 1,
     "executionTime": 12
@@ -126,6 +127,6 @@ See [Query modes](QUERY-MODES.md) for request sections and merge rules. The API 
 }
 ```
 
-Although some TypeScript declarations mark `meta` optional, the response parser currently requires valid metadata for successful runtime responses.
+`meta` remains optional in the TypeScript envelope because write/error shapes differ, but the active read client requires valid metadata for every successful report/widget response.
 
 Failed envelopes may include `error:{code,details}`, where each detail is a string or `{path?,message?}`. Transport failures, invalid envelopes, backend failures and cancellations are normalized by the API layer; report/widget views render retryable errors, while an intentional abort is not treated as a new failure.
