@@ -1,6 +1,7 @@
 import { ResponsiveFilterPanel } from "../components/Filters";
 import {
     getDashboard,
+    resolveDashboardWidgetDefinition,
     resolveDashboardWidgetColumns,
     resolveDashboardWidgetRequest,
 } from "../engine/DashboardEngine";
@@ -241,6 +242,8 @@ function DashboardContent({
 
                             const widgetRequest =
                                 resolveDashboardWidgetRequest(widget);
+                            const widgetDefinition =
+                                resolveDashboardWidgetDefinition(widget);
                             const widgetColumns =
                                 resolveDashboardWidgetColumns(widget);
 
@@ -343,11 +346,9 @@ function DashboardContent({
                                 >
 
                                     {widget.type === "report" &&
-                                        widget.reportId && (
+                                        widgetDefinition && (
                                             <ReportWidget
-                                                reportId={
-                                                    widget.reportId
-                                                }
+                                                definition={widgetDefinition}
                                                 title={
                                                     widget.title
                                                 }

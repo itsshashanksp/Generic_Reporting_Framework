@@ -366,7 +366,7 @@ function validateWidget(
     ];
     const definitionKeys = ["queryDefinition", "columns", "filters", "grid", "toolbar"];
     const typeKeys: Record<string, string[]> = {
-        report: ["reportId"],
+        report: ["request", "reportId", "widgetId", ...definitionKeys],
         stat: ["request", "reportId", "widgetId", "format", "valueField", ...definitionKeys],
         table: ["request", "reportId", "widgetId", "pageSize", "pageSizeOptions", "export", ...definitionKeys],
         chart: ["request", "reportId", "widgetId", "xField", "yField", "chartType", "showLegend", "showTooltip", "showGrid", "showLabels", ...definitionKeys],
@@ -449,17 +449,7 @@ function validateWidget(
     const hasRequest = widget.request !== undefined;
     const hasInlineDefinition = widget.queryDefinition !== undefined;
 
-    if (widget.type === "report") {
-        if (!isNonEmptyString(widget.reportId)) {
-            errors.push(
-                `Report widget "${String(widget.id ?? "")}" requires reportId.`
-            );
-        } else if (reportIds && !new Set(reportIds).has(widget.reportId)) {
-            errors.push(
-                `Report widget "${String(widget.id ?? "")}" references unknown reportId: ${widget.reportId}`
-            );
-        }
-    } else if ([hasReportId, hasWidgetId, hasRequest, hasInlineDefinition].filter(Boolean).length !== 1) {
+    if ([hasReportId, hasWidgetId, hasRequest, hasInlineDefinition].filter(Boolean).length !== 1) {
         errors.push(
             `${widget.type} widget "${String(widget.id ?? "")}" requires exactly one of queryDefinition, widgetId, reportId, or request.`
         );

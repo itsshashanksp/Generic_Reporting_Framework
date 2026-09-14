@@ -104,4 +104,30 @@ describe("DashboardEngine", () => {
             "stat widget \"inline-stat\" requires exactly one of queryDefinition, widgetId, reportId, or request."
         );
     });
+
+    it("supports inline report widgets and keeps registry-backed widget definitions", () => {
+        const inlineReport = {
+            id: "inline-report",
+            type: "report",
+            title: "Inline report",
+            request: {
+                action: "select",
+                source: { table: "items" },
+                fields: ["name"],
+            },
+            columns: [{ field: "name", header: "Name" }],
+            filters: [],
+        };
+
+        expect(validateDashboard({
+            id: "inline-dashboard",
+            title: "Inline dashboard",
+            widgets: [inlineReport],
+        }).valid).toBe(true);
+
+        const reusable = getDashboard("item-dashboard");
+        if (reusable.status !== "valid") throw new Error("Expected valid production dashboard");
+        const stat = reusable.dashboard.widgets.find(widget => widget.widgetId === "item-dashboard-stats")!;
+        expect(resolveDashboardWidgetRequest(stat)?.action).toBe("sql");
+    });
 });

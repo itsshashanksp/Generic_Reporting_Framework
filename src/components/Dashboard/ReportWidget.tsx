@@ -1,5 +1,6 @@
 import { getReport } from "../../engine/ReportEngine/reportLoader";
 import type { FilterDefinition } from "../../types/filter";
+import type { ReportDefinition } from "../../types/report";
 import Empty from "../Common/Empty";
 import ErrorState from "../Common/Error";
 import Loading from "../Common/Loading";
@@ -10,7 +11,8 @@ import { useDashboardWidgetRequest } from "./useDashboardWidgetRequest";
 const EMPTY_FILTER_DEFINITIONS: FilterDefinition[] = [];
 
 interface ReportWidgetProps {
-    reportId: string;
+    reportId?: string;
+    definition?: ReportDefinition;
     title: string;
     description?: string;
     filterDefinitions?: FilterDefinition[];
@@ -19,12 +21,13 @@ interface ReportWidgetProps {
 
 export default function ReportWidget({
     reportId,
+    definition,
     title,
     description,
     filterDefinitions = EMPTY_FILTER_DEFINITIONS,
     cacheScope,
 }: ReportWidgetProps) {
-    const report = getReport(reportId) ?? null;
+    const report = definition ?? (reportId ? getReport(reportId) : undefined) ?? null;
     const { response, loading, error, retry } = useDashboardWidgetRequest(
         report?.request ?? null,
         filterDefinitions,
