@@ -91,7 +91,7 @@ export function validateFilters(
         }
 
         const configured = filter as unknown as Record<string, unknown>;
-        const allowedKeys = ["field", "label", "type", "operator", "options", "visible", "required", "placeholder"];
+        const allowedKeys = ["field", "label", "type", "operator", "options", "dynamicOptions", "visible", "required", "placeholder"];
         const unknownKey = Object.keys(configured).find(key => !allowedKeys.includes(key));
         if (unknownKey) {
             throw new Error(`Unknown filter property '${unknownKey}'.`);
@@ -144,6 +144,18 @@ export function validateFilters(
             throw new Error(`Options are not supported for filter '${filter.field}' of type '${filter.type}'.`);
         }
 
+        if (filter.dynamicOptions !== undefined && filter.type !== "select" && filter.type !== "multiselect") {
+            throw new Error(`Dynamic options are not supported for filter '${filter.field}' of type '${filter.type}'.`);
+        }
+
+        if (filter.options !== undefined && filter.dynamicOptions !== undefined) {
+            throw new Error(`Filter '${filter.field}' must use either options or dynamicOptions, not both.`);
+        }
+
+        if (filter.dynamicOptions !== undefined) {
+            validateDynamicOptions(filter);
+        }
+
 
         if (
             !filter.type ||
@@ -193,8 +205,7 @@ export function validateFilters(
             filter.type === "multiselect" &&
             filter.operator !== "isNull" &&
             filter.operator !== "isNotNull" &&
-            (!filter.options ||
-                filter.options.length === 0)
+            (!filter.options || filter.options.length === 0) && !filter.dynamicOptions
         ) {
 
             throw new Error(
@@ -212,8 +223,7 @@ export function validateFilters(
             filter.type === "select" &&
             filter.operator !== "isNull" &&
             filter.operator !== "isNotNull" &&
-            (!filter.options ||
-                filter.options.length === 0)
+            (!filter.options || filter.options.length === 0) && !filter.dynamicOptions
         ) {
 
             throw new Error(
@@ -238,7 +248,7 @@ export function validateFilters(
                     }
 
                     const unknownOptionKey = Object.keys(option).find(
-                        key => key !== "label" && key !== "value"
+                        key => key !== "label" && key !== "value" && key !== "count"
                     );
                     if (unknownOptionKey) {
                         throw new Error(`Unknown option property '${unknownOptionKey}' for filter '${filter.field}'.`);
@@ -258,7 +268,8 @@ export function validateFilters(
 
                     if (
                         (typeof option.value !== "string" &&
-                            typeof option.value !== "number")
+                            typeof option.value !== "number" &&
+                            typeof option.value !== "boolean")
                     ) {
 
                         throw new Error(
@@ -280,6 +291,10 @@ export function validateFilters(
 
                     optionValues.add(optionKey);
 
+                    if (option.count !== undefined && (!Number.isFinite(option.count) || option.count < 0)) {
+                        throw new Error(`Option count must be a non-negative number for filter '${filter.field}'.`);
+                    }
+
                 }
             );
 
@@ -290,4 +305,26 @@ export function validateFilters(
 
     return filters;
 
+}
+
+function validateDynamicOptions(filter: FilterDefinition): void {
+    const dynamic = filter.dynamicOptions as unknown as Record<string, unknown>;
+    if (typeof dynamic !== "object" || dynamic === null || Array.isArray(dynamic)) {
+        throw new Error(`Dynamic options for filter '${filter.field}' must be an object.`);
+    }
+    const allowed = ["request", "valueField", "labelField", "countField", "searchable", "searchPlaceholder"];
+    const unknown = Object.keys(dynamic).find(key => !allowed.includes(key));
+    if (unknown) throw new Error(`Unknown dynamic option property '${unknown}' for filter '${filter.field}'.`);
+    for (const key of ["valueField", "labelField", "countField", "searchPlaceholder"]) {
+        if (dynamic[key] !== undefined && (typeof dynamic[key] !== "string" || dynamic[key].trim() === "")) {
+            throw new Error(`Dynamic option ${key} for filter '${filter.field}' must be a non-empty string.`);
+        }
+    }
+    if (dynamic.searchable !== undefined && typeof dynamic.searchable !== "boolean") {
+        throw new Error(`Dynamic option searchable for filter '${filter.field}' must be a boolean.`);
+    }
+    const request = dynamic.request as Record<string, unknown> | undefined;
+    if (!request || request.action !== "select" || typeof request.source !== "object" || !Array.isArray(request.fields)) {
+        throw new Error(`Dynamic options for filter '${filter.field}' require a JSON Query select request.`);
+    }
 }

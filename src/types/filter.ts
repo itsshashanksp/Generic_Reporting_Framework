@@ -33,8 +33,20 @@ export interface FilterOption {
 
     label: string;
 
-    value: string | number;
+    value: string | number | boolean;
 
+    count?: number;
+
+}
+
+export interface DynamicFilterOptions {
+    /** Reviewed JSON Query request used only to retrieve grouped option rows. */
+    request: UniversalQueryRequest;
+    valueField: string;
+    labelField?: string;
+    countField?: string;
+    searchable?: boolean;
+    searchPlaceholder?: string;
 }
 
 
@@ -50,6 +62,8 @@ export interface FilterDefinition {
 
     options?: FilterOption[];
 
+    dynamicOptions?: DynamicFilterOptions;
+
     visible?: boolean;
 
     required?: boolean;
@@ -57,3 +71,4 @@ export interface FilterDefinition {
     placeholder?: string;
 
 }
+import type { UniversalQueryRequest } from "./api";

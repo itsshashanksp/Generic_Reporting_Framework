@@ -41,6 +41,21 @@
     min-height: 84px;
 }
 
+.filter-field > input[type="search"] + select {
+    margin-top: 6px;
+}
+
+.filter-field > small {
+    display: block;
+    margin-top: 5px;
+    color: #64748b;
+    font-size: 11px;
+}
+
+.filter-field > small[role="alert"] {
+    color: #b91c1c;
+}
+
 .filter-field input:hover,
 .filter-field select:hover {
     border-color: #94a3b8;

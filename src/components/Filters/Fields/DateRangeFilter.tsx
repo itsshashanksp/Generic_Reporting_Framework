@@ -22,10 +22,10 @@ export default function DateRangeFilter({
             : ["", ""];
 
     const startDate =
-        value[0] || "";
+        typeof value[0] === "string" ? value[0] : "";
 
     const endDate =
-        value[1] || "";
+        typeof value[1] === "string" ? value[1] : "";
     const startId = useId();
     const endId = useId();
 

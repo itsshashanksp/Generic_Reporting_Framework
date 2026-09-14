@@ -5,7 +5,7 @@ const REPORT_KEYS = ["id", "title", "description", "queryDefinition", "request",
 const REQUEST_KEYS = ["action", "source", "fields", "filters", "joins", "groupBy", "having", "sort", "pagination", "distinct", "limit", "filterLogic", "with"];
 const REQUEST_FIELD_KEYS = ["field", "fields", "function", "alias", "sort", "case", "expression", "buckets", "offset", "default", "separator", "datatype", "style", "value", "values", "index", "datepart", "number", "start", "end", "year", "month", "day", "hour", "minute", "second", "millisecond", "precision", "power", "part", "length", "search", "replace", "pattern", "format", "condition", "true", "false"];
 const COLUMN_KEYS = ["field", "header", "visible", "sortable", "width"];
-const FILTER_KEYS = ["field", "label", "type", "operator", "options", "visible", "required", "placeholder"];
+const FILTER_KEYS = ["field", "label", "type", "operator", "options", "dynamicOptions", "visible", "required", "placeholder"];
 const FILTER_TYPES: FilterType[] = ["text", "number", "select", "multiselect", "boolean", "date", "daterange"];
 const QUERY_OPERATORS = ["=", "!=", "<>", ">", "<", ">=", "<=", "LIKE", "NOT LIKE", "IN", "NOT IN", "BETWEEN", "NOT BETWEEN", "IS NULL", "IS NOT NULL", "EXISTS", "NOT EXISTS"];
 const QUERY_FUNCTIONS = [
@@ -203,6 +203,12 @@ function validateRequest(value: unknown, errors: string[]) {
     }
 }
 
+export function getJsonQueryRequestValidationErrors(value: unknown): string[] {
+    const errors: string[] = [];
+    validateRequest(value, errors);
+    return errors;
+}
+
 function validateColumns(value: unknown, errors: string[], required: boolean) {
     if (value === undefined && !required) return;
     if (!Array.isArray(value) || value.length === 0) return errors.push("Report columns must be a non-empty array.");
@@ -243,27 +249,49 @@ function validateFilters(value: unknown, errors: string[], sqlResource: boolean)
         optionalString(entry.placeholder, `${label} placeholder`, errors);
         if (entry.placeholder !== undefined && entry.type !== "text" && entry.type !== "number") errors.push(`${label} placeholder is not supported for type ${String(entry.type)}.`);
         if (entry.options !== undefined && entry.type !== "select" && entry.type !== "multiselect") errors.push(`${label} options are not supported for type ${String(entry.type)}.`);
+        if (entry.dynamicOptions !== undefined && entry.type !== "select" && entry.type !== "multiselect") errors.push(`${label} dynamicOptions are not supported for type ${String(entry.type)}.`);
+        if (entry.options !== undefined && entry.dynamicOptions !== undefined) errors.push(`${label} must use either options or dynamicOptions.`);
         validateOptions(entry.options, entry.type, entry.operator, label, errors);
+        validateDynamicOptions(entry.dynamicOptions, entry.type, entry.operator, label, errors);
     });
 }
 
+function requiresOptions(type: unknown, operator: unknown) {
+    return (type === "multiselect" || type === "select") && operator !== "isNull" && operator !== "isNotNull";
+}
+
 function validateOptions(value: unknown, type: unknown, operator: unknown, label: string, errors: string[]) {
-    const required = (type === "multiselect" || type === "select") && operator !== "isNull" && operator !== "isNotNull";
+    const required = requiresOptions(type, operator);
     if (value === undefined) {
-        if (required) errors.push(`${label} options are required.`);
         return;
     }
     if (!Array.isArray(value) || (required && value.length === 0)) return errors.push(`${label} options must be a non-empty array.`);
     const values = new Set<string>();
     value.forEach((option, index) => {
         if (!isRecord(option)) return errors.push(`${label} option at index ${index} must be an object.`);
-        rejectUnknown(option, ["label", "value"], `${label} option at index ${index}`, errors);
+        rejectUnknown(option, ["label", "value", "count"], `${label} option at index ${index}`, errors);
         requireString(option.label, `${label} option at index ${index} label`, errors);
-        if (typeof option.value !== "string" && typeof option.value !== "number") errors.push(`${label} option at index ${index} value must be a string or number.`);
+        if (typeof option.value !== "string" && typeof option.value !== "number" && typeof option.value !== "boolean") errors.push(`${label} option at index ${index} value must be a scalar.`);
+        if (option.count !== undefined && (typeof option.count !== "number" || !Number.isFinite(option.count) || option.count < 0)) errors.push(`${label} option at index ${index} count must be a non-negative number.`);
         const key = `${typeof option.value}:${String(option.value)}`;
         if (values.has(key)) errors.push(`${label} has duplicate option value ${String(option.value)}.`);
         values.add(key);
     });
+}
+
+function validateDynamicOptions(value: unknown, type: unknown, operator: unknown, label: string, errors: string[]) {
+    if (value === undefined) {
+        if (requiresOptions(type, operator)) errors.push(`${label} options or dynamicOptions are required.`);
+        return;
+    }
+    if (!isRecord(value)) return errors.push(`${label} dynamicOptions must be an object.`);
+    rejectUnknown(value, ["request", "valueField", "labelField", "countField", "searchable", "searchPlaceholder"], `${label} dynamicOptions`, errors);
+    requireIdentifier(value.valueField, `${label} dynamicOptions valueField`, errors);
+    optionalIdentifier(value.labelField, `${label} dynamicOptions labelField`, errors);
+    optionalIdentifier(value.countField, `${label} dynamicOptions countField`, errors);
+    optionalBoolean(value.searchable, `${label} dynamicOptions searchable`, errors);
+    optionalString(value.searchPlaceholder, `${label} dynamicOptions searchPlaceholder`, errors);
+    getJsonQueryRequestValidationErrors(value.request).forEach(error => errors.push(`${label} dynamicOptions: ${error}`));
 }
 
 function validateGrid(value: unknown, errors: string[]) {

@@ -1,15 +1,15 @@
 import { useFilters } from "../../../engine/FilterContext";
-import { useId } from "react";
+import { useId, useMemo, useState } from "react";
+import type { DynamicFilterOptions, FilterOption } from "../../../types/filter";
+import { useDynamicFilterOptions } from "../useDynamicFilterOptions";
 
-interface Option {
-    label: string;
-    value: string | number;
-}
+const optionKey = (option: Pick<FilterOption, "value">) => `${typeof option.value}:${String(option.value)}`;
 
 interface Props {
     field: string;
     label: string;
-    options?: Option[];
+    options?: FilterOption[];
+    dynamicOptions?: DynamicFilterOptions;
     required?: boolean;
 }
 
@@ -17,6 +17,7 @@ export default function MultiSelectFilter({
     field,
     label,
     options = [],
+    dynamicOptions,
     required = false,
 }: Props) {
 
@@ -30,6 +31,15 @@ export default function MultiSelectFilter({
             ? filters[field]
             : [];
     const selectId = useId();
+    const [search, setSearch] = useState("");
+    const dynamic = useDynamicFilterOptions(dynamicOptions);
+    const availableOptions = dynamicOptions ? dynamic.options : options;
+    const displayedOptions = useMemo(() => {
+        const term = search.trim().toLocaleLowerCase();
+        return term
+            ? availableOptions.filter(option => option.label.toLocaleLowerCase().includes(term))
+            : availableOptions;
+    }, [availableOptions, search]);
 
     const handleChange = (
         event: React.ChangeEvent<HTMLSelectElement>
@@ -38,9 +48,9 @@ export default function MultiSelectFilter({
         const values = Array.from(
             event.target.selectedOptions,
             selectedOption =>
-                options.find(
+                availableOptions.find(
                     option =>
-                        String(option.value) === selectedOption.value
+                        optionKey(option) === selectedOption.value
                 )?.value ?? selectedOption.value
         );
 
@@ -59,32 +69,45 @@ export default function MultiSelectFilter({
                 {label}{required && <span className="filter-required" aria-hidden="true"> *</span>}
             </label>
 
+            {dynamicOptions?.searchable !== false && (
+                <input
+                    type="search"
+                    aria-label={`Search ${label}`}
+                    placeholder={dynamicOptions?.searchPlaceholder ?? `Search ${label.toLocaleLowerCase()}`}
+                    value={search}
+                    onChange={event => setSearch(event.target.value)}
+                />
+            )}
+
             <select
                 id={selectId}
                 multiple
                 required={required}
                 value={selectedValues.map(
-                    String
+                    value => `${typeof value}:${String(value)}`
                 )}
                 onChange={handleChange}
                 size={Math.min(
-                    Math.max(options.length, 3),
+                    Math.max(displayedOptions.length, 3),
                     6
                 )}
             >
 
-                {options.map(option => (
+                {displayedOptions.map(option => (
 
                     <option
                         key={`${typeof option.value}:${String(option.value)}`}
-                        value={String(option.value)}
+                        value={optionKey(option)}
                     >
-                        {option.label}
+                        {option.label}{option.count !== undefined ? ` (${option.count.toLocaleString("en-IN")})` : ""}
                     </option>
 
                 ))}
 
             </select>
+
+            {dynamic.loading && <small role="status">Loading values…</small>}
+            {dynamic.error && <small role="alert">{dynamic.error}</small>}
 
         </div>
 

@@ -3,7 +3,7 @@ import type { FilterDefinition } from "../types/filter";
 import {
     validateFilters as validateFilterDefinitions,
 } from "./FilterEngine/validator";
-import { getReportValidationErrors } from "./ReportDefinitionEngine/validator";
+import { getJsonQueryRequestValidationErrors, getReportValidationErrors } from "./ReportDefinitionEngine/validator";
 
 export interface DashboardValidationResult {
     valid: boolean;
@@ -280,7 +280,7 @@ function validateFilters(
 
         rejectUnknownProperties(
             filter,
-            ["field", "label", "type", "operator", "options", "visible", "required", "placeholder"],
+            ["field", "label", "type", "operator", "options", "dynamicOptions", "visible", "required", "placeholder"],
             label,
             errors
         );
@@ -324,6 +324,25 @@ function validateFilters(
         }
 
         validateOptionalString(filter.placeholder, `${label} placeholder`, errors);
+        if (filter.dynamicOptions !== undefined) {
+            if (!isRecord(filter.dynamicOptions)) {
+                errors.push(`${label} dynamicOptions must be an object.`);
+            } else {
+                rejectUnknownProperties(
+                    filter.dynamicOptions,
+                    ["request", "valueField", "labelField", "countField", "searchable", "searchPlaceholder"],
+                    `${label} dynamicOptions`,
+                    errors
+                );
+                for (const key of ["valueField", "labelField", "countField"]) {
+                    if (filter.dynamicOptions[key] !== undefined && !isNonEmptyString(filter.dynamicOptions[key])) {
+                        errors.push(`${label} dynamicOptions ${key} must be a non-empty string.`);
+                    }
+                }
+                getJsonQueryRequestValidationErrors(filter.dynamicOptions.request)
+                    .forEach(error => errors.push(`${label} dynamicOptions: ${error}`));
+            }
+        }
     });
 
     if (errors.length === initialErrorCount) {

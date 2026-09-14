@@ -74,6 +74,43 @@ Universal JSON projection or a backend SQL resource.
 - Layout: `columns`, `tabletColumns`, `mobileColumns`.
 - Auto refresh: `enabled`, `interval`.
 - Filters use the same schema and behavior as report filters.
+- A `select` or `multiselect` filter may replace static `options` with
+  `dynamicOptions`. Its reviewed JSON Query request should return one row per
+  value (normally with `groupBy`), and may return a frequency field produced by
+  `COUNT`. `valueField`, optional `labelField`, and optional `countField` map
+  those rows into searchable choices. Choices are cached by request, sorted by
+  descending frequency, and selection still updates the normal filter state.
+  Because this request is independent of the report data request, it also works
+  for SQL Resource reports and dashboard widgets without exposing SQL or table
+  names to the filter UI.
+
+```json
+{
+  "field": "Category",
+  "label": "Category",
+  "type": "select",
+  "dynamicOptions": {
+    "request": {
+      "action": "select",
+      "source": { "table": "Inventory" },
+      "fields": [
+        "Category",
+        { "function": "COUNT", "field": "*", "alias": "Frequency" }
+      ],
+      "groupBy": ["Category"],
+      "sort": [{ "field": "Frequency", "direction": "DESC" }],
+      "limit": 100
+    },
+    "valueField": "Category",
+    "countField": "Frequency",
+    "searchable": true
+  }
+}
+```
+
+Filter fields and display columns are independent. In SQL Resource mode, a
+filter-only field must be declared in `queryDefinition.execution.filters`; it
+does not need to be added to `columns` or `execution.columns`.
 - Report widget: `reportId`.
 - Stat widget: inline SQL `queryDefinition`/JSON `request`, or `widgetId`/compatible `reportId`, plus `valueField` and `format`.
 - Table widget: inline SQL `queryDefinition`/JSON `request`, or `widgetId`/compatible `reportId`, plus `columns`, `pageSize`, `pageSizeOptions`, and `export`.

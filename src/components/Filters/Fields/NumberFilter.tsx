@@ -30,6 +30,8 @@ export default function NumberFilter({
         const range = Array.isArray(filters[field])
             ? filters[field]
             : ["", ""];
+        const minimum = typeof range[0] === "string" || typeof range[0] === "number" ? range[0] : "";
+        const maximum = typeof range[1] === "string" || typeof range[1] === "number" ? range[1] : "";
 
         return (
             <fieldset className="filter-field">
@@ -41,13 +43,13 @@ export default function NumberFilter({
                     <input
                         id={minimumId}
                         type="number"
-                        value={range[0] ?? ""}
+                        value={minimum}
                         placeholder="Minimum"
                         required={required}
                         onChange={(event) =>
                             setFilter(field, [
                                 event.target.value,
-                                range[1] ?? "",
+                                maximum,
                             ])
                         }
                     />
@@ -56,12 +58,12 @@ export default function NumberFilter({
                     <input
                         id={maximumId}
                         type="number"
-                        value={range[1] ?? ""}
+                        value={maximum}
                         placeholder="Maximum"
                         required={required}
                         onChange={(event) =>
                             setFilter(field, [
-                                range[0] ?? "",
+                                minimum,
                                 event.target.value,
                             ])
                         }

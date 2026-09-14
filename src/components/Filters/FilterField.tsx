@@ -68,6 +68,7 @@ export default function FilterField({
                     field={filter.field}
                     label={filter.label}
                     options={filter.options}
+                    dynamicOptions={filter.dynamicOptions}
                     required={filter.required}
                 />
             );
@@ -79,6 +80,7 @@ export default function FilterField({
                    field={filter.field}
                    label={filter.label}
                    options={filter.options}
+                   dynamicOptions={filter.dynamicOptions}
                    required={filter.required}
                />
            );

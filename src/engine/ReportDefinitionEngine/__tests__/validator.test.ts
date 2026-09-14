@@ -85,6 +85,40 @@ describe("report request contract alignment", () => {
         ]));
     });
 
+    it("allows a dynamic filter-only field outside the displayed columns", () => {
+        const errors = getReportValidationErrors({
+            ...presentation,
+            columns: [{ field: "Item_Desc", header: "Description" }],
+            queryDefinition: {
+                format: "sql",
+                resource: "reports/items",
+                execution: {
+                    columns: ["Item_Desc"],
+                    filters: {
+                        Supplier_Name: { expression: "Supplier_Name", placement: "source" },
+                    },
+                },
+            },
+            filters: [{
+                field: "Supplier_Name",
+                label: "Supplier",
+                type: "select",
+                dynamicOptions: {
+                    request: {
+                        action: "select",
+                        source: { table: "Suppliers" },
+                        fields: ["Supplier_Name", { function: "COUNT", field: "*", alias: "Frequency" }],
+                        groupBy: ["Supplier_Name"],
+                    },
+                    valueField: "Supplier_Name",
+                    countField: "Frequency",
+                },
+            }],
+        });
+
+        expect(errors).toEqual([]);
+    });
+
     it("enforces SQL Resource logical field identifiers", () => {
         expect(getReportValidationErrors({
             ...presentation,

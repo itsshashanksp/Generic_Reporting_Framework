@@ -13,7 +13,7 @@ export type FilterValue =
     | boolean
     | null
     | undefined
-    | (string | number)[];
+    | (string | number | boolean)[];
 
 export type FilterValues = Record<string, FilterValue>;
 
