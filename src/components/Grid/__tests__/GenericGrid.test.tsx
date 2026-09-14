@@ -40,6 +40,16 @@ describe("GenericGrid shared configuration", () => {
         expect(props.rowSelection).toBe("multiple");
     });
 
+    it("formats numeric cells without changing row data", () => {
+        const rows = [{ Code: 0.30000000000000004, Description: "Calculated" }];
+        render(<GridProvider><GenericGrid rows={rows} columns={columns} gridConfig={gridConfig} /></GridProvider>);
+        const props = agGridProps.mock.calls.at(-1)?.[0];
+
+        expect(props.columnDefs[0].valueFormatter({ value: rows[0].Code })).toBe("0.3");
+        expect(rows[0].Code).toBe(0.30000000000000004);
+        expect(screen.getByLabelText("Item Code: 0.3")).toBeTruthy();
+    });
+
     it("exposes working server pagination controls", () => {
         const onPageChange = vi.fn();
         const onPageSizeChange = vi.fn();

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { formatNumberForDisplay } from "../../engine/ValueFormatter";
 
 import type { FilterDefinition } from "../../types/filter";
 import type { WidgetRequest } from "../../types/widget";
@@ -46,7 +47,7 @@ function formatValue(
         });
     }
 
-    return numericValue.toLocaleString("en-IN");
+    return formatNumberForDisplay(numericValue);
 }
 
 export default function StatWidget({

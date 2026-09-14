@@ -1,4 +1,5 @@
 import type { KeyboardEvent } from "react";
+import { formatNumberForDisplay } from "../../engine/ValueFormatter";
 
 interface MobileColumn {
     field: string;
@@ -24,6 +25,7 @@ interface MobileReportViewProps {
 
 function formatValue(value: unknown) {
     if (value === null || value === undefined || value === "") return "—";
+    if (typeof value === "number") return formatNumberForDisplay(value);
     if (typeof value === "boolean") return value ? "Yes" : "No";
     if (typeof value === "object") {
         try {

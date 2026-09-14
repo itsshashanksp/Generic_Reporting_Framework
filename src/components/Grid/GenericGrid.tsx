@@ -10,6 +10,7 @@ import {
     gridTheme,
 } from "../../engine/GridEngine";
 import { getContentMinWidth } from "../../engine/GridEngine/contentWidth";
+import { formatNumberForDisplay } from "../../engine/ValueFormatter";
 
 import type { GridConfig } from "../../types/report";
 import type { ColumnDefinition } from "../../types/column";
@@ -32,6 +33,12 @@ interface Props {
         onPageSizeChange: (pageSize: number) => void;
     };
     onSortChange?: (sort: Array<{ field: string; direction: "ASC" | "DESC" }>) => void;
+}
+
+function formatGridValue(value: unknown): string {
+    return typeof value === "number"
+        ? formatNumberForDisplay(value)
+        : String(value ?? "");
 }
 
 export default function GenericGrid({
@@ -79,6 +86,7 @@ export default function GenericGrid({
                         group.header ?? group.field,
                         true,
                     ),
+                    valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value),
                 })),
                 ...aggregateColumns.map(aggregate => ({
                     field: aggregate.alias ?? `${aggregate.function}_${aggregate.field}`,
@@ -96,6 +104,7 @@ export default function GenericGrid({
                             ?? `${aggregate.function} ${aggregate.field}`,
                         true,
                     ),
+                    valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value),
                 })),
             ]
             : columns
@@ -112,6 +121,7 @@ export default function GenericGrid({
                         column.header,
                         column.sortable ?? true,
                     ),
+                    valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value),
                 }));
     }, [columns, gridConfig.grouping, rows]);
 

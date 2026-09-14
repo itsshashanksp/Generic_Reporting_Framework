@@ -88,6 +88,21 @@ describe("dashboard widgets", () => {
         expect(await screen.findByText("1,234")).toBeTruthy();
     });
 
+    it("removes floating-point artifacts from stat presentation", async () => {
+        executeRequestMock.mockResolvedValue({
+            success: true,
+            message: "ok",
+            data: [{ value: 12.199999999999998 }],
+        });
+        render(
+            <DashboardProvider>
+                <StatWidget title="Calculated" request={request} valueField="value" format="number" />
+            </DashboardProvider>
+        );
+
+        expect(await screen.findByText("12.2")).toBeTruthy();
+    });
+
     it("applies Item Dashboard filters to every statistic and maps all statistic fields", async () => {
         executeRequestMock.mockResolvedValue({
             success: true,
