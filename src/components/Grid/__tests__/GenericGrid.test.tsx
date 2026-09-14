@@ -50,6 +50,16 @@ describe("GenericGrid shared configuration", () => {
         expect(screen.getByLabelText("Item Code: 0.3")).toBeTruthy();
     });
 
+    it("renders null as an em dash without changing other falsy values", () => {
+        const rows = [{ Code: null, Description: "" }];
+        render(<GridProvider><GenericGrid rows={rows} columns={columns} gridConfig={gridConfig} /></GridProvider>);
+        const props = agGridProps.mock.calls.at(-1)?.[0];
+
+        expect(props.columnDefs[0].valueFormatter({ value: rows[0].Code })).toBe("—");
+        expect(props.columnDefs[1].valueFormatter({ value: rows[0].Description })).toBe("");
+        expect(rows[0].Code).toBeNull();
+    });
+
     it("exposes working server pagination controls", () => {
         const onPageChange = vi.fn();
         const onPageSizeChange = vi.fn();
@@ -151,6 +161,21 @@ describe("GenericGrid shared configuration", () => {
 
         fireEvent.click(record);
         expect(record.getAttribute("aria-selected")).toBe("true");
+    });
+
+    it("does not treat an empty string as null in mobile cells", () => {
+        render(
+            <GridProvider>
+                <GenericGrid
+                    rows={[{ Code: "", Description: "" }]}
+                    columns={columns}
+                    gridConfig={gridConfig}
+                />
+            </GridProvider>
+        );
+
+        const record = within(screen.getByRole("listbox", { name: "Report records" })).getByRole("option");
+        expect(record.textContent).not.toContain("—");
     });
 
     it("keeps non-descriptive columns in compact labeled detail rows", () => {

@@ -103,6 +103,24 @@ describe("dashboard widgets", () => {
         expect(await screen.findByText("12.2")).toBeTruthy();
     });
 
+    it("renders a returned null statistic as an em dash", async () => {
+        const row = { value: null };
+        executeRequestMock.mockResolvedValue({
+            success: true,
+            message: "ok",
+            data: [row],
+        });
+        render(
+            <DashboardProvider>
+                <StatWidget title="Nullable" request={request} valueField="value" />
+            </DashboardProvider>
+        );
+
+        expect(await screen.findByText("—")).toBeTruthy();
+        expect(row.value).toBeNull();
+        expect(screen.queryByText("No data")).toBeNull();
+    });
+
     it("applies Item Dashboard filters to every statistic and maps all statistic fields", async () => {
         executeRequestMock.mockResolvedValue({
             success: true,

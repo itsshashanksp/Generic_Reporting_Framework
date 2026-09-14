@@ -1,4 +1,5 @@
 const DISPLAY_SIGNIFICANT_DIGITS = 15;
+export const NULL_DISPLAY_VALUE = "—";
 
 /**
  * Formats finite numeric values for display without changing the source value.
@@ -16,4 +17,12 @@ export function formatNumberForDisplay(value: number): string {
     return normalized.toLocaleString("en-IN", {
         maximumSignificantDigits: DISPLAY_SIGNIFICANT_DIGITS,
     });
+}
+
+/** Generic scalar presentation used by grids without altering row data. */
+export function formatValueForDisplay(value: unknown): string {
+    if (value === null) return NULL_DISPLAY_VALUE;
+    if (value === undefined) return "";
+    if (typeof value === "number") return formatNumberForDisplay(value);
+    return String(value);
 }

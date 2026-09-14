@@ -1,4 +1,4 @@
-import { formatNumberForDisplay } from "../ValueFormatter";
+import { formatValueForDisplay } from "../ValueFormatter";
 
 const DEFAULT_MIN_WIDTH = 150;
 const CELL_HORIZONTAL_SPACE = 25;
@@ -39,8 +39,7 @@ function measureGridText(value: string, fontWeight: number) {
 }
 
 function displayText(value: unknown) {
-    if (typeof value === "number") return formatNumberForDisplay(value);
-    return value == null ? "" : String(value);
+    return formatValueForDisplay(value);
 }
 
 /**

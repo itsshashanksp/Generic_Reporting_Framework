@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatNumberForDisplay } from "..";
+import { formatNumberForDisplay, formatValueForDisplay } from "..";
 
 describe("formatNumberForDisplay", () => {
     it.each([
@@ -19,5 +19,15 @@ describe("formatNumberForDisplay", () => {
     it("keeps non-finite values representable", () => {
         expect(formatNumberForDisplay(Number.NaN)).toBe("NaN");
         expect(formatNumberForDisplay(Number.POSITIVE_INFINITY)).toBe("Infinity");
+    });
+});
+
+describe("formatValueForDisplay", () => {
+    it("renders only null as an em dash", () => {
+        expect(formatValueForDisplay(null)).toBe("—");
+        expect(formatValueForDisplay(0)).toBe("0");
+        expect(formatValueForDisplay(false)).toBe("false");
+        expect(formatValueForDisplay("")).toBe("");
+        expect(formatValueForDisplay("ABC")).toBe("ABC");
     });
 });

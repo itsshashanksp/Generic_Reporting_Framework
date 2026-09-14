@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { formatNumberForDisplay } from "../../engine/ValueFormatter";
+import { formatNumberForDisplay, NULL_DISPLAY_VALUE } from "../../engine/ValueFormatter";
 
 import type { FilterDefinition } from "../../types/filter";
 import type { WidgetRequest } from "../../types/widget";
@@ -25,6 +25,8 @@ function formatValue(
     value: unknown,
     format: StatWidgetProps["format"]
 ) {
+    if (value === null) return NULL_DISPLAY_VALUE;
+
     const numericValue = Number(value);
 
     if (Number.isNaN(numericValue)) {
@@ -64,13 +66,19 @@ export default function StatWidget({
         filterDefinitions,
         cacheScope
     );
-    const value = useMemo(() => {
+    const statistic = useMemo(() => {
         const firstRow = response?.data?.[0];
-        return firstRow
-            ? valueField ? firstRow[valueField] : Object.values(firstRow)[0]
-            : undefined;
+        if (!firstRow) return { available: false, value: undefined };
+        if (valueField) {
+            return {
+                available: Object.prototype.hasOwnProperty.call(firstRow, valueField),
+                value: firstRow[valueField],
+            };
+        }
+        const values = Object.values(firstRow);
+        return { available: values.length > 0, value: values[0] };
     }, [response, valueField]);
-    const hasValue = value !== undefined && value !== null;
+    const { available: hasValue, value } = statistic;
 
     return (
         <DashboardWidgetFrame

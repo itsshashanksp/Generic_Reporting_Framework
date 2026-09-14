@@ -10,7 +10,7 @@ import {
     gridTheme,
 } from "../../engine/GridEngine";
 import { getContentMinWidth } from "../../engine/GridEngine/contentWidth";
-import { formatNumberForDisplay } from "../../engine/ValueFormatter";
+import { formatValueForDisplay } from "../../engine/ValueFormatter";
 
 import type { GridConfig } from "../../types/report";
 import type { ColumnDefinition } from "../../types/column";
@@ -36,9 +36,7 @@ interface Props {
 }
 
 function formatGridValue(value: unknown): string {
-    return typeof value === "number"
-        ? formatNumberForDisplay(value)
-        : String(value ?? "");
+    return formatValueForDisplay(value);
 }
 
 export default function GenericGrid({
