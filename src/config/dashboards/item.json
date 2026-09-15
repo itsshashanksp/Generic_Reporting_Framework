@@ -2,15 +2,18 @@
   "id": "item-dashboard",
   "title": "Item Dashboard",
   "description": "Item reporting dashboard.",
+
   "layout": {
     "columns": 12,
     "tabletColumns": 6,
     "mobileColumns": 1
   },
+
   "autoRefresh": {
     "enabled": false,
     "interval": 30000
   },
+
   "filters": [
     {
       "field": "Item_Desc",
@@ -20,19 +23,51 @@
     {
       "field": "Std_Vat",
       "label": "GST %",
-      "type": "text"
+      "type": "select",
+      "dynamicOptions": {
+        "request": {
+          "action": "select",
+          "source": {
+            "table": "ItemMasterTable"
+          },
+          "fields": [
+            "Std_Vat",
+            {
+              "function": "COUNT",
+              "field": "*",
+              "alias": "Frequency"
+            }
+          ],
+          "groupBy": [
+            "Std_Vat"
+          ],
+          "sort": [
+            {
+              "field": "Frequency",
+              "direction": "DESC"
+            }
+          ],
+          "limit": 1000
+        },
+        "valueField": "Std_Vat",
+        "countField": "Frequency",
+        "searchable": false
+      }
     }
   ],
+
   "widgets": [
     {
       "id": "item-table",
       "type": "table",
       "title": "Item Details",
       "visible": true,
+
       "position": {
         "x": 0,
         "y": 1
       },
+
       "queryDefinition": {
         "format": "sql",
         "resource": "widgets/item-dashboard-table",
@@ -54,6 +89,7 @@
           ]
         }
       },
+
       "columns": [
         {
           "field": "Item_Code",
@@ -89,7 +125,9 @@
           "dataType": "number"
         }
       ],
+
       "pageSize": 10,
+
       "export": {
         "enabled": true,
         "formats": [
@@ -101,6 +139,7 @@
         "exportCurrentView": true
       }
     },
+
     {
       "id": "total-Items",
       "type": "stat",
@@ -109,14 +148,36 @@
       "width": 4,
       "height": 175,
       "visible": true,
+
       "position": {
         "x": 0,
         "y": 2
       },
-      "widgetId": "item-dashboard-stats",
+
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/item-dashboard-stats",
+        "execution": {
+          "columns": [
+            "TotalItems"
+          ],
+          "filters": {
+            "Item_Desc": {
+              "expression": "Item_Desc",
+              "placement": "source"
+            },
+            "Std_Vat": {
+              "expression": "Std_Vat",
+              "placement": "source"
+            }
+          }
+        }
+      },
+
       "valueField": "TotalItems",
       "format": "number"
     },
+
     {
       "id": "minimum-sp-item",
       "type": "stat",
@@ -125,14 +186,36 @@
       "width": 4,
       "height": 175,
       "visible": true,
+
       "position": {
         "x": 4,
         "y": 2
       },
-      "widgetId": "item-dashboard-stats",
+
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/item-dashboard-stats",
+        "execution": {
+          "columns": [
+            "MinimumSP"
+          ],
+          "filters": {
+            "Item_Desc": {
+              "expression": "Item_Desc",
+              "placement": "source"
+            },
+            "Std_Vat": {
+              "expression": "Std_Vat",
+              "placement": "source"
+            }
+          }
+        }
+      },
+
       "valueField": "MinimumSP",
       "format": "currency"
     },
+
     {
       "id": "maximum-sp-item",
       "type": "stat",
@@ -141,14 +224,36 @@
       "width": 4,
       "height": 175,
       "visible": true,
+
       "position": {
         "x": 8,
         "y": 2
       },
-      "widgetId": "item-dashboard-stats",
+
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/item-dashboard-stats",
+        "execution": {
+          "columns": [
+            "MaximumSP"
+          ],
+          "filters": {
+            "Item_Desc": {
+              "expression": "Item_Desc",
+              "placement": "source"
+            },
+            "Std_Vat": {
+              "expression": "Std_Vat",
+              "placement": "source"
+            }
+          }
+        }
+      },
+
       "valueField": "MaximumSP",
       "format": "currency"
     },
+
     {
       "id": "stock-value",
       "type": "stat",
@@ -157,11 +262,32 @@
       "width": 4,
       "height": 175,
       "visible": true,
+
       "position": {
         "x": 0,
         "y": 3
       },
-      "widgetId": "item-dashboard-stats",
+
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/item-dashboard-stats",
+        "execution": {
+          "columns": [
+            "StockValue"
+          ],
+          "filters": {
+            "Item_Desc": {
+              "expression": "Item_Desc",
+              "placement": "source"
+            },
+            "Std_Vat": {
+              "expression": "Std_Vat",
+              "placement": "source"
+            }
+          }
+        }
+      },
+
       "valueField": "StockValue",
       "format": "currency"
     }

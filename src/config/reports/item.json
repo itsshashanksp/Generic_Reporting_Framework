@@ -2,6 +2,7 @@
   "id": "item",
   "title": "Item Report",
   "description": "Displays all items.",
+
   "queryDefinition": {
     "format": "sql",
     "resource": "reports/item",
@@ -11,6 +12,12 @@
         "Item_Desc",
         "Item_MRP"
       ],
+      "filters": {
+        "UserName": {
+          "expression": "UserName",
+          "placement": "source"
+        }
+      },
       "defaultSort": [
         {
           "field": "Item_Code",
@@ -19,6 +26,7 @@
       ]
     }
   },
+
   "columns": [
     {
       "field": "Item_Code",
@@ -33,6 +41,7 @@
       "header": "Item MRP"
     }
   ],
+
   "filters": [
     {
       "field": "Item_Code",
@@ -43,8 +52,43 @@
       "field": "Item_Desc",
       "label": "Item Description",
       "type": "text"
+    },
+    {
+      "field": "UserName",
+      "label": "User Name",
+      "type": "select",
+      "dynamicOptions": {
+        "request": {
+          "action": "select",
+          "source": {
+            "table": "ItemMasterTable"
+          },
+          "fields": [
+            "UserName",
+            {
+              "function": "COUNT",
+              "field": "*",
+              "alias": "Frequency"
+            }
+          ],
+          "groupBy": [
+            "UserName"
+          ],
+          "sort": [
+            {
+              "field": "Frequency",
+              "direction": "DESC"
+            }
+          ],
+          "limit": 1000
+        },
+        "valueField": "UserName",
+        "countField": "Frequency",
+        "searchable": false
+      }
     }
   ],
+
   "grid": {
     "pagination": {
       "enabled": true,
@@ -58,11 +102,13 @@
     },
     "rowSelection": "multiple"
   },
+
   "toolbar": {
     "export": true,
     "refresh": true,
     "saveReport": false
   },
+
   "export": {
     "enabled": true,
     "formats": [
