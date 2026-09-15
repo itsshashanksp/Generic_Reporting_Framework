@@ -38,7 +38,8 @@
         },
         {
           "field": "Sales",
-          "header": "Sales"
+          "header": "Sales",
+          "dataType": "number"
         }
       ],
       "pageSize": 10,
@@ -79,7 +80,8 @@
         },
         {
           "field": "Purchases",
-          "header": "Purchases"
+          "header": "Purchases",
+          "dataType": "number"
         }
       ],
       "pageSize": 10,
@@ -120,7 +122,8 @@
         },
         {
           "field": "Sales",
-          "header": "Sales"
+          "header": "Sales",
+          "dataType": "number"
         }
       ],
       "pageSize": 10,
@@ -165,7 +168,8 @@
         },
         {
           "field": "Sales",
-          "header": "Sales"
+          "header": "Sales",
+          "dataType": "number"
         }
       ],
       "pageSize": 10,
@@ -213,7 +217,8 @@
         },
         {
           "field": "Sales",
-          "header": "Sales"
+          "header": "Sales",
+          "dataType": "number"
         }
       ],
       "pageSize": 10,

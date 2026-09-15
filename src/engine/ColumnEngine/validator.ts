@@ -12,6 +12,13 @@ export function validateColumns(columns: ColumnDefinition[]): ColumnDefinition[]
             throw new Error(`Column header is required for '${column.field}'.`);
         }
 
+        if (
+            column.dataType !== undefined &&
+            !["text", "number", "boolean", "date", "datetime"].includes(column.dataType)
+        ) {
+            throw new Error(`Invalid data type for column '${column.field}'.`);
+        }
+
     });
 
     return columns;

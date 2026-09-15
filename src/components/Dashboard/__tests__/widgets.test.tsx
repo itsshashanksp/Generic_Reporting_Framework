@@ -103,6 +103,23 @@ describe("dashboard widgets", () => {
         expect(await screen.findByText("12.2")).toBeTruthy();
     });
 
+    it("formats numeric string statistics without mutating the response row", async () => {
+        const row = { value: "12509.549999999999" };
+        executeRequestMock.mockResolvedValue({
+            success: true,
+            message: "ok",
+            data: [row],
+        });
+        render(
+            <DashboardProvider>
+                <StatWidget title="Calculated string" request={request} valueField="value" format="number" />
+            </DashboardProvider>
+        );
+
+        expect(await screen.findByText("12,509.55")).toBeTruthy();
+        expect(row.value).toBe("12509.549999999999");
+    });
+
     it("renders a returned null statistic as an em dash", async () => {
         const row = { value: null };
         executeRequestMock.mockResolvedValue({

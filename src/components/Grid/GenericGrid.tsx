@@ -35,8 +35,8 @@ interface Props {
     onSortChange?: (sort: Array<{ field: string; direction: "ASC" | "DESC" }>) => void;
 }
 
-function formatGridValue(value: unknown): string {
-    return formatValueForDisplay(value);
+function formatGridValue(value: unknown, dataType?: ColumnDefinition["dataType"]): string {
+    return formatValueForDisplay(value, dataType);
 }
 
 export default function GenericGrid({
@@ -85,6 +85,7 @@ export default function GenericGrid({
                         true,
                     ),
                     valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value),
+                    dataType: undefined,
                 })),
                 ...aggregateColumns.map(aggregate => ({
                     field: aggregate.alias ?? `${aggregate.function}_${aggregate.field}`,
@@ -102,7 +103,8 @@ export default function GenericGrid({
                             ?? `${aggregate.function} ${aggregate.field}`,
                         true,
                     ),
-                    valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value),
+                    valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value, "number"),
+                    dataType: "number" as const,
                 })),
             ]
             : columns
@@ -118,8 +120,11 @@ export default function GenericGrid({
                         column.field,
                         column.header,
                         column.sortable ?? true,
+                        undefined,
+                        column.dataType,
                     ),
-                    valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value),
+                    valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value, column.dataType),
+                    dataType: column.dataType,
                 }));
     }, [columns, gridConfig.grouping, rows]);
 
@@ -127,6 +132,7 @@ export default function GenericGrid({
         field: column.field,
         headerName: column.headerName,
         sortable: column.sortable !== false,
+        dataType: column.dataType,
     }));
 
     const mobileRows = useMemo(() => {

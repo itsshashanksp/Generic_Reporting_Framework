@@ -50,6 +50,31 @@ describe("GenericGrid shared configuration", () => {
         expect(screen.getByLabelText("Item Code: 0.3")).toBeTruthy();
     });
 
+    it("formats decimal strings only for explicitly numeric columns", () => {
+        const row = {
+            CustomerCode: "7019901585",
+            MinimumBill: "12509.549999999999",
+            MaximumBill: "4208.449999999998",
+            AverageBill: "7813.800000000002",
+        };
+        const numericColumns = [
+            { field: "CustomerCode", header: "Customer Code", dataType: "text" as const, visible: true },
+            { field: "MinimumBill", header: "Minimum Bill", dataType: "number" as const, visible: true },
+            { field: "MaximumBill", header: "Maximum Bill", dataType: "number" as const, visible: true },
+            { field: "AverageBill", header: "Average Bill", dataType: "number" as const, visible: true },
+        ];
+        render(<GridProvider><GenericGrid rows={[row]} columns={numericColumns} gridConfig={gridConfig} /></GridProvider>);
+        const props = agGridProps.mock.calls.at(-1)?.[0];
+
+        expect(props.columnDefs[0].valueFormatter({ value: row.CustomerCode })).toBe("7019901585");
+        expect(props.columnDefs[1].valueFormatter({ value: row.MinimumBill })).toBe("12,509.55");
+        expect(props.columnDefs[2].valueFormatter({ value: row.MaximumBill })).toBe("4,208.45");
+        expect(props.columnDefs[3].valueFormatter({ value: row.AverageBill })).toBe("7,813.8");
+        expect(row.MinimumBill).toBe("12509.549999999999");
+        expect(screen.getByLabelText("Customer Code: 7019901585")).toBeTruthy();
+        expect(screen.getByText("12,509.55")).toBeTruthy();
+    });
+
     it("renders null as an em dash without changing other falsy values", () => {
         const rows = [{ Code: null, Description: "" }];
         render(<GridProvider><GenericGrid rows={rows} columns={columns} gridConfig={gridConfig} /></GridProvider>);

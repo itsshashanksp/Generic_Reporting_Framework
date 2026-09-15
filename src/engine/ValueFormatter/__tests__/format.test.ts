@@ -30,4 +30,20 @@ describe("formatValueForDisplay", () => {
         expect(formatValueForDisplay("")).toBe("");
         expect(formatValueForDisplay("ABC")).toBe("ABC");
     });
+
+    it.each([
+        ["12509.549999999999", "12,509.55"],
+        ["4208.449999999998", "4,208.45"],
+        ["7813.800000000002", "7,813.8"],
+    ])("formats configured numeric string %s as %s", (value, expected) => {
+        expect(formatValueForDisplay(value, "number")).toBe(expected);
+    });
+
+    it.each(["7019901585", "7259381613", "ABC123"])(
+        "preserves untyped/text value %s",
+        value => {
+            expect(formatValueForDisplay(value)).toBe(value);
+            expect(formatValueForDisplay(value, "text")).toBe(value);
+        }
+    );
 });

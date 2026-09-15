@@ -1,3 +1,5 @@
+export type ColumnDataType = "text" | "number" | "boolean" | "date" | "datetime";
+
 export interface ColumnDefinition {
     field: string;
     header: string;
@@ -7,4 +9,7 @@ export interface ColumnDefinition {
     sortable?: boolean;
 
     width?: number;
+
+    /** Explicit presentation type; required to format numeric values returned as strings. */
+    dataType?: ColumnDataType;
 }

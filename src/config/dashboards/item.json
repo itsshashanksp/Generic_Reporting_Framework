@@ -65,23 +65,28 @@
         },
         {
           "field": "Sale_Rate",
-          "header": "Sale Rate"
+          "header": "Sale Rate",
+          "dataType": "number"
         },
         {
           "field": "Item_MRP",
-          "header": "Item MRP"
+          "header": "Item MRP",
+          "dataType": "number"
         },
         {
           "field": "Std_Vat",
-          "header": "GST %"
+          "header": "GST %",
+          "dataType": "number"
         },
         {
           "field": "cl_stock",
-          "header": "Closing Stock"
+          "header": "Closing Stock",
+          "dataType": "number"
         },
         {
           "field": "stock_value",
-          "header": "Stock Value"
+          "header": "Stock Value",
+          "dataType": "number"
         }
       ],
       "pageSize": 10,

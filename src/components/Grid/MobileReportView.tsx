@@ -1,10 +1,12 @@
 import type { KeyboardEvent } from "react";
-import { formatNumberForDisplay, NULL_DISPLAY_VALUE } from "../../engine/ValueFormatter";
+import { formatNumberForDisplay, formatValueForDisplay, NULL_DISPLAY_VALUE } from "../../engine/ValueFormatter";
+import type { ColumnDataType } from "../../types/column";
 
 interface MobileColumn {
     field: string;
     headerName: string;
     sortable: boolean;
+    dataType?: ColumnDataType;
 }
 
 interface MobileSort {
@@ -23,10 +25,11 @@ interface MobileReportViewProps {
     onSortDirectionChange: () => void;
 }
 
-function formatValue(value: unknown) {
+function formatValue(value: unknown, dataType?: ColumnDataType) {
     if (value === null) return NULL_DISPLAY_VALUE;
     if (value === undefined) return "";
     if (typeof value === "number") return formatNumberForDisplay(value);
+    if (dataType === "number" && typeof value === "string") return formatValueForDisplay(value, dataType);
     if (typeof value === "boolean") return value ? "Yes" : "No";
     if (typeof value === "object") {
         try {
@@ -120,17 +123,17 @@ export default function MobileReportView({
                                     {primaryColumn && (
                                         <div
                                             className="mobile-report-record__primary"
-                                            aria-label={`${primaryColumn.headerName}: ${formatValue(row[primaryColumn.field])}`}
+                                            aria-label={`${primaryColumn.headerName}: ${formatValue(row[primaryColumn.field], primaryColumn.dataType)}`}
                                         >
-                                            {formatValue(row[primaryColumn.field])}
+                                            {formatValue(row[primaryColumn.field], primaryColumn.dataType)}
                                         </div>
                                     )}
                                     {secondaryColumn && (
                                         <div
                                             className="mobile-report-record__secondary"
-                                            aria-label={`${secondaryColumn.headerName}: ${formatValue(row[secondaryColumn.field])}`}
+                                            aria-label={`${secondaryColumn.headerName}: ${formatValue(row[secondaryColumn.field], secondaryColumn.dataType)}`}
                                         >
-                                            {formatValue(row[secondaryColumn.field])}
+                                            {formatValue(row[secondaryColumn.field], secondaryColumn.dataType)}
                                         </div>
                                     )}
                                 </header>
@@ -141,7 +144,7 @@ export default function MobileReportView({
                                     {detailColumns.map(column => (
                                         <div key={column.field} className="mobile-report-record__field">
                                             <dt>{column.headerName}</dt>
-                                            <dd>{formatValue(row[column.field])}</dd>
+                                            <dd>{formatValue(row[column.field], column.dataType)}</dd>
                                         </div>
                                     ))}
                                 </dl>
