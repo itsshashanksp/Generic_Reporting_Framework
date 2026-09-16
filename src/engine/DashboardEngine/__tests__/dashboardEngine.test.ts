@@ -60,6 +60,37 @@ describe("DashboardEngine", () => {
         expect("widgetId" in table).toBe(false);
     });
 
+    it("maps an inline chart SQL Resource through the shared filter metadata", () => {
+        const chart = {
+            id: "stock-value-chart",
+            type: "chart" as const,
+            title: "Stock value by category",
+            queryDefinition: { format: "sql" as const, resource: "widgets/item-stock-value-by-category" },
+            xField: "Category",
+            yField: "StockValue",
+        };
+        const sharedFilters = [
+            { field: "Item_Desc", label: "Item", type: "text" as const },
+            { field: "Br_code", label: "Brand", type: "text" as const },
+            { field: "Cat_code", label: "Category", type: "text" as const },
+            { field: "Std_Vat", label: "GST", type: "text" as const },
+        ];
+
+        expect(resolveDashboardWidgetRequest(chart, sharedFilters)).toMatchObject({
+            action: "sql",
+            resource: "widgets/item-stock-value-by-category",
+            execution: {
+                filters: {
+                    Item_Desc: { placement: "source" },
+                    Br_code: { placement: "source" },
+                    Cat_code: { placement: "source" },
+                    Std_Vat: { placement: "source" },
+                },
+            },
+        });
+        expect(chart).toMatchObject({ xField: "Category", yField: "StockValue" });
+    });
+
     it("resolves every inline Bill widget through the shared backend SQL resource mode", () => {
         const result = getDashboard("bill-dashboard");
         if (result.status !== "valid") throw new Error("Expected valid Bill dashboard");
@@ -133,6 +164,26 @@ describe("DashboardEngine", () => {
             title: "Inline dashboard",
             widgets: [inlineReport],
         }).valid).toBe(true);
+    });
+
+    it("keeps chart xField and yField validation intact", () => {
+        const chart = {
+            id: "category-chart",
+            type: "chart",
+            title: "Categories",
+            queryDefinition: { format: "sql", resource: "widgets/categories" },
+        };
+        const result = validateDashboard({
+            id: "chart-dashboard",
+            title: "Chart dashboard",
+            widgets: [chart],
+        });
+
+        expect(result.valid).toBe(false);
+        expect(result.errors).toEqual(expect.arrayContaining([
+            'Chart widget "category-chart" requires xField.',
+            'Chart widget "category-chart" requires yField.',
+        ]));
     });
 
     it("preserves widgetId validation for reusable definitions", () => {

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DashboardProvider, useDashboard } from "../../../engine/DashboardContext";
 import { clearRequestCache } from "../../../engine/RequestCache";
+import ChartWidget from "../ChartWidget";
 import StatWidget from "../StatWidget";
 import TableWidget from "../TableWidget";
 
@@ -41,6 +42,17 @@ function deferred<T>() {
 function ApplyItemFiltersButton() {
     const { applyFilters } = useDashboard();
     return <button type="button" onClick={() => applyFilters({ Item_Desc: "ABC", Std_Vat: "5" })}>Apply item filters</button>;
+}
+
+function ApplyChartFiltersButton({
+    label,
+    filters,
+}: {
+    label: string;
+    filters: Record<string, string>;
+}) {
+    const { applyFilters } = useDashboard();
+    return <button type="button" onClick={() => applyFilters(filters)}>{label}</button>;
 }
 
 describe("dashboard widgets", () => {
@@ -199,6 +211,74 @@ describe("dashboard widgets", () => {
                 { field: "Std_Vat", operator: "LIKE", value: "%5%" },
             ]);
         });
+    });
+
+    it("loads a SQL Resource chart without filters and applies shared dashboard filters", async () => {
+        executeRequestMock.mockResolvedValue({
+            success: true,
+            message: "ok",
+            data: [
+                { Category: "DELICATESSEN", StockValue: 3425154.06 },
+                { Category: "KITCHEN WARE", StockValue: 2705972.65 },
+            ],
+            meta: { page: null, pageSize: null, totalRows: 2, rowsReturned: 2, executionTime: 1 },
+        });
+        const chartRequest = {
+            action: "sql" as const,
+            resource: "widgets/item-stock-value-by-category",
+            execution: {
+                filters: {
+                    Cat_code: { placement: "source" as const },
+                    Std_Vat: { placement: "source" as const },
+                },
+            },
+        };
+        const filterDefinitions = [
+            { field: "Cat_code", label: "Category", type: "text" as const },
+            { field: "Std_Vat", label: "GST %", type: "select" as const, operator: "equals" as const, options: [{ label: "5", value: "5" }] },
+        ];
+
+        render(
+            <DashboardProvider>
+                <ApplyChartFiltersButton label="Category only" filters={{ Cat_code: "10" }} />
+                <ApplyChartFiltersButton label="GST only" filters={{ Std_Vat: "5" }} />
+                <ApplyChartFiltersButton label="Both filters" filters={{ Cat_code: "10", Std_Vat: "5" }} />
+                <ChartWidget
+                    title="Stock Value by Category"
+                    request={chartRequest}
+                    xField="Category"
+                    yField="StockValue"
+                    filterDefinitions={filterDefinitions}
+                />
+            </DashboardProvider>
+        );
+
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(1));
+        expect(executeRequestMock.mock.calls[0][0]).toMatchObject({
+            action: "sql",
+            resource: "widgets/item-stock-value-by-category",
+            filters: [],
+        });
+        expect(screen.queryByText("Unable to load chart")).toBeNull();
+
+        fireEvent.click(screen.getByRole("button", { name: "Category only" }));
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(2));
+        expect(executeRequestMock.mock.calls[1][0].filters).toEqual([
+            { field: "Cat_code", operator: "LIKE", value: "%10%" },
+        ]);
+
+        fireEvent.click(screen.getByRole("button", { name: "GST only" }));
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(3));
+        expect(executeRequestMock.mock.calls[2][0].filters).toEqual([
+            { field: "Std_Vat", operator: "=", value: "5" },
+        ]);
+
+        fireEvent.click(screen.getByRole("button", { name: "Both filters" }));
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(4));
+        expect(executeRequestMock.mock.calls[3][0].filters).toEqual([
+            { field: "Cat_code", operator: "LIKE", value: "%10%" },
+            { field: "Std_Vat", operator: "=", value: "5" },
+        ]);
     });
 
     it("aborts an obsolete widget request and ignores its late response", async () => {
