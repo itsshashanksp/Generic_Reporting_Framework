@@ -29,7 +29,7 @@ describe("report request contract alignment", () => {
             resource: "reports/customer",
             execution: {
                 columns: ["Cust_Name"],
-                filters: { Region: { expression: "Region", placement: "source" } },
+                filters: { Region: { placement: "source" } },
             },
             sort: [{ field: "Cust_Name", direction: "ASC" }],
             filterLogic: "OR",
@@ -142,7 +142,7 @@ describe("report request contract alignment", () => {
         expect(report.request).toMatchObject({
             execution: {
                 columns: ["Item_Desc"],
-                filters: { Supplier_Name: { expression: "Supplier_Name", placement: "source" } },
+                filters: { Supplier_Name: { placement: "source" } },
             },
         });
     });

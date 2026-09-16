@@ -132,8 +132,8 @@ export default function TableWidget({
     const [exportError, setExportError] = useState("");
 
     const dashboardFilters = useMemo(
-        () => buildFilters(appliedFilters, filterDefinitions),
-        [appliedFilters, filterDefinitions]
+        () => buildFilters(appliedFilters, filterDefinitions, request.action === "sql"),
+        [appliedFilters, filterDefinitions, request.action]
     );
 
     const queryKey = useMemo(

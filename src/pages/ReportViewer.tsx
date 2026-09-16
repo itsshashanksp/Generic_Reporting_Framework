@@ -95,7 +95,7 @@ export default function ReportViewer() {
             ...report.request,
             filters: [
                 ...(Array.isArray(report.request.filters) ? report.request.filters : []),
-                ...buildFilters(activeFilters, report.filters ?? []),
+                ...buildFilters(activeFilters, report.filters ?? [], report.request.action === "sql"),
             ],
             sort: activeSorting,
             ...pagination,
@@ -303,7 +303,7 @@ export default function ReportViewer() {
                         ...(Array.isArray(report.request.filters)
                             ? report.request.filters
                             : []),
-                        ...buildFilters(appliedFilters, report.filters ?? []),
+                        ...buildFilters(appliedFilters, report.filters ?? [], report.request.action === "sql"),
                     ],
                     sort: currentSorting,
                 },

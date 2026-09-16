@@ -17,6 +17,7 @@ import type { ApiResponse } from "../../types/api";
 import type { FilterDefinition } from "../../types/filter";
 
 interface RequestWithFilters {
+    action?: string;
     filters?: unknown[];
 }
 
@@ -39,8 +40,8 @@ export function useDashboardWidgetRequest(
     const previousRetryKey = useRef(retryKey);
 
     const dashboardFilters = useMemo(
-        () => buildFilters(appliedFilters, filterDefinitions),
-        [appliedFilters, filterDefinitions]
+        () => buildFilters(appliedFilters, filterDefinitions, request?.action === "sql"),
+        [appliedFilters, filterDefinitions, request?.action]
     );
     const queryKey = useMemo(
         () => JSON.stringify({ request, dashboardFilters }),

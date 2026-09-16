@@ -61,17 +61,23 @@ describe("date-range runtime filtering", () => {
 
     it("keeps semantic date strings in JSON Query and SQL Resource runtime filters", () => {
         const values = { Bill_Date: ["2021-04-01", "2022-03-31"] };
-        const filters = buildFilters(values, [{
+        const jsonFilters = buildFilters(values, [{
             field: "Bill_Date",
             label: "Date",
             type: "daterange",
             operator: "between",
         }]);
+        const sqlFilters = buildFilters(values, [{
+            field: "Bill_Date",
+            label: "Date",
+            type: "daterange",
+            operator: "between",
+        }], true);
         const jsonRequest = {
             action: "select" as const,
             source: { table: "Bills" },
             fields: ["Bill_Date"],
-            filters,
+            filters: jsonFilters,
         };
         const sqlReport = loadDefinition({
             id: "item-sales",
@@ -80,7 +86,7 @@ describe("date-range runtime filtering", () => {
             columns: [{ field: "Item_Code", header: "Item" }],
             filters: [{ field: "Bill_Date", label: "Date", type: "daterange", operator: "between" }],
         });
-        const sqlRequest = { ...sqlReport.request, filters };
+        const sqlRequest = { ...sqlReport.request, filters: sqlFilters };
 
         expect(jsonRequest.filters).toEqual([
             { field: "Bill_Date", operator: "BETWEEN", value: ["2021-04-01", "2022-03-31"] },
@@ -89,9 +95,14 @@ describe("date-range runtime filtering", () => {
             action: "sql",
             resource: "reports/item-sales",
             execution: {
-                filters: { Bill_Date: { expression: "Bill_Date", placement: "source" } },
+                filters: { Bill_Date: { placement: "source" } },
             },
-            filters,
+            filters: [{
+                field: "Bill_Date",
+                operator: "BETWEEN",
+                value: ["2021-04-01", "2022-03-31"],
+                type: "daterange",
+            }],
         });
         expect(JSON.stringify([jsonRequest, sqlRequest])).not.toMatch(/YYYYMMDD|CONVERT|CAST/);
     });

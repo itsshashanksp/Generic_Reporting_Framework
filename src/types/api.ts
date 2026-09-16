@@ -43,6 +43,7 @@ export interface SqlRuntimeFilter {
     field: string;
     operator: SqlRuntimeOperator;
     value?: unknown;
+    type?: "date" | "daterange";
 }
 
 export interface SqlExecutionFilter {

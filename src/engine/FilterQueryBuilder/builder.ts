@@ -1,6 +1,7 @@
 import type {
     FilterDefinition,
     FilterOperator,
+    FilterType,
 } from "../../types/filter";
 import type { SqlRuntimeOperator } from "../../types/api";
 
@@ -12,6 +13,8 @@ export interface FilterCondition {
     operator: SqlRuntimeOperator;
 
     value?: unknown;
+
+    type?: Extract<FilterType, "date" | "daterange">;
 
 }
 
@@ -115,7 +118,8 @@ function formatValue(
 
 export function buildFilters(
     filterValues: Record<string, unknown>,
-    definitions: FilterDefinition[] = []
+    definitions: FilterDefinition[] = [],
+    includeSemanticType = false
 ): FilterCondition[] {
 
     const filters: FilterCondition[] = [];
@@ -145,6 +149,11 @@ export function buildFilters(
                 definition?.operator ??
                 "contains";
 
+            const semanticType = includeSemanticType
+                && (definition?.type === "date" || definition?.type === "daterange")
+                ? { type: definition.type }
+                : {};
+
 
             /*
              * IS NULL and IS NOT NULL do not
@@ -166,6 +175,8 @@ export function buildFilters(
                 filters.push({
 
                     field,
+
+                    ...semanticType,
 
                     operator:
                         getSqlOperator(
@@ -225,12 +236,12 @@ export function buildFilters(
 
                 if (definition?.type === "daterange" && operator === "between") {
                     if (hasStart && !hasEnd) {
-                        filters.push({ field, operator: ">=", value: start });
+                        filters.push({ field, operator: ">=", value: start, ...semanticType });
                         return;
                     }
 
                     if (!hasStart && hasEnd) {
-                        filters.push({ field, operator: "<=", value: end });
+                        filters.push({ field, operator: "<=", value: end, ...semanticType });
                         return;
                     }
                 }
@@ -250,6 +261,8 @@ export function buildFilters(
                 filters.push({
 
                     field,
+
+                    ...semanticType,
 
                     operator:
                         getSqlOperator(
@@ -296,6 +309,8 @@ export function buildFilters(
 
                     field,
 
+                    ...semanticType,
+
                     operator:
                         getSqlOperator(
                             operator
@@ -316,6 +331,8 @@ export function buildFilters(
             filters.push({
 
                 field,
+
+                ...semanticType,
 
                 operator:
                     getSqlOperator(

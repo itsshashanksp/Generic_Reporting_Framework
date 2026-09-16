@@ -5,7 +5,6 @@ import type {
     ReportDefinition,
     ReportRequest,
 } from "../../types/report";
-import type { FilterDefinition } from "../../types/filter";
 import type { SqlExecutionMetadata, SqlResourceRequest } from "../../types/api";
 import { defaultReportDefinition } from "./defaults";
 import { getReportValidationErrors } from "./validator";
@@ -57,7 +56,7 @@ export function buildSqlResourceRequest(
     const sourceFilters = Object.fromEntries(
         (report.filters ?? [])
             .filter(filter => !outputColumns.has(filter.field.toLowerCase()))
-            .map(filter => [filter.field, toSourceFilter(filter)])
+            .map(filter => [filter.field, toSourceFilter()])
     );
     const execution: SqlExecutionMetadata = {
         ...(columns.length > 0 ? { columns } : {}),
@@ -73,9 +72,8 @@ export function buildSqlResourceRequest(
     };
 }
 
-function toSourceFilter(filter: FilterDefinition) {
+function toSourceFilter() {
     return {
-        expression: filter.field,
         placement: "source" as const,
     };
 }

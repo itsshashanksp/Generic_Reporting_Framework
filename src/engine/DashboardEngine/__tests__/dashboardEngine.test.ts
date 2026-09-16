@@ -37,8 +37,8 @@ describe("DashboardEngine", () => {
             execution: {
                 columns: expect.arrayContaining(["Item_Code", "cl_stock", "stock_value"]),
                 filters: {
-                    Br_code: { expression: "Br_code", placement: "source" },
-                    Cat_code: { expression: "Cat_code", placement: "source" },
+                    Br_code: { placement: "source" },
+                    Cat_code: { placement: "source" },
                 },
             },
             sort: [{ field: "Item_Code", direction: "ASC" }],
@@ -49,10 +49,10 @@ describe("DashboardEngine", () => {
             resource: "widgets/item-dashboard-stats",
             execution: {
                 filters: {
-                    Item_Desc: { expression: "Item_Desc", placement: "source" },
-                    Br_code: { expression: "Br_code", placement: "source" },
-                    Cat_code: { expression: "Cat_code", placement: "source" },
-                    Std_Vat: { expression: "Std_Vat", placement: "source" },
+                    Item_Desc: { placement: "source" },
+                    Br_code: { placement: "source" },
+                    Cat_code: { placement: "source" },
+                    Std_Vat: { placement: "source" },
                 },
             },
         });
