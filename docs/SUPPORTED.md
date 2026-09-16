@@ -47,6 +47,7 @@ Only implemented frontend behavior appears in this inventory. Backend capabiliti
 ## Sorting and pagination
 
 - Multi-column server sorting on reports and first-column server sorting on dashboard tables.
+- Initial top-level sort is reflected in AG Grid's visible sort state.
 - Sortable backend output aliases where permitted.
 - Server pagination for report pages/dashboard tables with page size 10 by default and first/previous/next/last controls.
 - Shared compact mobile pagination; report widgets use it client-side over their returned rows.
@@ -56,6 +57,7 @@ Only implemented frontend behavior appears in this inventory. Backend capabiliti
 - Backend JSON Query grouping and aggregate HAVING in authored requests.
 - Configured grouped-result columns for responses already aggregated by the backend.
 - Configured column visibility, sortability, initial width, drag reordering, resizing, selectable rows, and text selection.
+- Presentation-only number, ISO-style date, and datetime formatting without row mutation or timezone conversion.
 - One shared report/table frame, grid, mobile sort, compact labeled record cards, pagination, and responsive menu behavior for reports and dashboard tables/widgets.
 - Every mobile value remains associated with its configured column header.
 

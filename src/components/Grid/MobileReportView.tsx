@@ -30,6 +30,9 @@ function formatValue(value: unknown, dataType?: ColumnDataType) {
     if (value === undefined) return "";
     if (typeof value === "number") return formatNumberForDisplay(value);
     if (dataType === "number" && typeof value === "string") return formatValueForDisplay(value, dataType);
+    if ((dataType === "date" || dataType === "datetime") && typeof value === "string") {
+        return formatValueForDisplay(value, dataType);
+    }
     if (typeof value === "boolean") return value ? "Yes" : "No";
     if (typeof value === "object") {
         try {

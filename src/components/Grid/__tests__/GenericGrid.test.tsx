@@ -40,6 +40,28 @@ describe("GenericGrid shared configuration", () => {
         expect(props.rowSelection).toBe("multiple");
     });
 
+    it("initializes AG Grid sort indicators in configured multi-sort order", () => {
+        render(
+            <GridProvider>
+                <GenericGrid
+                    rows={[{ Code: "A", Description: "Alpha" }]}
+                    columns={columns}
+                    gridConfig={gridConfig}
+                    initialSort={[
+                        { field: "Description", direction: "DESC" },
+                        { field: "Code", direction: "ASC" },
+                    ]}
+                />
+            </GridProvider>
+        );
+        const props = agGridProps.mock.calls.at(-1)?.[0];
+
+        expect(props.columnDefs[0]).toMatchObject({ initialSort: "asc", initialSortIndex: 1 });
+        expect(props.columnDefs[1]).toMatchObject({ initialSort: "desc", initialSortIndex: 0 });
+        expect((screen.getByLabelText("Sort records by") as HTMLSelectElement).value).toBe("Description");
+        expect(screen.getByRole("button", { name: "Sort ascending" })).toBeTruthy();
+    });
+
     it("formats numeric cells without changing row data", () => {
         const rows = [{ Code: 0.30000000000000004, Description: "Calculated" }];
         render(<GridProvider><GenericGrid rows={rows} columns={columns} gridConfig={gridConfig} /></GridProvider>);
@@ -83,6 +105,31 @@ describe("GenericGrid shared configuration", () => {
         expect(props.columnDefs[0].valueFormatter({ value: rows[0].Code })).toBe("—");
         expect(props.columnDefs[1].valueFormatter({ value: rows[0].Description })).toBe("");
         expect(rows[0].Code).toBeNull();
+    });
+
+    it("formats date columns consistently in desktop and mobile presentations", () => {
+        const row = { BillDate: "2021-04-01", CreatedAt: "2021-04-01T14:30:45Z", ClosedAt: null };
+        const dateColumns = [
+            { field: "BillDate", header: "Bill Date", dataType: "date" as const, visible: true },
+            { field: "CreatedAt", header: "Created At", dataType: "datetime" as const, visible: true },
+            { field: "ClosedAt", header: "Closed At", dataType: "date" as const, visible: true },
+        ];
+        render(<GridProvider><GenericGrid rows={[row]} columns={dateColumns} gridConfig={gridConfig} /></GridProvider>);
+        const props = agGridProps.mock.calls.at(-1)?.[0];
+
+        expect(props.columnDefs[0].valueFormatter({ value: row.BillDate })).toBe("01 Apr 2021");
+        expect(props.columnDefs[1].valueFormatter({ value: row.CreatedAt })).toBe("01 Apr 2021, 14:30:45");
+        expect(props.columnDefs[2].valueFormatter({ value: row.ClosedAt })).toBe("—");
+        expect(screen.getByLabelText("Bill Date: 01 Apr 2021")).toBeTruthy();
+        expect(screen.getByText("01 Apr 2021, 14:30:45")).toBeTruthy();
+        expect(row.CreatedAt).toBe("2021-04-01T14:30:45Z");
+
+        const measuredValues: string[] = [];
+        getContentMinWidth([row], "BillDate", "Bill Date", true, value => {
+            measuredValues.push(value);
+            return value.length * 8;
+        }, "date");
+        expect(measuredValues).toContain("01 Apr 2021");
     });
 
     it("exposes working server pagination controls", () => {

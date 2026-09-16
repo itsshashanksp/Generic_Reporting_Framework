@@ -64,7 +64,12 @@ export default function ReportWidget({
                 <Empty title="No records found" message="The current filters returned no data." compact />
             )}
             {report && rows.length > 0 && (
-                <ReportDataGrid rows={rows} columns={report.columns} gridConfig={report.grid} />
+                <ReportDataGrid
+                    rows={rows}
+                    columns={report.columns}
+                    gridConfig={report.grid}
+                    initialSort={report.sort}
+                />
             )}
         </ReportTableFrame>
     );

@@ -426,6 +426,7 @@ export default function ReportViewer() {
                             rows={rows}
                             columns={report.columns}
                             gridConfig={report.grid}
+                            initialSort={report.sort}
                             serverPagination={{
                                 page: currentPage,
                                 pageSize: currentPageSize,

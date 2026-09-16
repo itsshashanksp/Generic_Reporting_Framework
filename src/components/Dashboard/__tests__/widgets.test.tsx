@@ -74,6 +74,31 @@ describe("dashboard widgets", () => {
         expect(executeRequestMock).toHaveBeenCalledTimes(1);
     });
 
+    it("passes configured sort into dashboard table grid state and its initial request", async () => {
+        executeRequestMock.mockResolvedValue({
+            success: true,
+            message: "ok",
+            data: [{ Item_Code: "A1", Item_Desc: "Alpha" }],
+            meta: { page: 1, pageSize: 10, totalRows: 1, rowsReturned: 1, executionTime: 1 },
+        });
+        const sortedRequest = {
+            ...request,
+            sort: [
+                { field: "Item_Desc", direction: "DESC" as const },
+                { field: "Item_Code", direction: "ASC" as const },
+            ],
+        };
+        render(
+            <DashboardProvider>
+                <TableWidget title="Items" request={sortedRequest} pageSize={10} />
+            </DashboardProvider>
+        );
+
+        await waitFor(() => expect(screen.getByTestId("shared-generic-grid")).toBeTruthy());
+        expect(genericGridProps.mock.calls.at(-1)?.[0].initialSort).toEqual(sortedRequest.sort);
+        expect(executeRequestMock.mock.calls[0][0].sort).toEqual(sortedRequest.sort);
+    });
+
     it("uses dashboard valueField and formatting for columnless stat widgets", async () => {
         executeRequestMock.mockResolvedValue({
             success: true,

@@ -49,6 +49,12 @@ export function getReportValidationErrors(
         if (isRecord(report.request) && report.request.sort !== undefined) {
             errors.push("Report request sort must be configured at top-level sort.");
         }
+        if (isRecord(report.request) && report.request.pagination !== undefined) {
+            errors.push("Report request pagination must be configured in frontend pagination settings.");
+        }
+        if (isRecord(report.request) && report.request.filterLogic !== undefined) {
+            errors.push("Report request filterLogic must be configured at top-level filterLogic.");
+        }
     }
     validateColumns(report.columns, errors, columnsRequired);
     validateFilters(report.filters, errors, hasQueryDefinition);

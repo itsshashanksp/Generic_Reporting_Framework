@@ -5,6 +5,7 @@ import DateRangeFilter from "../../../components/Filters/Fields/DateRangeFilter"
 import BooleanFilter from "../../../components/Filters/Fields/BooleanFilter";
 import { FilterProvider, useFilters } from "../../FilterContext";
 import { buildFilters } from "../../FilterQueryBuilder";
+import { loadDefinition } from "../../ReportDefinitionEngine";
 import { isEmptyFilterValue } from "../filterValue";
 import type { FilterDefinition } from "../../../types/filter";
 
@@ -17,8 +18,11 @@ const definition: FilterDefinition = {
 };
 
 function StateProbe() {
-    const { filters } = useFilters();
-    return <output data-testid="state">{JSON.stringify(filters.StDate)}</output>;
+    const { filters, clearFilters } = useFilters();
+    return <>
+        <output data-testid="state">{JSON.stringify(filters.StDate)}</output>
+        <button type="button" onClick={clearFilters}>Clear test filters</button>
+    </>;
 }
 
 function BooleanStateProbe() {
@@ -51,6 +55,45 @@ describe("date-range runtime filtering", () => {
         expect(end.hasAttribute("required")).toBe(false);
         fireEvent.change(start, { target: { value: "2026-09-01" } });
         expect(screen.getByTestId("state").textContent).toBe('["2026-09-01",""]');
+        fireEvent.click(screen.getByRole("button", { name: "Clear test filters" }));
+        expect(screen.getByTestId("state").textContent).toBe("");
+    });
+
+    it("keeps semantic date strings in JSON Query and SQL Resource runtime filters", () => {
+        const values = { Bill_Date: ["2021-04-01", "2022-03-31"] };
+        const filters = buildFilters(values, [{
+            field: "Bill_Date",
+            label: "Date",
+            type: "daterange",
+            operator: "between",
+        }]);
+        const jsonRequest = {
+            action: "select" as const,
+            source: { table: "Bills" },
+            fields: ["Bill_Date"],
+            filters,
+        };
+        const sqlReport = loadDefinition({
+            id: "item-sales",
+            title: "Item sales",
+            queryDefinition: { format: "sql", resource: "reports/item-sales" },
+            columns: [{ field: "Item_Code", header: "Item" }],
+            filters: [{ field: "Bill_Date", label: "Date", type: "daterange", operator: "between" }],
+        });
+        const sqlRequest = { ...sqlReport.request, filters };
+
+        expect(jsonRequest.filters).toEqual([
+            { field: "Bill_Date", operator: "BETWEEN", value: ["2021-04-01", "2022-03-31"] },
+        ]);
+        expect(sqlRequest).toMatchObject({
+            action: "sql",
+            resource: "reports/item-sales",
+            execution: {
+                filters: { Bill_Date: { expression: "Bill_Date", placement: "source" } },
+            },
+            filters,
+        });
+        expect(JSON.stringify([jsonRequest, sqlRequest])).not.toMatch(/YYYYMMDD|CONVERT|CAST/);
     });
 
     it("preserves existing text filter conversion", () => {

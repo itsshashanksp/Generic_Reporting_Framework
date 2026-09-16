@@ -21,6 +21,12 @@ All configuration is JSON. Unknown top-level report keys are rejected, and defin
 
 Omitted report defaults are: export, refresh, and saved reports enabled; pagination enabled with page size `10` and options `[10,25,50,100]`; row selection `single`; each column visible and sortable with width `150`.
 
+For JSON Query mode, authored `request.sort`, `request.pagination`, and
+`request.filterLogic` are rejected. Initial sorting and flat filter logic belong
+at the report/widget top level, while `grid.pagination` or a table widget's
+`pageSize` controls interactive paging. The runtime still adds the corresponding
+API request fields.
+
 SQL Resource IDs use slash-separated segments such as `reports/item` and
 `widgets/item-dashboard-table`, without `.sql`. `queryDefinition` contains no
 presentation or execution metadata. The loader derives API execution columns
@@ -35,7 +41,7 @@ authoritative for resource capabilities and SQL validation.
 { "field": "customer_name", "header": "Customer", "width": 240, "visible": true, "sortable": true }
 ```
 
-`field` and `header` are required strings. `width` is a positive integer. `visible` and `sortable` are booleans. A hidden column is not created in AG Grid, so it cannot be restored interactively.
+`field` and `header` are required strings. `width` is a positive integer. `visible` and `sortable` are booleans. Optional `dataType` is `text`, `number`, `boolean`, `date`, or `datetime`. Numeric, ISO-style date, and ISO-style datetime values receive presentation-only formatting; date/time formatting preserves the encoded wall-clock fields and does not convert timezones or mutate row data. A hidden column is not created in AG Grid, so it cannot be restored interactively.
 
 ## Filters
 
@@ -51,7 +57,7 @@ Each filter requires `field`, `label`, and `type`. Optional properties are `oper
 | `date` | `equals` | `equals`, `notEquals`, comparison operators, `isNull`, `isNotNull` |
 | `daterange` | `between` | `between`, `notBetween`, `isNull`, `isNotNull` |
 
-`select` and `multiselect` require non-empty `options` except for null operators. The runtime maps friendly operators to `=`, `<>`, `>`, `>=`, `<`, `<=`, `LIKE`, `NOT LIKE`, `BETWEEN`, `NOT BETWEEN`, `IN`, `NOT IN`, `IS NULL`, and `IS NOT NULL`. Contains/start/end variants add `%` wildcards. Numbers are emitted as numbers and boolean options as booleans. Empty controls are omitted. A one-sided date `between` becomes `>=` or `<=`; `notBetween` requires both endpoints. Null filters are applied only when their checkbox is selected and omit `value`.
+`select` and `multiselect` require non-empty `options` except for null operators. The runtime maps friendly operators to `=`, `<>`, `>`, `>=`, `<`, `<=`, `LIKE`, `NOT LIKE`, `BETWEEN`, `NOT BETWEEN`, `IN`, `NOT IN`, `IS NULL`, and `IS NOT NULL`. Contains/start/end variants add `%` wildcards. Numbers are emitted as numbers and boolean options as booleans. Empty controls are omitted. Date inputs retain semantic `YYYY-MM-DD` strings: a complete date `between` sends both strings, while a one-sided range becomes `>=` or `<=`; `notBetween` requires both endpoints. Clear/reset removes the filter. No database-specific date conversion is performed. Null filters are applied only when their checkbox is selected and omit `value`.
 
 ## Grid
 

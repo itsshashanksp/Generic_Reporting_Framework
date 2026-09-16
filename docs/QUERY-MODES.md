@@ -36,11 +36,11 @@ The source requires `table`; `alias` is optional. `fields` must be non-empty and
 | `joins` | `{type, source:{table,alias?}, on:{left,operator:"=",right}}[]`; type is `INNER`, `LEFT`, or `RIGHT` |
 | `groupBy` | Non-empty field-name strings in an array |
 | `having` | `{function,field,operator,value}[]`; functions: `COUNT`, `SUM`, `AVG`, `MIN`, `MAX`, `STRING_AGG`; comparison operators only |
-| `sort` | Query capability used internally; report/widget initial sorting is authored at the definition's top level |
-| `pagination` | `{page,pageSize}`, both positive integers |
+| `sort` | Runtime query capability; report/widget initial sorting is authored at the definition's top level |
+| `pagination` | Runtime query capability generated from grid/widget paging; `{page,pageSize}`, both positive integers |
 | `distinct` | boolean |
 | `limit` | positive integer |
-| `filterLogic` | `AND` or `OR` for the flat request filter list |
+| `filterLogic` | Runtime query capability derived from top-level `filterLogic`; `AND` or `OR` for the flat filter list |
 | `with` | One standard `{name,query}` or recursive `{name,anchor,recursive}` CTE; branches are nested SELECT bodies |
 
 The frontend validator checks identifiers, the public operator/function allowlists, fields, filters and subqueries, joins, grouping, HAVING, CTE branches, sort, pagination, DISTINCT, and limit. The backend remains authoritative and additionally validates live table/column metadata.
@@ -91,7 +91,7 @@ capabilities and are not expressed by frontend presentation JSON.
 - Applied UI filters are appended to configured request filters.
 - Current grid sorting replaces configured `sort` after the user/grid state is established.
 - Enabled grid pagination supplies `pagination.page` and `pagination.pageSize`.
-- Disabling grid pagination stops the UI from adding pagination, but a manually authored `request.pagination` remains because the base request is spread first. Prefer `grid.pagination` for interactive reports.
+- Authored JSON report/widget requests reject `sort`, `pagination`, and `filterLogic` because their top-level presentation settings are the source of truth. These fields remain part of the generated runtime API request contract.
 - SQL resource mode sends the same runtime fields beside `action`, `resource`, and derived `execution` metadata; the backend validates and interprets them.
 
 ## Deliberately unexposed backend actions

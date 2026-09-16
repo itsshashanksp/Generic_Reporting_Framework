@@ -12,7 +12,7 @@ import {
 import { getContentMinWidth } from "../../engine/GridEngine/contentWidth";
 import { formatValueForDisplay } from "../../engine/ValueFormatter";
 
-import type { GridConfig } from "../../types/report";
+import type { GridConfig, SortDefinition } from "../../types/report";
 import type { ColumnDefinition } from "../../types/column";
 import MobileReportView from "./MobileReportView";
 
@@ -24,6 +24,7 @@ interface Props {
     columns: ColumnDefinition[];
     gridConfig: GridConfig;
     height?: CSSProperties["height"];
+    initialSort?: SortDefinition[];
     serverPagination?: {
         page: number;
         pageSize: number;
@@ -44,6 +45,7 @@ export default function GenericGrid({
     columns,
     gridConfig,
     height,
+    initialSort = [],
     serverPagination,
     onSortChange,
 }: Props) {
@@ -53,13 +55,28 @@ export default function GenericGrid({
 
     const gridRef = useRef<AgGridReact>(null);
     const [selectedRows, setSelectedRows] = useState<Set<Record<string, unknown>>>(() => new Set());
-    const [mobileSort, setMobileSort] = useState<{ field: string; direction: "asc" | "desc" } | null>(null);
+    const [mobileSort, setMobileSort] = useState<{ field: string; direction: "asc" | "desc" } | null>(() => {
+        const firstSort = initialSort[0];
+        return firstSort ? {
+            field: firstSort.field,
+            direction: firstSort.direction === "DESC" ? "desc" : "asc",
+        } : null;
+    });
     const [mobileClientPage, setMobileClientPage] = useState(1);
     const [mobileClientPageSize, setMobileClientPageSize] = useState(gridConfig.pagination.pageSize);
 
     useEffect(() => () => setApi(null), [setApi]);
 
     const columnDefs = useMemo(() => {
+        const getInitialSortState = (field: string) => {
+            const sortIndex = initialSort.findIndex(sort => sort.field === field);
+            if (sortIndex < 0) return {};
+
+            return {
+                initialSort: initialSort[sortIndex].direction === "DESC" ? "desc" as const : "asc" as const,
+                initialSortIndex: sortIndex,
+            };
+        };
         const hasConfiguredGrouping = gridConfig.grouping?.enabled
             && ((gridConfig.grouping.groups?.length ?? 0) > 0
                 || (gridConfig.grouping.aggregates?.length ?? 0) > 0);
@@ -86,6 +103,7 @@ export default function GenericGrid({
                     ),
                     valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value),
                     dataType: undefined,
+                    ...getInitialSortState(group.field),
                 })),
                 ...aggregateColumns.map(aggregate => ({
                     field: aggregate.alias ?? `${aggregate.function}_${aggregate.field}`,
@@ -105,6 +123,7 @@ export default function GenericGrid({
                     ),
                     valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value, "number"),
                     dataType: "number" as const,
+                    ...getInitialSortState(aggregate.alias ?? `${aggregate.function}_${aggregate.field}`),
                 })),
             ]
             : columns
@@ -125,8 +144,9 @@ export default function GenericGrid({
                     ),
                     valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value, column.dataType),
                     dataType: column.dataType,
+                    ...getInitialSortState(column.field),
                 }));
-    }, [columns, gridConfig.grouping, rows]);
+    }, [columns, gridConfig.grouping, initialSort, rows]);
 
     const mobileColumns = columnDefs.map(column => ({
         field: column.field,

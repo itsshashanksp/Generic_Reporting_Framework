@@ -46,4 +46,20 @@ describe("formatValueForDisplay", () => {
             expect(formatValueForDisplay(value, "text")).toBe(value);
         }
     );
+
+    it.each([
+        ["2021-04-01", "date", "01 Apr 2021"],
+        ["2021-04-01T14:30:45", "datetime", "01 Apr 2021, 14:30:45"],
+        ["2021-04-01T23:30:00Z", "datetime", "01 Apr 2021, 23:30:00"],
+        ["2021-04-01T23:30:00+05:30", "datetime", "01 Apr 2021, 23:30:00"],
+        ["2021-04-01", "datetime", "01 Apr 2021"],
+    ] as const)("formats configured %s %s values without timezone conversion", (value, dataType, expected) => {
+        expect(formatValueForDisplay(value, dataType)).toBe(expected);
+    });
+
+    it("preserves invalid or non-ISO date text and null presentation", () => {
+        expect(formatValueForDisplay("not-a-date", "date")).toBe("not-a-date");
+        expect(formatValueForDisplay("2021-02-30", "date")).toBe("2021-02-30");
+        expect(formatValueForDisplay(null, "datetime")).toBe("—");
+    });
 });

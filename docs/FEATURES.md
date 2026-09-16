@@ -6,15 +6,17 @@ Reports and dashboards render only configured filter controls. Editing a control
 
 The interface has no global free-text search box. The previous unused search context was removed. “Search” on the filter form means apply configured filters; it has no debounce behavior.
 
-There is no advanced/nested filter builder. Authored JSON requests can choose one flat `filterLogic` of `AND` or `OR`, but the UI neither edits that value nor builds nested condition groups. A static request filter may carry backend-owned `query` content.
+There is no advanced/nested filter builder. Authored definitions can choose one flat top-level `filterLogic` of `AND` or `OR`, but the UI neither edits that value nor builds nested condition groups. A static request filter may carry backend-owned `query` content.
 
 ## Sorting
 
-Clicking a sortable report column updates the API sort and returns to page 1. Report grids can emit multiple sorted columns through AG Grid. Dashboard table widgets intentionally send only the first sort item. Both query modes declare initial sorting with top-level `sort`; runtime grid state replaces it. SQL Resource sort fields must reference configured display columns.
+Clicking a sortable report column updates the API sort and returns to page 1. Report grids can emit multiple sorted columns through AG Grid. Dashboard table widgets intentionally send only the first user-selected sort item. Both query modes declare initial sorting with top-level `sort`; AG Grid initializes its visible sort arrows and multi-sort order from that state, and runtime grid state replaces it. SQL Resource sort fields must reference configured display columns.
 
 ## Pagination
 
-Reports use configured server pagination and show the current row range, rows-per-page choice, and first/previous/next/last controls. Dashboard table widgets always use server pagination. Paginated SQL Resources should define a deterministic top-level `sort`. A report with pagination disabled has no paging footer or injected runtime page; avoid a base `request.pagination` if an unpaged report is intended.
+Reports use configured server pagination and show the current row range, rows-per-page choice, and first/previous/next/last controls. Dashboard table widgets always use server pagination. Paginated SQL Resources should define a deterministic top-level `sort`. A report with pagination disabled has no paging footer or injected runtime page. Authored `request.pagination` is rejected; runtime paging is generated from grid/widget state.
+
+Configured `date` and `datetime` columns format ISO-style values for display in desktop and mobile grids. Formatting does not mutate response rows or shift encoded wall-clock values between timezones; null remains an em dash.
 
 Report widgets render through the same grid and compact mobile pager. Desktop retains AG Grid client pagination over the returned response.
 

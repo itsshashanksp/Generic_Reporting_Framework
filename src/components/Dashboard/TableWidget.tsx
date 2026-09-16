@@ -506,6 +506,7 @@ export default function TableWidget({
                         rows={visibleRows}
                         columns={columns}
                         gridConfig={gridConfig}
+                        initialSort={request.sort}
                         serverPagination={{
                             page: currentPage,
                             pageSize: activePageSize,

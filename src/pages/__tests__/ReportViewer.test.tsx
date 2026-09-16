@@ -16,10 +16,15 @@ vi.mock("../../api/request", () => ({
 }));
 
 vi.mock("../../components/Grid/GenericGrid", () => ({
-    default: ({ columns, onSortChange }: {
+    default: ({ columns, initialSort, onSortChange }: {
         columns: Array<{ field: string }>;
+        initialSort?: Array<{ field: string; direction: "ASC" | "DESC" }>;
         onSortChange?: (sort: Array<{ field: string; direction: "ASC" | "DESC" }>) => void;
-    }) => <div data-testid="report-grid" data-columns={columns.map(column => column.field).join(",")}>
+    }) => <div
+        data-testid="report-grid"
+        data-columns={columns.map(column => column.field).join(",")}
+        data-initial-sort={JSON.stringify(initialSort ?? [])}
+    >
         <button type="button" onClick={() => onSortChange?.([{ field: "Item_Desc", direction: "DESC" }])}>
             Sort test grid
         </button>
@@ -74,6 +79,9 @@ describe("ReportViewer runtime", () => {
         });
         expect(request.filters).toContainEqual({ field: "Item_Code", operator: "LIKE", value: "%A1%" });
         expect(JSON.stringify(request)).not.toContain("SELECT");
+        expect(screen.getByTestId("report-grid").getAttribute("data-initial-sort")).toBe(JSON.stringify([
+            { field: "Item_Code", direction: "ASC" },
+        ]));
 
         fireEvent.click(screen.getByRole("button", { name: "Sort test grid" }));
         await waitFor(() => expect(getReportRequests()).toHaveLength(3));

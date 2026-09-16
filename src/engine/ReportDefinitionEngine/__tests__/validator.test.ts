@@ -36,7 +36,7 @@ describe("report request contract alignment", () => {
         });
     });
 
-    it("accepts backend-supported JSON joins, filters, grouping, HAVING, sorting, and pagination", () => {
+    it("accepts backend-supported JSON joins, filters, grouping, and HAVING", () => {
         const errors = getReportValidationErrors({
             ...presentation,
             request: {
@@ -48,12 +48,11 @@ describe("report request contract alignment", () => {
                 ],
                 joins: [{ type: "INNER", source: { table: "Customers", alias: "C" }, on: { left: "O.CustomerId", operator: "=", right: "C.CustomerId" } }],
                 filters: [{ field: "O.Status", operator: "IN", value: ["Open", "Pending"] }],
-                filterLogic: "AND",
                 groupBy: ["C.CustomerName"],
                 having: [{ function: "SUM", field: "O.Amount", operator: ">", value: 1000 }],
-                pagination: { page: 1, pageSize: 10 },
             },
             sort: [{ field: "TotalAmount", direction: "DESC" }],
+            filterLogic: "AND",
         });
 
         expect(errors).toEqual([]);
@@ -71,6 +70,25 @@ describe("report request contract alignment", () => {
         });
 
         expect(errors).toContain("Report request sort must be configured at top-level sort.");
+    });
+
+    it("rejects authored pagination and filter logic inside a JSON Query request", () => {
+        const errors = getReportValidationErrors({
+            ...presentation,
+            request: {
+                action: "select",
+                source: { table: "Orders" },
+                fields: ["CustomerName"],
+                pagination: { page: 1, pageSize: 10 },
+                filterLogic: "OR",
+            },
+            filterLogic: "AND",
+        });
+
+        expect(errors).toEqual(expect.arrayContaining([
+            "Report request pagination must be configured in frontend pagination settings.",
+            "Report request filterLogic must be configured at top-level filterLogic.",
+        ]));
     });
 
     it("accepts a backend SQL resource identifier and rejects SQL text or paths", () => {

@@ -63,4 +63,24 @@ describe("production SQL and JSON responsibility separation", () => {
         expect(configuration).not.toContain('"execution"');
         expect(configuration).not.toContain('"defaultSort"');
     });
+
+    it("contains no authored request pagination or filter logic", () => {
+        const definitions: unknown[] = [item, customer, itemDashboard, billDashboard];
+        const duplicatedKeys: string[] = [];
+
+        const visit = (value: unknown) => {
+            if (Array.isArray(value)) return value.forEach(visit);
+            if (!value || typeof value !== "object") return;
+            const record = value as Record<string, unknown>;
+            if (record.request && typeof record.request === "object") {
+                const request = record.request as Record<string, unknown>;
+                if ("pagination" in request) duplicatedKeys.push("request.pagination");
+                if ("filterLogic" in request) duplicatedKeys.push("request.filterLogic");
+            }
+            Object.values(record).forEach(visit);
+        };
+
+        definitions.forEach(visit);
+        expect(duplicatedKeys).toEqual([]);
+    });
 });
