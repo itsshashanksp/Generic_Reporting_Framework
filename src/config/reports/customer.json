@@ -2,35 +2,30 @@
   "id": "customer",
   "title": "Customer Report",
   "description": "Displays all customers.",
-
-  "queryDefinition": {
-    "format": "sql",
-    "resource": "reports/customer",
-    "execution": {
-      "columns": [
-        "Cust_Name",
-        "TotalCustomers",
-        "MinimumBill",
-        "MaximumBill"
-      ],
-      "filters": {
-        "Cust_Name": {
-          "expression": "Cust_Name",
-          "placement": "source"
-        },
-        "StDate": {
-          "expression": "StDate",
-          "placement": "source",
-          "valueType": "integer-date"
-        }
+  "request": {
+    "action": "select",
+    "source": {
+      "table": "CustomerTable"
+    },
+    "fields": [
+      "Cust_Name",
+      {
+        "function": "COUNT",
+        "field": "Cust_Name",
+        "alias": "TotalCustomers"
       },
-      "defaultSort": [
-        {
-          "field": "Cust_Name",
-          "direction": "ASC"
-        }
-      ]
-    }
+      {
+        "function": "MIN",
+        "field": "Bill_Amt",
+        "alias": "MinimumBill"
+      },
+      {
+        "function": "MAX",
+        "field": "Bill_Amt",
+        "alias": "MaximumBill"
+      }
+    ],
+    "groupBy": ["Cust_Name"]
   },
 
   "columns": [
@@ -55,6 +50,13 @@
     }
   ],
 
+  "sort": [
+    {
+      "field": "Cust_Name",
+      "direction": "ASC"
+    }
+  ],
+
   "filters": [
     {
       "field": "Cust_Name",
@@ -73,12 +75,7 @@
     "pagination": {
       "enabled": true,
       "pageSize": 10,
-      "pageSizeOptions": [
-        10,
-        25,
-        50,
-        100
-      ]
+      "pageSizeOptions": [10, 25, 50, 100]
     },
     "rowSelection": "multiple"
   },
@@ -91,10 +88,7 @@
 
   "export": {
     "enabled": true,
-    "formats": [
-      "csv",
-      "excel"
-    ],
+    "formats": ["csv", "excel"],
     "filename": "customer-report",
     "exportAll": true,
     "exportCurrentView": true

@@ -164,7 +164,7 @@ All configurable UI operators map as follows:
 
 The authored JSON Query contract additionally accepts `<>`, `EXISTS`, and `NOT EXISTS`.
 
-## Actual SQL Resource: item
+## SQL Resource example: item
 
 Frontend report source:
 
@@ -172,12 +172,15 @@ Frontend report source:
 {
   "queryDefinition": {
     "format": "sql",
-    "resource": "reports/item",
-    "execution": {
-      "columns": ["Item_Code", "Item_Desc", "Item_MRP"],
-      "defaultSort": [{ "field": "Item_Code", "direction": "ASC" }]
-    }
-  }
+    "resource": "reports/item"
+  },
+  "columns": [
+    { "field": "Item_Code", "header": "Item Code" },
+    { "field": "Item_Desc", "header": "Description" },
+    { "field": "Item_MRP", "header": "MRP", "dataType": "number" }
+  ],
+  "filters": [{ "field": "Item_Desc", "label": "Description", "type": "text" }],
+  "sort": [{ "field": "Item_Code", "direction": "ASC" }]
 }
 ```
 
@@ -188,8 +191,7 @@ Runtime request:
   "action": "sql",
   "resource": "reports/item",
   "execution": {
-    "columns": ["Item_Code", "Item_Desc", "Item_MRP"],
-    "defaultSort": [{ "field": "Item_Code", "direction": "ASC" }]
+    "columns": ["Item_Code", "Item_Desc", "Item_MRP"]
   },
   "filters": [{ "field": "Item_Desc", "operator": "LIKE", "value": "%pen%" }],
   "sort": [{ "field": "Item_Code", "direction": "ASC" }],
@@ -220,7 +222,7 @@ An abbreviated response is:
 }
 ```
 
-## Actual SQL Resource: customer
+## SQL Resource example: customer
 
 Frontend report source:
 
@@ -228,16 +230,20 @@ Frontend report source:
 {
   "queryDefinition": {
     "format": "sql",
-    "resource": "reports/customer",
-    "execution": {
-      "columns": ["Cust_Name", "TotalCustomers", "MinimumBill", "MaximumBill"],
-      "filters": {
-        "Cust_Name": { "expression": "Cust_Name", "placement": "source" },
-        "StDate": { "expression": "StDate", "placement": "source", "valueType": "integer-date" }
-      },
-      "defaultSort": [{ "field": "Cust_Name", "direction": "ASC" }]
-    }
-  }
+    "resource": "reports/customer"
+  },
+  "columns": [
+    { "field": "Cust_Name", "header": "Customer" },
+    { "field": "TotalCustomers", "header": "Total", "dataType": "number" },
+    { "field": "MinimumBill", "header": "Minimum", "dataType": "number" },
+    { "field": "MaximumBill", "header": "Maximum", "dataType": "number" }
+  ],
+  "filters": [
+    { "field": "Cust_Name", "label": "Customer", "type": "text" },
+    { "field": "StDate", "label": "Start date", "type": "daterange" }
+  ],
+  "sort": [{ "field": "Cust_Name", "direction": "ASC" }],
+  "filterLogic": "AND"
 }
 ```
 
@@ -250,10 +256,8 @@ Runtime request:
   "execution": {
     "columns": ["Cust_Name", "TotalCustomers", "MinimumBill", "MaximumBill"],
     "filters": {
-      "Cust_Name": { "expression": "Cust_Name", "placement": "source" },
-      "StDate": { "expression": "StDate", "placement": "source", "valueType": "integer-date" }
-    },
-    "defaultSort": [{ "field": "Cust_Name", "direction": "ASC" }]
+      "StDate": { "expression": "StDate", "placement": "source" }
+    }
   },
   "filters": [
     { "field": "Cust_Name", "operator": "LIKE", "value": "A%" },
@@ -265,7 +269,7 @@ Runtime request:
 }
 ```
 
-Flow: frontend ID `reports/customer` → backend discovery/resolution → server-owned Customer resource → backend-validated source placement and integer-date conversion → grouped standard response. `execution` is copied from reviewed configuration; runtime users supply only filter values.
+Flow: frontend ID `reports/customer` → normalized columns/filters/sort → derived SQL request envelope → backend discovery/resolution → server-owned Customer resource → grouped standard response. Runtime users supply only filter values.
 
 The backend-owned SQL resource is:
 
@@ -292,7 +296,7 @@ The current dashboards use these discovered IDs:
 - `widgets/bill-top-10-categories`, `widgets/bill-category-sales-month-wise`
 - `widgets/TOP-10-month-Wise-Category-wise`
 
-Dashboard JSON contains a logical resource ID, reviewed execution metadata when runtime controls need it, and presentation fields. It never contains the backend file path or SQL text.
+Dashboard JSON contains a logical resource ID and presentation fields. Shared dashboard filters are merged into widget definitions before the request envelope is derived. It never contains the backend file path or SQL text.
 
 ## Column visibility
 

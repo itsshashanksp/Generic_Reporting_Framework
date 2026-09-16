@@ -10,11 +10,11 @@ There is no advanced/nested filter builder. Authored JSON requests can choose on
 
 ## Sorting
 
-Clicking a sortable report column updates the API sort and returns to page 1. Report grids can emit multiple sorted columns through AG Grid. Dashboard table widgets intentionally send only the first sort item. SQL Resource sort fields must be declared in `execution.columns`; runtime sort replaces `execution.defaultSort`. JSON requests may declare an initial sort; runtime grid state replaces it.
+Clicking a sortable report column updates the API sort and returns to page 1. Report grids can emit multiple sorted columns through AG Grid. Dashboard table widgets intentionally send only the first sort item. Both query modes declare initial sorting with top-level `sort`; runtime grid state replaces it. SQL Resource sort fields must reference configured display columns.
 
 ## Pagination
 
-Reports use configured server pagination and show the current row range, rows-per-page choice, and first/previous/next/last controls. Dashboard table widgets always use server pagination. SQL Resource pagination requires an approved runtime sort or reviewed `execution.defaultSort`. A report with pagination disabled has no paging footer or injected runtime page; avoid a base `request.pagination` if an unpaged report is intended.
+Reports use configured server pagination and show the current row range, rows-per-page choice, and first/previous/next/last controls. Dashboard table widgets always use server pagination. Paginated SQL Resources should define a deterministic top-level `sort`. A report with pagination disabled has no paging footer or injected runtime page; avoid a base `request.pagination` if an unpaged report is intended.
 
 Report widgets render through the same grid and compact mobile pager. Desktop retains AG Grid client pagination over the returned response.
 

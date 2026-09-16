@@ -10,9 +10,11 @@ All configuration is JSON. Unknown top-level report keys are rejected, and defin
 | `title` | yes | non-empty string | Page title and default saved-report name |
 | `description` | no | string | Supporting page text |
 | `request` | exactly one source | JSON request | Active JSON mode |
-| `queryDefinition` | exactly one source | `{format:"sql",resource:string,execution?:object,filterLogic?:"AND"|"OR"}` | Active discovered SQL Resource mode |
+| `queryDefinition` | exactly one source | `{format:"sql",resource:string}` | Active discovered SQL Resource mode |
 | `columns` | yes | non-empty array | Grid output columns; fields must be unique |
 | `filters` | yes | array | Filter form; use `[]` for none |
+| `sort` | no | `{field,direction}[]` | Initial/default API sort for either query mode |
+| `filterLogic` | no | `AND` or `OR` | Flat combination for applied filters |
 | `grid` | no | object | Grid, paging and configured grouping |
 | `toolbar` | no | object | Toolbar feature switches |
 | `export` | no | object | Export formats/scope |
@@ -20,16 +22,12 @@ All configuration is JSON. Unknown top-level report keys are rejected, and defin
 Omitted report defaults are: export, refresh, and saved reports enabled; pagination enabled with page size `10` and options `[10,25,50,100]`; row selection `single`; each column visible and sortable with width `150`.
 
 SQL Resource IDs use slash-separated segments such as `reports/item` and
-`widgets/item-dashboard-table`, without `.sql`. Optional `execution` accepts
-only `columns`, `filters`, and `defaultSort`. Columns are non-empty unique output
-identifiers. Each filter mapping has optional `expression`, `placement`
-(`output`, `source`, or `having`), and `valueType` (`integer-date` only).
-Default-sort fields must be execution columns. Resources with no filters,
-sorting, or pagination can omit execution metadata.
-`queryDefinition.filterLogic` selects the backend's one flat `AND` or `OR`
-combination for applied SQL Resource filters and defaults to backend `AND`.
-Frontend validation also requires every configured SQL filter and sortable
-column to be declared by the corresponding execution metadata.
+`widgets/item-dashboard-table`, without `.sql`. `queryDefinition` contains no
+presentation or execution metadata. The loader derives API execution columns
+from top-level `columns`, derives source mappings for filter-only top-level
+`filters`, and sends top-level `sort` and `filterLogic` with the runtime request.
+SQL sort fields must reference displayed columns. The backend remains
+authoritative for resource capabilities and SQL validation.
 
 ## Columns
 
@@ -114,7 +112,7 @@ Inline non-report widgets accept `columns`, `grid`, `toolbar`, and optional filt
 
 ## Reusable widget files
 
-Files under `src/config/widgets/*.json` are auto-discovered for `widgetId` references. The supported reusable definition has `id`, `title`, SQL `queryDefinition`, optional `description`, `columns`, `grid`, `toolbar`, `export`, and a `filters` array (use `[]`). The Item dashboard uses one shared statistics definition so four cards do not duplicate the same resource and execution metadata.
+Files under `src/config/widgets/*.json` are auto-discovered for `widgetId` references. The supported reusable definition has `id`, `title`, one query source, optional `description`, `columns`, `sort`, `grid`, `toolbar`, `export`, and a `filters` array (use `[]`). Dashboard-level filters are merged into resolved inline, `reportId`, and `widgetId` definitions before request translation.
 
 ## Menu
 

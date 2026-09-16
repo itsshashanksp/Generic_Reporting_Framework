@@ -12,6 +12,8 @@ import type { DashboardWidget, WidgetRequest } from "../../types/widget";
 import type { ColumnDefinition } from "../../types/column";
 import type { ReportConfiguration, ReportDefinition } from "../../types/report";
 import { loadDefinition } from "../ReportDefinitionEngine";
+import { buildSqlResourceRequest } from "../ReportDefinitionEngine/loader";
+import type { FilterDefinition } from "../../types/filter";
 import {
     getWidgetDefinition,
     getWidgetDefinitionIds,
@@ -138,8 +140,10 @@ export function getDashboardIds(): string[] {
 
 /** Resolves inline definitions first, then existing report/widget references. */
 export function resolveDashboardWidgetDefinition(
-    widget: DashboardWidget
+    widget: DashboardWidget,
+    sharedFilters: FilterDefinition[] = []
 ): ReportDefinition | undefined {
+    const filters = mergeFilterDefinitions(widget.filters ?? [], sharedFilters);
     if (widget.queryDefinition || widget.request) {
         const configuration: ReportConfiguration = {
             id: widget.id,
@@ -151,7 +155,9 @@ export function resolveDashboardWidgetDefinition(
                 ? { queryDefinition: widget.queryDefinition }
                 : { request: widget.request! }),
             ...(widget.columns !== undefined ? { columns: widget.columns } : {}),
-            filters: widget.filters ?? [],
+            filters,
+            ...(widget.sort !== undefined ? { sort: widget.sort } : {}),
+            ...(widget.filterLogic !== undefined ? { filterLogic: widget.filterLogic } : {}),
             ...(widget.grid !== undefined ? { grid: widget.grid } : {}),
             ...(widget.toolbar !== undefined ? { toolbar: widget.toolbar } : {}),
             ...(widget.export !== undefined ? { export: widget.export } : {}),
@@ -161,11 +167,11 @@ export function resolveDashboardWidgetDefinition(
     }
 
     if (widget.widgetId) {
-        return getWidgetDefinition(widget.widgetId);
+        return addSharedFilters(getWidgetDefinition(widget.widgetId), sharedFilters);
     }
 
     if (widget.reportId) {
-        return getReport(widget.reportId);
+        return addSharedFilters(getReport(widget.reportId), sharedFilters);
     }
 
     return undefined;
@@ -173,14 +179,47 @@ export function resolveDashboardWidgetDefinition(
 
 /** Resolves data widgets through the same loaded report/query pipeline as reports. */
 export function resolveDashboardWidgetRequest(
-    widget: DashboardWidget
+    widget: DashboardWidget,
+    sharedFilters: FilterDefinition[] = []
 ): WidgetRequest | undefined {
-    return resolveDashboardWidgetDefinition(widget)?.request;
+    return resolveDashboardWidgetDefinition(widget, sharedFilters)?.request;
 }
 
 /** Resolves optional table presentation columns without changing widget query data. */
 export function resolveDashboardWidgetColumns(
-    widget: DashboardWidget
+    widget: DashboardWidget,
+    sharedFilters: FilterDefinition[] = []
 ): ColumnDefinition[] | undefined {
-    return resolveDashboardWidgetDefinition(widget)?.columns ?? widget.columns;
+    return resolveDashboardWidgetDefinition(widget, sharedFilters)?.columns ?? widget.columns;
+}
+
+function addSharedFilters(
+    definition: ReportDefinition | undefined,
+    sharedFilters: FilterDefinition[]
+): ReportDefinition | undefined {
+    if (!definition || sharedFilters.length === 0) return definition;
+    const filters = mergeFilterDefinitions(definition.filters, sharedFilters);
+    if (definition.request.action !== "sql" || !definition.queryDefinition) {
+        return { ...definition, filters };
+    }
+    return {
+        ...definition,
+        filters,
+        request: buildSqlResourceRequest({
+            queryDefinition: definition.queryDefinition,
+            columns: definition.columns,
+            filters,
+            sort: definition.sort,
+            filterLogic: definition.filterLogic,
+        } as ReportConfiguration),
+    };
+}
+
+function mergeFilterDefinitions(
+    widgetFilters: FilterDefinition[],
+    sharedFilters: FilterDefinition[]
+): FilterDefinition[] {
+    const merged = new Map(widgetFilters.map(filter => [filter.field, filter]));
+    sharedFilters.forEach(filter => merged.set(filter.field, filter));
+    return [...merged.values()];
 }

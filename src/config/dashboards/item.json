@@ -21,6 +21,16 @@
       "type": "text"
     },
     {
+      "field": "Br_code",
+      "label": "Brand Code",
+      "type": "text"
+    },
+    {
+      "field": "Cat_code",
+      "label": "Cat Code",
+      "type": "text"
+    },
+    {
       "field": "Std_Vat",
       "label": "GST %",
       "type": "select",
@@ -38,9 +48,7 @@
               "alias": "Frequency"
             }
           ],
-          "groupBy": [
-            "Std_Vat"
-          ],
+          "groupBy": ["Std_Vat"],
           "sort": [
             {
               "field": "Frequency",
@@ -70,24 +78,7 @@
 
       "queryDefinition": {
         "format": "sql",
-        "resource": "widgets/item-dashboard-table",
-        "execution": {
-          "columns": [
-            "Item_Code",
-            "Item_Desc",
-            "Sale_Rate",
-            "Item_MRP",
-            "Std_Vat",
-            "cl_stock",
-            "stock_value"
-          ],
-          "defaultSort": [
-            {
-              "field": "Item_Code",
-              "direction": "ASC"
-            }
-          ]
-        }
+        "resource": "widgets/item-dashboard-table"
       },
 
       "columns": [
@@ -126,14 +117,18 @@
         }
       ],
 
+      "sort": [
+        {
+          "field": "Item_Code",
+          "direction": "ASC"
+        }
+      ],
+
       "pageSize": 10,
 
       "export": {
         "enabled": true,
-        "formats": [
-          "csv",
-          "excel"
-        ],
+        "formats": ["csv", "excel"],
         "filename": "item-details",
         "exportAll": true,
         "exportCurrentView": true
@@ -156,22 +151,7 @@
 
       "queryDefinition": {
         "format": "sql",
-        "resource": "widgets/item-dashboard-stats",
-        "execution": {
-          "columns": [
-            "TotalItems"
-          ],
-          "filters": {
-            "Item_Desc": {
-              "expression": "Item_Desc",
-              "placement": "source"
-            },
-            "Std_Vat": {
-              "expression": "Std_Vat",
-              "placement": "source"
-            }
-          }
-        }
+        "resource": "widgets/item-dashboard-stats"
       },
 
       "valueField": "TotalItems",
@@ -194,22 +174,7 @@
 
       "queryDefinition": {
         "format": "sql",
-        "resource": "widgets/item-dashboard-stats",
-        "execution": {
-          "columns": [
-            "MinimumSP"
-          ],
-          "filters": {
-            "Item_Desc": {
-              "expression": "Item_Desc",
-              "placement": "source"
-            },
-            "Std_Vat": {
-              "expression": "Std_Vat",
-              "placement": "source"
-            }
-          }
-        }
+        "resource": "widgets/item-dashboard-stats"
       },
 
       "valueField": "MinimumSP",
@@ -232,22 +197,7 @@
 
       "queryDefinition": {
         "format": "sql",
-        "resource": "widgets/item-dashboard-stats",
-        "execution": {
-          "columns": [
-            "MaximumSP"
-          ],
-          "filters": {
-            "Item_Desc": {
-              "expression": "Item_Desc",
-              "placement": "source"
-            },
-            "Std_Vat": {
-              "expression": "Std_Vat",
-              "placement": "source"
-            }
-          }
-        }
+        "resource": "widgets/item-dashboard-stats"
       },
 
       "valueField": "MaximumSP",
@@ -270,22 +220,7 @@
 
       "queryDefinition": {
         "format": "sql",
-        "resource": "widgets/item-dashboard-stats",
-        "execution": {
-          "columns": [
-            "StockValue"
-          ],
-          "filters": {
-            "Item_Desc": {
-              "expression": "Item_Desc",
-              "placement": "source"
-            },
-            "Std_Vat": {
-              "expression": "Std_Vat",
-              "placement": "source"
-            }
-          }
-        }
+        "resource": "widgets/item-dashboard-stats"
       },
 
       "valueField": "StockValue",

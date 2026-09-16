@@ -15,7 +15,7 @@ Status summary: Completed — 36 and 36A; In Progress — none; Next — 37; Pla
 | 42 | Report scheduler | Planned | Requires an external/backend scheduling and delivery contract; no frontend-only implementation is claimed |
 | 44 | Audit | Planned | Define auditable frontend events after identity and mutation contracts exist |
 | 45 | Favorites | Planned | Define local vs account-backed ownership and migration |
-| 46 | Report designer | Planned | Must emit only validated JSON Query structures or discovered SQL Resource IDs with constrained execution metadata—never SQL text |
+| 46 | Report designer | Planned | Must emit only validated JSON Query structures or minimal discovered SQL Resource references plus normalized presentation—never SQL text |
 | 38 | Email report | Deferred / Last | Keep after scheduling, identity, and delivery APIs are defined |
 | 43 | Authentication and roles | Deferred / Last | Firebase direction retained; backend currently has no API authorization, so UI hiding alone is insufficient |
 

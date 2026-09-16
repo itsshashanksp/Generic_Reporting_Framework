@@ -9,11 +9,11 @@ Dashboard widgets are either report renderers or focused stat, table, and chart 
 | `report` | Exactly `reportId` |
 | `stat`, `table`, `chart` | Exactly one of inline `request`, inline SQL `queryDefinition`, `reportId`, or reusable `widgetId` |
 
-Inline definitions keep dashboard configuration self-contained. SQL widgets use discovered `widgets/...` IDs and carry constrained execution metadata when their runtime filters, sorting, or pagination need declared fields/default ordering. Reusable definitions in `src/config/widgets/*.json` remain supported for `widgetId` compatibility. Report reuse shares the report request and columns.
+Inline definitions keep dashboard configuration self-contained. SQL widgets use minimal discovered `widgets/...` references; their top-level columns, filters, and sort are translated into the API request. Reusable definitions in `src/config/widgets/*.json` remain supported for `widgetId` compatibility. Report reuse shares the normalized report definition.
 
 ## Runtime behavior
 
-Dashboard filters are appended to every widget request. Each widget has independent loading, empty, error and retry states and its own dashboard/widget cache scope.
+Dashboard filters are merged into every resolved inline, `reportId`, or `widgetId` definition and then appended to each widget request. This lets the SQL translator derive required filter mappings without duplicating shared controls inside widgets. Each widget has independent loading, empty, error and retry states and its own dashboard/widget cache scope.
 
 - Stat reads `valueField` from the first row (or the first property) and formats using the Indian locale.
 - Table uses server pagination, supports sorting and optional CSV/Excel export. Missing columns are inferred from the first row.

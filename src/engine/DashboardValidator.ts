@@ -127,6 +127,7 @@ export function validateDashboard(
                     errors,
                     warnings,
                     widgetIds,
+                    Array.isArray(dashboard.filters) ? dashboard.filters as FilterDefinition[] : [],
                     options.reportIds,
                     options.widgetIds
                 );
@@ -367,6 +368,7 @@ function validateWidget(
     errors: string[],
     warnings: string[],
     widgetIds: Set<string>,
+    sharedFilters: FilterDefinition[],
     reportIds?: Iterable<string>,
     widgetDefinitionIds?: Iterable<string>
 ) {
@@ -383,7 +385,7 @@ function validateWidget(
     const commonKeys = [
         "id", "type", "title", "description", "width", "height", "visible", "position",
     ];
-    const definitionKeys = ["queryDefinition", "columns", "filters", "grid", "toolbar"];
+    const definitionKeys = ["queryDefinition", "columns", "filters", "sort", "filterLogic", "grid", "toolbar"];
     const typeKeys: Record<string, string[]> = {
         report: ["request", "reportId", "widgetId", ...definitionKeys],
         stat: ["request", "reportId", "widgetId", "format", "valueField", ...definitionKeys],
@@ -480,7 +482,9 @@ function validateWidget(
                 description: widget.description,
                 queryDefinition: widget.queryDefinition,
                 columns: widget.columns,
-                filters: widget.filters ?? [],
+                filters: mergeFilterDefinitions(widget.filters, sharedFilters),
+                sort: widget.sort,
+                filterLogic: widget.filterLogic,
                 grid: widget.grid,
                 toolbar: widget.toolbar,
                 export: widget.export,
@@ -515,7 +519,9 @@ function validateWidget(
                 title: widget.title,
                 request: widget.request,
                 columns: widget.columns,
-                filters: widget.filters ?? [],
+                filters: mergeFilterDefinitions(widget.filters, sharedFilters),
+                sort: widget.sort,
+                filterLogic: widget.filterLogic,
                 grid: widget.grid,
                 toolbar: widget.toolbar,
                 export: widget.export,
@@ -617,6 +623,19 @@ function validateWidget(
             );
         }
     }
+}
+
+function mergeFilterDefinitions(widgetFilters: unknown, sharedFilters: FilterDefinition[]) {
+    const merged = new Map<string, FilterDefinition>();
+    if (Array.isArray(widgetFilters)) {
+        widgetFilters.forEach(filter => {
+            if (isRecord(filter) && typeof filter.field === "string") {
+                merged.set(filter.field, filter as unknown as FilterDefinition);
+            }
+        });
+    }
+    sharedFilters.forEach(filter => merged.set(filter.field, filter));
+    return [...merged.values()];
 }
 
 function validateExportConfig(config: unknown, label: string, errors: string[]) {

@@ -240,12 +240,12 @@ function DashboardContent({
                     {visibleWidgets.map(
                         widget => {
 
-                            const widgetRequest =
-                                resolveDashboardWidgetRequest(widget);
                             const widgetDefinition =
-                                resolveDashboardWidgetDefinition(widget);
-                            const widgetColumns =
-                                resolveDashboardWidgetColumns(widget);
+                                resolveDashboardWidgetDefinition(widget, dashboard.filters ?? []);
+                            const widgetRequest = widgetDefinition?.request
+                                ?? resolveDashboardWidgetRequest(widget, dashboard.filters ?? []);
+                            const widgetColumns = widgetDefinition?.columns
+                                ?? resolveDashboardWidgetColumns(widget, dashboard.filters ?? []);
 
                             /*
                              * Keep widget width

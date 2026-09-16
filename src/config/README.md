@@ -24,34 +24,33 @@ JSON Query mode uses the backend's public SELECT request in `request`:
 It is sent unchanged, apart from the existing runtime filter, sort, and
 pagination merge, and is handled by the backend `QueryController`.
 
-Backend SQL mode uses a discovered logical resource identifier and optional
-reviewed execution metadata:
+Backend SQL mode uses only a discovered logical resource identifier:
 
 ```json
 {
   "queryDefinition": {
     "format": "sql",
-    "resource": "reports/item",
-    "execution": {
-      "columns": ["Item_Code", "Item_Desc", "Item_MRP"],
-      "defaultSort": [{ "field": "Item_Code", "direction": "ASC" }]
-    }
-  }
+    "resource": "reports/item"
+  },
+  "columns": [{ "field": "Item_Code", "header": "Item Code" }],
+  "filters": [],
+  "sort": [{ "field": "Item_Code", "direction": "ASC" }]
 }
 ```
 
-The loader copies those reviewed members to the SQL action. `reports/item` is
+The loader derives the SQL API execution columns/filter mappings from the
+top-level presentation fields and copies top-level `sort` into the request.
+`reports/item` is
 relative to the backend discovery root, without `.sql`; the frontend never
-constructs that path. Execution columns/default sort are present because this
-report exposes runtime sorting and pagination. The frontend neither loads nor
+constructs that path. The frontend neither loads nor
 parses SQL and never sends SQL text. Report JSON continues to own UI metadata.
 A report must define exactly one of `request` or `queryDefinition`.
 
 ## Canonical order
 
 Report files use this top-level order: `id`, `title`, `description`,
-`queryDefinition` or `request`, `columns`, `filters`, `grid`, `toolbar`,
-`export`. SQL definitions keep `execution` nested inside `queryDefinition`.
+`queryDefinition` or `request`, `columns`, `sort`, `filters`, `grid`, `toolbar`,
+`export`.
 
 Dashboard files use: `id`, `title`, `description`, `layout`, `autoRefresh`,
 `filters`, `widgets`. Each widget starts with `id`, `type`, `title`, and
@@ -108,9 +107,9 @@ Universal JSON projection or a backend SQL resource.
 }
 ```
 
-Filter fields and display columns are independent. In SQL Resource mode, a
-filter-only field must be declared in `queryDefinition.execution.filters`; it
-does not need to be added to `columns` or `execution.columns`.
+Filter fields and display columns are independent. In SQL Resource mode, the
+runtime derives a constrained source-filter mapping for a filter-only field; it
+does not need to be added to `columns`.
 - Report widget: `reportId`.
 - Stat widget: inline SQL `queryDefinition`/JSON `request`, or `widgetId`/compatible `reportId`, plus `valueField` and `format`.
 - Table widget: inline SQL `queryDefinition`/JSON `request`, or `widgetId`/compatible `reportId`, plus `columns`, `pageSize`, `pageSizeOptions`, and `export`.
@@ -118,8 +117,7 @@ does not need to be added to `columns` or `execution.columns`.
 
 Data-driven widgets may contain their full definition inline. Inline definitions
 are loaded by the same report-definition pipeline as reusable widget files.
-`widgetId` values resolve through the widget loader; the Item statistics cards
-share one definition this way. Each widget selects exactly one data source. Both forms use the
+`widgetId` values resolve through the widget loader. Each widget selects exactly one data source. Both forms use the
 same two request modes as reports; SQL-backed widgets contain a backend resource
 ID, not a frontend `.sql` file. Dashboard JSON continues to own layout and
 instance presentation. Table pagination is merged into the resolved request at

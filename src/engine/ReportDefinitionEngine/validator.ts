@@ -1,7 +1,7 @@
 import type { FilterType } from "../../types/filter";
 import { allowedOperators } from "../FilterEngine/validator";
 
-const REPORT_KEYS = ["id", "title", "description", "queryDefinition", "request", "columns", "filters", "grid", "toolbar", "export"];
+const REPORT_KEYS = ["id", "title", "description", "queryDefinition", "request", "columns", "filters", "sort", "filterLogic", "grid", "toolbar", "export"];
 const REQUEST_KEYS = ["action", "source", "fields", "filters", "joins", "groupBy", "having", "sort", "pagination", "distinct", "limit", "filterLogic", "with"];
 const REQUEST_FIELD_KEYS = ["field", "fields", "function", "alias", "sort", "case", "expression", "buckets", "offset", "default", "separator", "datatype", "style", "value", "values", "index", "datepart", "number", "start", "end", "year", "month", "day", "hour", "minute", "second", "millisecond", "precision", "power", "part", "length", "search", "replace", "pattern", "format", "condition", "true", "false"];
 const COLUMN_KEYS = ["field", "header", "visible", "sortable", "width", "dataType"];
@@ -44,9 +44,18 @@ export function getReportValidationErrors(
         errors.push("Report must contain exactly one of request or queryDefinition.");
     }
     validateQueryDefinitionReference(report.queryDefinition, errors);
-    if (hasRequest) validateRequest(report.request, errors);
+    if (hasRequest) {
+        validateRequest(report.request, errors);
+        if (isRecord(report.request) && report.request.sort !== undefined) {
+            errors.push("Report request sort must be configured at top-level sort.");
+        }
+    }
     validateColumns(report.columns, errors, columnsRequired);
     validateFilters(report.filters, errors, hasQueryDefinition);
+    if (report.sort !== undefined) validateSort(report.sort, "Report sort", errors);
+    if (report.filterLogic !== undefined && report.filterLogic !== "AND" && report.filterLogic !== "OR") {
+        errors.push("Report filterLogic must be AND or OR.");
+    }
     if (hasQueryDefinition) validateSqlPresentationCompatibility(report, errors);
     validateGrid(report.grid, errors);
     validateToolbar(report.toolbar, errors);
@@ -56,26 +65,29 @@ export function getReportValidationErrors(
 
 function validateSqlPresentationCompatibility(report: Record<string, unknown>, errors: string[]) {
     if (!isRecord(report.queryDefinition)) return;
-    const execution = isRecord(report.queryDefinition.execution) ? report.queryDefinition.execution : {};
-    const columns = Array.isArray(execution.columns)
-        ? execution.columns.filter(isSqlIdentifier).map(field => field.toLowerCase())
+    const columns = Array.isArray(report.columns)
+        ? report.columns.filter(isRecord).map(column => column.field).filter(isSqlIdentifier)
         : [];
-    const mappedFilters = isRecord(execution.filters)
-        ? Object.keys(execution.filters).map(field => field.toLowerCase())
-        : [];
-    const runtimeFields = new Set([...columns, ...mappedFilters]);
+    const columnNames = new Set(columns.map(field => field.toLowerCase()));
 
     if (Array.isArray(report.filters)) {
         report.filters.forEach((filter, index) => {
-            if (isRecord(filter) && typeof filter.field === "string" && !runtimeFields.has(filter.field.toLowerCase())) {
-                errors.push(`Report filter at index ${index} field must be declared by SQL execution columns or filters.`);
+            if (isRecord(filter) && !isSqlIdentifier(filter.field)) {
+                errors.push(`Report filter at index ${index} field must be a SQL runtime identifier.`);
             }
         });
     }
     if (Array.isArray(report.columns)) {
         report.columns.forEach((column, index) => {
-            if (isRecord(column) && column.sortable !== false && typeof column.field === "string" && !columns.includes(column.field.toLowerCase())) {
-                errors.push(`Sortable report column at index ${index} must be declared by SQL execution columns.`);
+            if (isRecord(column) && !isSqlIdentifier(column.field)) {
+                errors.push(`Report column at index ${index} field must be a SQL output identifier.`);
+            }
+        });
+    }
+    if (Array.isArray(report.sort)) {
+        report.sort.forEach((sort, index) => {
+            if (isRecord(sort) && typeof sort.field === "string" && !columnNames.has(sort.field.toLowerCase())) {
+                errors.push(`Report sort field at index ${index} must reference a displayed column.`);
             }
         });
     }
@@ -84,7 +96,7 @@ function validateSqlPresentationCompatibility(report: Record<string, unknown>, e
 function validateQueryDefinitionReference(value: unknown, errors: string[]) {
     if (value === undefined) return;
     if (!isRecord(value)) return errors.push("Report queryDefinition must be an object.");
-    rejectUnknown(value, ["format", "resource", "execution", "filterLogic"], "Report queryDefinition", errors);
+    rejectUnknown(value, ["format", "resource"], "Report queryDefinition", errors);
     if (value.format !== "sql") errors.push("Report queryDefinition format must be sql.");
     requireString(value.resource, "Report queryDefinition resource", errors);
     if (
@@ -93,78 +105,6 @@ function validateQueryDefinitionReference(value: unknown, errors: string[]) {
         && !/^[A-Za-z0-9][A-Za-z0-9_-]*(?:\/[A-Za-z0-9][A-Za-z0-9_-]*)*$/.test(value.resource)
     ) {
         errors.push("Report queryDefinition resource must be a safe backend resource identifier.");
-    }
-    if (value.execution !== undefined) validateSqlExecution(value.execution, errors);
-    if (value.filterLogic !== undefined && value.filterLogic !== "AND" && value.filterLogic !== "OR") {
-        errors.push("Report queryDefinition filterLogic must be AND or OR.");
-    }
-}
-
-function validateSqlExecution(value: unknown, errors: string[]) {
-    if (!isRecord(value)) return errors.push("Report queryDefinition execution must be an object.");
-    rejectUnknown(value, ["columns", "filters", "defaultSort"], "Report queryDefinition execution", errors);
-    const columns = value.columns;
-    if (columns !== undefined && !isUniqueSqlIdentifierArray(columns)) {
-        errors.push("Report queryDefinition execution columns must be a non-empty unique identifier array.");
-    }
-    if (value.filters !== undefined) {
-        if (!isRecord(value.filters) || Object.keys(value.filters).length === 0) {
-            errors.push("Report queryDefinition execution filters must be a non-empty object.");
-        } else {
-            const seen = new Set<string>();
-            Object.entries(value.filters).forEach(([field, definition]) => {
-                const label = `Report queryDefinition execution filter ${field}`;
-                const canonical = field.toLowerCase();
-                if (!isSqlIdentifier(field)) errors.push(`${label} name must be a valid identifier.`);
-                if (seen.has(canonical)) errors.push(`${label} name must be case-insensitively unique.`);
-                seen.add(canonical);
-                validateSqlExecutionFilter(definition, field, columns, label, errors);
-            });
-        }
-    }
-    if (value.defaultSort !== undefined) {
-        validateSort(value.defaultSort, "Report queryDefinition execution defaultSort", errors);
-        if (!Array.isArray(value.defaultSort) || value.defaultSort.length === 0) {
-            errors.push("Report queryDefinition execution defaultSort must be non-empty.");
-        }
-        if (!Array.isArray(columns)) {
-            errors.push("Report queryDefinition execution columns are required with defaultSort.");
-        } else if (Array.isArray(value.defaultSort)) {
-            value.defaultSort.forEach((sort, index) => {
-                if (isRecord(sort) && typeof sort.field === "string" && !containsCaseInsensitive(columns, sort.field)) {
-                    errors.push(`Report queryDefinition execution defaultSort field at index ${index} must be an execution column.`);
-                }
-            });
-        }
-    }
-}
-
-function validateSqlExecutionFilter(
-    value: unknown,
-    field: string,
-    columns: unknown,
-    label: string,
-    errors: string[]
-) {
-    if (!isRecord(value)) return errors.push(`${label} metadata must be an object.`);
-    rejectUnknown(value, ["expression", "valueType", "placement"], label, errors);
-    const placement = value.placement ?? "output";
-    if (!["output", "source", "having"].includes(String(placement))) {
-        errors.push(`${label} placement must be output, source, or having.`);
-        return;
-    }
-    const expression = value.expression ?? (placement === "output" ? field : undefined);
-    if (placement === "output") {
-        if (!isSqlIdentifier(expression) || !Array.isArray(columns) || !containsCaseInsensitive(columns, expression)) {
-            errors.push(`${label} output expression must be an execution column.`);
-        }
-    } else if (placement === "source") {
-        if (!isIdentifier(expression)) errors.push(`${label} source expression must be an optionally qualified identifier.`);
-    } else if (typeof expression !== "string" || !/^(?:COUNT|SUM|AVG|MIN|MAX)\s*\(\s*(?:\*|[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\s*\)$/i.test(expression.trim())) {
-        errors.push(`${label} HAVING expression must be a supported aggregate over one identifier.`);
-    }
-    if (value.valueType !== undefined && value.valueType !== "integer-date") {
-        errors.push(`${label} valueType must be integer-date.`);
     }
 }
 
@@ -574,15 +514,6 @@ function requireSqlIdentifier(value: unknown, label: string, errors: string[]) {
 function optionalIdentifier(value: unknown, label: string, errors: string[]) { if (value !== undefined && !isIdentifier(value)) errors.push(`${label} must be a valid identifier.`); }
 function isIdentifier(value: unknown): value is string { return typeof value === "string" && /^[A-Za-z_][A-Za-z0-9_.]*$/.test(value); }
 function isSqlIdentifier(value: unknown): value is string { return typeof value === "string" && /^[A-Za-z_][A-Za-z0-9_]*$/.test(value); }
-function isUniqueSqlIdentifierArray(value: unknown): value is string[] {
-    return Array.isArray(value)
-        && value.length > 0
-        && value.every(isSqlIdentifier)
-        && new Set(value.map(item => item.toLowerCase())).size === value.length;
-}
-function containsCaseInsensitive(values: unknown[], expected: string) {
-    return values.some(value => typeof value === "string" && value.toLowerCase() === expected.toLowerCase());
-}
 function isLiteral(value: unknown) { return value === null || ["string", "number", "boolean"].includes(typeof value); }
 function isSafeFunctionExpression(value: unknown): boolean {
     if (isLiteral(value)) return true;

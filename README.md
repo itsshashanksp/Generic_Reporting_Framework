@@ -14,7 +14,7 @@ JSON report/dashboard/widget configuration
         -> report grid or dashboard widget
 ```
 
-Data can be described by a top-level universal JSON request or by a discovered SQL Resource ID. Reviewed frontend definitions may include the backend-validated execution metadata required for filtering, sorting, and pagination. SQL text, discovery, path resolution, and execution remain backend responsibilities; the frontend does not load SQL files.
+Data can be described by a top-level universal JSON request or by a discovered SQL Resource ID. Frontend definitions keep display columns, controls, and initial sorting at the top level; the runtime derives the constrained SQL API envelope from that normalized configuration. SQL text, discovery, path resolution, validation, and execution remain backend responsibilities; the frontend does not load SQL files.
 
 ## Features
 

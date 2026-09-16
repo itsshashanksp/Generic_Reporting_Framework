@@ -25,11 +25,7 @@
       },
       "queryDefinition": {
         "format": "sql",
-        "resource": "widgets/bill-sales-month-wise",
-        "execution": {
-          "columns": ["Month", "Sales"],
-          "defaultSort": [{ "field": "Month", "direction": "DESC" }]
-        }
+        "resource": "widgets/bill-sales-month-wise"
       },
       "columns": [
         {
@@ -42,13 +38,11 @@
           "dataType": "number"
         }
       ],
+      "sort": [{ "field": "Month", "direction": "DESC" }],
       "pageSize": 10,
       "export": {
         "enabled": true,
-        "formats": [
-          "csv",
-          "excel"
-        ],
+        "formats": ["csv", "excel"],
         "exportCurrentView": true,
         "exportAll": true,
         "filename": "sales-month-wise"
@@ -67,11 +61,7 @@
       },
       "queryDefinition": {
         "format": "sql",
-        "resource": "widgets/bill-purchases-month-wise",
-        "execution": {
-          "columns": ["Month", "Purchases"],
-          "defaultSort": [{ "field": "Month", "direction": "DESC" }]
-        }
+        "resource": "widgets/bill-purchases-month-wise"
       },
       "columns": [
         {
@@ -84,13 +74,11 @@
           "dataType": "number"
         }
       ],
+      "sort": [{ "field": "Month", "direction": "DESC" }],
       "pageSize": 10,
       "export": {
         "enabled": true,
-        "formats": [
-          "csv",
-          "excel"
-        ],
+        "formats": ["csv", "excel"],
         "exportCurrentView": true,
         "exportAll": true,
         "filename": "purchases-month-wise"
@@ -109,11 +97,7 @@
       },
       "queryDefinition": {
         "format": "sql",
-        "resource": "widgets/bill-top-10-categories",
-        "execution": {
-          "columns": ["Category", "Sales"],
-          "defaultSort": [{ "field": "Sales", "direction": "DESC" }]
-        }
+        "resource": "widgets/bill-top-10-categories"
       },
       "columns": [
         {
@@ -126,13 +110,11 @@
           "dataType": "number"
         }
       ],
+      "sort": [{ "field": "Sales", "direction": "DESC" }],
       "pageSize": 10,
       "export": {
         "enabled": true,
-        "formats": [
-          "csv",
-          "excel"
-        ],
+        "formats": ["csv", "excel"],
         "exportCurrentView": true,
         "exportAll": true,
         "filename": "top-10-categories"
@@ -151,11 +133,7 @@
       },
       "queryDefinition": {
         "format": "sql",
-        "resource": "widgets/TOP-10-month-Wise-Category-wise",
-        "execution": {
-          "columns": ["Month", "Category", "Sales"],
-          "defaultSort": [{ "field": "Sales", "direction": "DESC" }]
-        }
+        "resource": "widgets/TOP-10-month-Wise-Category-wise"
       },
       "columns": [
         {
@@ -172,13 +150,11 @@
           "dataType": "number"
         }
       ],
+      "sort": [{ "field": "Sales", "direction": "DESC" }],
       "pageSize": 10,
       "export": {
         "enabled": true,
-        "formats": [
-          "csv",
-          "excel"
-        ],
+        "formats": ["csv", "excel"],
         "exportCurrentView": true,
         "exportAll": true,
         "filename": "top-10-month-wise-category-wise"
@@ -197,14 +173,7 @@
       },
       "queryDefinition": {
         "format": "sql",
-        "resource": "widgets/bill-category-sales-month-wise",
-        "execution": {
-          "columns": ["Month", "Category", "Sales"],
-          "defaultSort": [
-            { "field": "Month", "direction": "ASC" },
-            { "field": "Category", "direction": "ASC" }
-          ]
-        }
+        "resource": "widgets/bill-category-sales-month-wise"
       },
       "columns": [
         {
@@ -221,13 +190,14 @@
           "dataType": "number"
         }
       ],
+      "sort": [
+        { "field": "Month", "direction": "ASC" },
+        { "field": "Category", "direction": "ASC" }
+      ],
       "pageSize": 10,
       "export": {
         "enabled": true,
-        "formats": [
-          "csv",
-          "excel"
-        ],
+        "formats": ["csv", "excel"],
         "exportCurrentView": true,
         "exportAll": true,
         "filename": "category-sales-month-wise"

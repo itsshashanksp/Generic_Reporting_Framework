@@ -41,6 +41,10 @@ function renderReport(reportId = "item") {
 }
 
 describe("ReportViewer runtime", () => {
+    const getReportRequests = () => executeRequestMock.mock.calls
+        .map(([request]) => request)
+        .filter(request => request.pagination?.pageSize === 10);
+
     beforeEach(() => {
         clearRequestCache();
         executeRequestMock.mockReset().mockResolvedValue({
@@ -51,7 +55,7 @@ describe("ReportViewer runtime", () => {
         });
     });
 
-    it("sends an SQL resource reference with the existing runtime state", async () => {
+    it("sends the normalized JSON Query request with the existing runtime state", async () => {
         renderReport();
         await screen.findByTestId("report-grid");
         const toolbar = screen.getByRole("toolbar", { name: "Report actions" });
@@ -59,42 +63,37 @@ describe("ReportViewer runtime", () => {
 
         fireEvent.change(screen.getByLabelText("Item Code"), { target: { value: "A1" } });
         fireEvent.click(screen.getByRole("button", { name: "Search" }));
-        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(2));
-        const request = executeRequestMock.mock.calls.at(-1)?.[0];
+        await waitFor(() => expect(getReportRequests()).toHaveLength(2));
+        const request = getReportRequests().at(-1);
         expect(request).toMatchObject({
-            action: "sql",
-            resource: "reports/item",
-            execution: {
-                columns: ["Item_Code", "Item_Desc", "Item_MRP"],
-                defaultSort: [{ field: "Item_Code", direction: "ASC" }],
-            },
+            action: "select",
+            source: { table: "ItemMasterTable" },
+            fields: ["Item_Code", "Item_Desc", "Item_MRP"],
+            sort: [{ field: "Item_Code", direction: "ASC" }],
             pagination: { page: 1, pageSize: 10 },
         });
         expect(request.filters).toContainEqual({ field: "Item_Code", operator: "LIKE", value: "%A1%" });
         expect(JSON.stringify(request)).not.toContain("SELECT");
 
         fireEvent.click(screen.getByRole("button", { name: "Sort test grid" }));
-        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(3));
-        expect(executeRequestMock.mock.calls.at(-1)?.[0].sort).toEqual([
+        await waitFor(() => expect(getReportRequests()).toHaveLength(3));
+        expect(getReportRequests().at(-1)?.sort).toEqual([
             { field: "Item_Desc", direction: "DESC" },
         ]);
         expect(screen.getByTestId("report-grid").getAttribute("data-columns"))
             .toBe("Item_Code,Item_Desc,Item_MRP");
     });
 
-    it("loads the customer report through its configured SQL resource", async () => {
+    it("loads the customer report through its configured JSON Query request", async () => {
         renderReport("customer");
         await screen.findByTestId("report-grid");
-        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(1));
+        await waitFor(() => expect(getReportRequests()).toHaveLength(1));
 
-        expect(executeRequestMock.mock.calls[0][0]).toMatchObject({
-            action: "sql",
-            resource: "reports/customer",
-            execution: {
-                filters: expect.objectContaining({
-                    StDate: { expression: "StDate", placement: "source", valueType: "integer-date" },
-                }),
-            },
+        expect(getReportRequests()[0]).toMatchObject({
+            action: "select",
+            source: { table: "CustomerTable" },
+            groupBy: ["Cust_Name"],
+            sort: [{ field: "Cust_Name", direction: "ASC" }],
             pagination: { page: 1, pageSize: 10 },
         });
     });
@@ -102,12 +101,12 @@ describe("ReportViewer runtime", () => {
     it("renders a cached report immediately without another request", async () => {
         const first = renderReport();
         await screen.findByTestId("report-grid");
-        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(1));
+        await waitFor(() => expect(getReportRequests()).toHaveLength(1));
         first.unmount();
 
         renderReport();
         expect(screen.getByTestId("report-grid")).toBeTruthy();
         expect(screen.queryByText("Loading report data…")).toBeNull();
-        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(1));
+        await waitFor(() => expect(getReportRequests()).toHaveLength(1));
     });
 });

@@ -4,21 +4,31 @@ The frontend sends JSON by `POST` to `VITE_API_URL` with `Content-Type: applicat
 
 ## JSON Query mode
 
-Configure a report with a top-level `request`:
+The normalized report keeps query structure in `request` and initial sorting at
+the report's top level:
 
 ```json
 {
-  "action": "select",
-  "source": { "table": "Orders", "alias": "O" },
-  "fields": ["O.OrderId", { "field": "O.Amount", "alias": "Amount" }],
-  "filters": [{ "field": "O.Status", "operator": "=", "value": "Open" }],
-  "filterLogic": "AND",
-  "sort": [{ "field": "O.OrderId", "direction": "ASC" }],
-  "pagination": { "page": 1, "pageSize": 10 }
+  "request": {
+    "action": "select",
+    "source": { "table": "Orders", "alias": "O" },
+    "fields": [
+      { "field": "O.OrderId", "alias": "OrderId" },
+      { "field": "O.Amount", "alias": "Amount" }
+    ],
+    "filters": [{ "field": "O.Status", "operator": "=", "value": "Open" }]
+  },
+  "columns": [
+    { "field": "OrderId", "header": "Order" },
+    { "field": "Amount", "header": "Amount", "dataType": "number" }
+  ],
+  "filters": [],
+  "sort": [{ "field": "OrderId", "direction": "ASC" }],
+  "filterLogic": "AND"
 }
 ```
 
-The backend accepts `source`, `fields`, `filters`, `joins`, `groupBy`, `having`, `sort`, `pagination`, `distinct`, `limit`, `filterLogic`, and one standard or recursive `with`. Unknown properties are rejected. See [Examples](EXAMPLES.md) for validated joins and grouping.
+At runtime the frontend adds top-level sort/filter logic plus current filters and pagination to the JSON request. The backend accepts `source`, `fields`, `filters`, `joins`, `groupBy`, `having`, `sort`, `pagination`, `distinct`, `limit`, `filterLogic`, and one standard or recursive `with`. Unknown properties are rejected. See [Examples](EXAMPLES.md) for validated joins and grouping.
 
 JSON Query filters accept `=`, `!=`, `<>`, `>`, `<`, `>=`, `<=`, `LIKE`, `NOT LIKE`, `IN`, `NOT IN`, `BETWEEN`, `NOT BETWEEN`, `IS NULL`, `IS NOT NULL`, `EXISTS`, and `NOT EXISTS`. IN/NOT IN may use a non-empty values list or one-column subquery; EXISTS forms require a subquery and omit `field`. There is one flat `filterLogic`, not nested groups.
 
@@ -34,22 +44,23 @@ TIMEFROMPARTS is intentionally omitted because the current backend public valida
 
 ## SQL Resource mode
 
-Frontend configuration:
+Frontend configuration (presentation fields are authored once):
 
 ```json
 {
   "queryDefinition": {
     "format": "sql",
-    "resource": "reports/customer",
-    "execution": {
-      "columns": ["Cust_Name", "TotalCustomers", "MinimumBill", "MaximumBill"],
-      "filters": {
-        "Cust_Name": { "expression": "Cust_Name", "placement": "source" },
-        "StDate": { "expression": "StDate", "placement": "source", "valueType": "integer-date" }
-      },
-      "defaultSort": [{ "field": "Cust_Name", "direction": "ASC" }]
-    }
-  }
+    "resource": "reports/customer"
+  },
+  "columns": [
+    { "field": "Cust_Name", "header": "Customer" },
+    { "field": "TotalCustomers", "header": "Total", "dataType": "number" }
+  ],
+  "filters": [
+    { "field": "Cust_Name", "label": "Customer", "type": "text" },
+    { "field": "Region", "label": "Region", "type": "text" }
+  ],
+  "sort": [{ "field": "Cust_Name", "direction": "ASC" }]
 }
 ```
 
@@ -60,16 +71,17 @@ Normalized runtime request:
   "action": "sql",
   "resource": "reports/customer",
   "execution": {
-    "columns": ["Cust_Name", "TotalCustomers", "MinimumBill", "MaximumBill"],
+    "columns": ["Cust_Name", "TotalCustomers"],
     "filters": {
-      "Cust_Name": { "expression": "Cust_Name", "placement": "source" },
-      "StDate": { "expression": "StDate", "placement": "source", "valueType": "integer-date" }
-    },
-    "defaultSort": [{ "field": "Cust_Name", "direction": "ASC" }]
+      "Region": { "expression": "Region", "placement": "source" }
+    }
   },
-  "filters": [{ "field": "Cust_Name", "operator": "LIKE", "value": "A%" }],
+  "filters": [
+    { "field": "Cust_Name", "operator": "LIKE", "value": "A%" },
+    { "field": "Region", "operator": "=", "value": "North" }
+  ],
   "filterLogic": "AND",
-  "sort": [{ "field": "MaximumBill", "direction": "DESC" }],
+  "sort": [{ "field": "Cust_Name", "direction": "ASC" }],
   "pagination": { "page": 1, "pageSize": 10 }
 }
 ```
@@ -80,25 +92,22 @@ filename, and the frontend does not append `.sql`. SQL action requests accept
 only `action`, `resource`, `execution`, `filters`, `filterLogic`, `sort`, and
 `pagination`. SQL Resource filters do not accept subqueries or EXISTS.
 
-`execution` is reviewed report metadata, not end-user input. `columns` declares
-stable output aliases for output filtering/sorting. `filters` maps logical UI
-fields to the backend's constrained output/source/HAVING grammar and optional
-`integer-date` conversion. `defaultSort` supplies deterministic ordering when
-pagination is used without an active runtime sort. A simple resource without
-runtime controls omits `execution`.
-Frontend `queryDefinition.filterLogic` may be `AND` or `OR`; the loader copies
-it to the top-level SQL action. The backend default is `AND`, and cross-stage
-`OR` is rejected when it would change semantics.
+`execution` is generated by the frontend loader, not authored alongside the
+presentation and not supplied by end users. Its columns come from configured
+display columns; filter-only logical identifiers receive constrained source
+mappings. Top-level configuration `filterLogic` is copied to the SQL action.
+The backend remains authoritative for the resource, mapping grammar, and
+whether a requested runtime capability is valid.
 
-SQL Resource runtime filters accept every value/list/range/null operator above except EXISTS/NOT EXISTS. A non-empty runtime sort replaces `execution.defaultSort`. Multiple sort entries are supported. Pagination requires positive integers and an approved runtime/default sort.
+SQL Resource runtime filters accept every value/list/range/null operator above except EXISTS/NOT EXISTS. A non-empty runtime sort comes from top-level initial configuration or current grid state. Multiple sort entries are supported. Pagination requires positive integers and an approved sort.
 
 ## Runtime merge
 
 The runtime appends configured UI filters to static request filters, uses the current grid sort, and supplies page/pageSize when pagination is enabled. UI filter definitions select a fixed operator; there is no interactive operator builder or nested Boolean-group editor.
 
 Filter values are never SQL fragments. List and range values remain arrays.
-`IS NULL` and `IS NOT NULL` omit `value`. Reviewed configuration may select
-`output`, `source`, or `having` and a narrowly validated expression, but the
+`IS NULL` and `IS NOT NULL` omit `value`. The normalized presentation is
+translated to constrained execution metadata, but the
 backend validates the grammar, performs placement/conversion, creates parameter
 placeholders, resolves the discovered resource, and executes the SQL.
 

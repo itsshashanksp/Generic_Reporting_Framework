@@ -11,19 +11,17 @@ const presentation = {
 };
 
 describe("report request contract alignment", () => {
-    it("copies reviewed SQL execution metadata and filter logic into the API request", () => {
+    it("derives the SQL API envelope from normalized presentation configuration", () => {
         const report = loadDefinition({
             ...presentation,
             columns: [{ field: "Cust_Name", header: "Customer" }],
             queryDefinition: {
                 format: "sql",
                 resource: "reports/customer",
-                execution: {
-                    columns: ["Cust_Name"],
-                    defaultSort: [{ field: "Cust_Name", direction: "ASC" }],
-                },
-                filterLogic: "OR",
             },
+            filters: [{ field: "Region", label: "Region", type: "text" }],
+            sort: [{ field: "Cust_Name", direction: "ASC" }],
+            filterLogic: "OR",
         });
 
         expect(report.request).toEqual({
@@ -31,8 +29,9 @@ describe("report request contract alignment", () => {
             resource: "reports/customer",
             execution: {
                 columns: ["Cust_Name"],
-                defaultSort: [{ field: "Cust_Name", direction: "ASC" }],
+                filters: { Region: { expression: "Region", placement: "source" } },
             },
+            sort: [{ field: "Cust_Name", direction: "ASC" }],
             filterLogic: "OR",
         });
     });
@@ -52,29 +51,34 @@ describe("report request contract alignment", () => {
                 filterLogic: "AND",
                 groupBy: ["C.CustomerName"],
                 having: [{ function: "SUM", field: "O.Amount", operator: ">", value: 1000 }],
-                sort: [{ field: "TotalAmount", direction: "DESC" }],
                 pagination: { page: 1, pageSize: 10 },
             },
+            sort: [{ field: "TotalAmount", direction: "DESC" }],
         });
 
         expect(errors).toEqual([]);
     });
 
+    it("rejects duplicated default sorting inside a JSON Query request", () => {
+        const errors = getReportValidationErrors({
+            ...presentation,
+            request: {
+                action: "select",
+                source: { table: "Orders" },
+                fields: ["CustomerName"],
+                sort: [{ field: "CustomerName", direction: "ASC" }],
+            },
+        });
+
+        expect(errors).toContain("Report request sort must be configured at top-level sort.");
+    });
+
     it("accepts a backend SQL resource identifier and rejects SQL text or paths", () => {
         expect(getReportValidationErrors({
             ...presentation,
-            queryDefinition: {
-                format: "sql",
-                resource: "reports/customer",
-                execution: {
-                    columns: ["CustomerName", "TotalAmount"],
-                    filters: {
-                        StDate: { expression: "StDate", placement: "source", valueType: "integer-date" },
-                    },
-                    defaultSort: [{ field: "CustomerName", direction: "ASC" }],
-                },
-                filterLogic: "OR",
-            },
+            queryDefinition: { format: "sql", resource: "reports/customer" },
+            sort: [{ field: "CustomerName", direction: "ASC" }],
+            filterLogic: "OR",
         })).toEqual([]);
         expect(getReportValidationErrors({
             ...presentation,
@@ -92,12 +96,6 @@ describe("report request contract alignment", () => {
             queryDefinition: {
                 format: "sql",
                 resource: "reports/items",
-                execution: {
-                    columns: ["Item_Desc"],
-                    filters: {
-                        Supplier_Name: { expression: "Supplier_Name", placement: "source" },
-                    },
-                },
             },
             filters: [{
                 field: "Supplier_Name",
@@ -117,6 +115,18 @@ describe("report request contract alignment", () => {
         });
 
         expect(errors).toEqual([]);
+        const report = loadDefinition({
+            ...presentation,
+            columns: [{ field: "Item_Desc", header: "Description" }],
+            queryDefinition: { format: "sql", resource: "reports/items" },
+            filters: [{ field: "Supplier_Name", label: "Supplier", type: "text" }],
+        });
+        expect(report.request).toMatchObject({
+            execution: {
+                columns: ["Item_Desc"],
+                filters: { Supplier_Name: { expression: "Supplier_Name", placement: "source" } },
+            },
+        });
     });
 
     it("enforces SQL Resource logical field identifiers", () => {
@@ -129,7 +139,7 @@ describe("report request contract alignment", () => {
         ]));
     });
 
-    it("rejects unsafe SQL execution metadata using the backend grammar", () => {
+    it("rejects legacy duplicated SQL execution metadata", () => {
         const errors = getReportValidationErrors({
             ...presentation,
             queryDefinition: {
@@ -147,9 +157,7 @@ describe("report request contract alignment", () => {
         });
 
         expect(errors).toEqual(expect.arrayContaining([
-            expect.stringContaining("source expression"),
-            expect.stringContaining("HAVING expression"),
-            expect.stringContaining("must be an execution column"),
+            expect.stringContaining('unknown property "execution"'),
         ]));
     });
 

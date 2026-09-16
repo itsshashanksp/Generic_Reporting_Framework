@@ -6,8 +6,8 @@ This inventory was verified against the backend documentation and the public val
 | --- | --- | --- | --- |
 | JSON `select` | Configured `request` | Same, with stricter validation | Supported |
 | SQL Resource `sql` | Legacy basename resource IDs | Migrated to discovered `reports/...` and `widgets/...` IDs | Supported; frontend never derives a file path |
-| SQL execution metadata | Not supported by frontend model | `columns`, constrained filter mappings, and `defaultSort` validated and copied to the SQL action | Supported in reviewed configuration |
-| SQL Resource runtime filters | UI filters appended against legacy registry metadata | Exact serialization plus reviewed output/source/HAVING logical mappings | Supported only for execution-declared fields |
+| SQL execution metadata | Not supported by frontend model | Derived at request time from normalized columns and filters | Infrastructure detail; backend validates it |
+| SQL Resource runtime filters | UI filters appended against legacy registry metadata | Exact serialization plus derived output/source logical mappings | Supported for normalized configured fields |
 | SQL Resource discovery | Assumed every resource was manually registered | Uses relative slash-separated IDs without extension | Backend-owned, frontend-consumed |
 | Comparison operators | Configurable | Configurable and validated | `=`, `!=`/`<>`, `>`, `<`, `>=`, `<=` |
 | LIKE operators | Contains/starts/ends | Added matching NOT LIKE variants | UI config maps wildcards; no raw SQL |
@@ -18,7 +18,7 @@ This inventory was verified against the backend documentation and the public val
 | Filter logic | Static `AND`/`OR` passed through | Validated | One flat top-level value; no nested groups; SQL Resource OR may not span configured locations |
 | Boolean values | Context supported, no dedicated control | Boolean filter control and serialization | Supported |
 | Text/number/date/select/multiselect | Configured controls | Retained | Supported |
-| Sorting | Report multi-sort; table first sort | Retained; SQL runtime/default sorts use execution columns | Runtime sort replaces `execution.defaultSort` |
+| Sorting | Report multi-sort; table first sort | Retained; both modes use top-level initial sort | Runtime grid sort replaces configured initial sort |
 | Pagination | Server paging; default 10 | Discovered SQL definitions provide deterministic default sorts where paging is used | Positive page/pageSize; SQL paging requires approved ordering |
 | SELECT aliases | Type support, shallow validation | Identifier validation | Supported in configured JSON |
 | DISTINCT / TOP (`limit`) | Passed through | Validated | Supported in configured JSON |
@@ -50,9 +50,9 @@ This inventory was verified against the backend documentation and the public val
 ## Verified backend discrepancies
 
 - `TIMEFROMPARTS` appears in the backend internal function list but cannot pass the public field-property validator because `fractions` is not accepted. The frontend does not expose it.
-- The discovered Item dashboard table now declares `cl_stock` and `stock_value` in frontend execution columns, so its displayed sortable fields no longer depend on the incomplete legacy registry allowlist.
+- The discovered Item dashboard table now declares `cl_stock` and `stock_value` as display columns, so the translator includes them in the constrained runtime envelope.
 - Backend query sorting defaults omitted directions to `ASC`; frontend-authored configuration requires an explicit direction for clarity and deterministic state restoration.
 
 ## Ownership rule
 
-The frontend never parses, generates, mutates, or executes SQL. SQL Resource mode sends a discovered logical ID, optional reviewed execution metadata, and runtime filter/sort/page values. The backend validates the metadata grammar, resolves the server-owned file, performs filter placement and parameterization, executes SQL Server, and returns the standard response.
+The frontend never parses, generates, mutates, or executes SQL. SQL Resource configuration stores a discovered logical ID and normalized presentation; the runtime derives constrained request metadata and adds filter/sort/page values. The backend validates the request, resolves the server-owned file, performs filter placement and parameterization, executes SQL Server, and returns the standard response.

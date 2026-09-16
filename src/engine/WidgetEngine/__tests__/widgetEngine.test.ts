@@ -17,18 +17,15 @@ describe("WidgetEngine", () => {
             queryDefinition: {
                 format: "sql",
                 resource: "widgets/item-dashboard-table",
-                execution: {
-                    columns: ["Item_Code"],
-                    defaultSort: [{ field: "Item_Code", direction: "ASC" }],
-                },
             },
             columns: [{ field: "Item_Code", header: "Item Code" }],
+            sort: [{ field: "Item_Code", direction: "ASC" }],
             filters: [],
         },
     });
 
-    it("discovers the shared production Item statistics definition", () => {
-        expect(getWidgetDefinitionIds()).toEqual(["item-dashboard-stats"]);
+    it("does not require standalone definitions when production widgets are inline", () => {
+        expect(getWidgetDefinitionIds()).toEqual([]);
     });
 
     it("loads reusable backend SQL resource definitions without parsing SQL", () => {
@@ -39,8 +36,8 @@ describe("WidgetEngine", () => {
         expect(registry["item-dashboard-table"].request).toMatchObject({
             execution: {
                 columns: ["Item_Code"],
-                defaultSort: [{ field: "Item_Code", direction: "ASC" }],
             },
+            sort: [{ field: "Item_Code", direction: "ASC" }],
         });
     });
 

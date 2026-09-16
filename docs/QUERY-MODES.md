@@ -17,14 +17,14 @@ Use top-level `request` with `action: "select"`. The request is sent to the Gene
       { "field": "o.id", "alias": "order_id" },
       { "field": "o.total", "alias": "total" }
     ],
-    "filters": [{ "field": "o.status", "operator": "=", "value": "OPEN" }],
-    "sort": [{ "field": "o.id", "direction": "DESC" }]
+    "filters": [{ "field": "o.status", "operator": "=", "value": "OPEN" }]
   },
   "columns": [
     { "field": "order_id", "header": "Order", "width": 120 },
     { "field": "total", "header": "Total" }
   ],
-  "filters": []
+  "filters": [],
+  "sort": [{ "field": "order_id", "direction": "DESC" }]
 }
 ```
 
@@ -36,7 +36,7 @@ The source requires `table`; `alias` is optional. `fields` must be non-empty and
 | `joins` | `{type, source:{table,alias?}, on:{left,operator:"=",right}}[]`; type is `INNER`, `LEFT`, or `RIGHT` |
 | `groupBy` | Non-empty field-name strings in an array |
 | `having` | `{function,field,operator,value}[]`; functions: `COUNT`, `SUM`, `AVG`, `MIN`, `MAX`, `STRING_AGG`; comparison operators only |
-| `sort` | `{field,direction}[]`, direction `ASC` or `DESC` |
+| `sort` | Query capability used internally; report/widget initial sorting is authored at the definition's top level |
 | `pagination` | `{page,pageSize}`, both positive integers |
 | `distinct` | boolean |
 | `limit` | positive integer |
@@ -55,14 +55,14 @@ Use `queryDefinition` with exactly this frontend shape:
   "title": "Monthly sales",
   "queryDefinition": {
     "format": "sql",
-    "resource": "widgets/bill-sales-month-wise",
-    "execution": {
-      "columns": ["Month", "Sales"],
-      "defaultSort": [{ "field": "Month", "direction": "DESC" }]
-    }
+    "resource": "widgets/bill-sales-month-wise"
   },
-  "columns": [{ "field": "month", "header": "Month" }],
-  "filters": []
+  "columns": [
+    { "field": "Month", "header": "Month" },
+    { "field": "Sales", "header": "Sales", "dataType": "number" }
+  ],
+  "filters": [],
+  "sort": [{ "field": "Month", "direction": "DESC" }]
 }
 ```
 
@@ -71,22 +71,18 @@ The resource is a slash-separated logical ID such as `reports/customer` or
 without `.sql`. Each segment matches `[A-Za-z0-9][A-Za-z0-9_-]*`. The frontend
 does not construct a path or inspect the file.
 
-`queryDefinition.execution` is copied to the API action only when runtime
-controls require it. Its exact optional members are:
+`queryDefinition` intentionally contains only `format` and `resource`.
+The loader translates the normalized definition into the backend SQL action:
 
-- `columns`: non-empty, case-insensitively unique output identifiers used to
-  validate output filters and sorting;
-- `filters`: logical names mapped to an optional constrained `expression`, an
-  `output`/`source`/`having` placement, and optional `integer-date` value type;
-- `defaultSort`: a non-empty list over declared execution columns.
+- top-level `columns` become constrained execution output columns;
+- a top-level filter not present in `columns` receives a constrained source
+  mapping using the same logical identifier;
+- top-level `sort` becomes the initial runtime sort;
+- top-level `filterLogic` becomes the backend-supported flat `AND`/`OR` value.
 
-Pagination requires an approved runtime sort or `execution.defaultSort`.
-Output mappings name a declared execution column, source mappings permit only
-an optionally qualified identifier, and HAVING mappings permit only
-COUNT/SUM/AVG/MIN/MAX over one identifier or `*`. This metadata is reviewed
-configuration, never runtime user input or arbitrary SQL.
-Optional `queryDefinition.filterLogic` is copied beside `execution` and selects
-the backend-supported flat `AND` or `OR` combination for applied filters.
+This translation is infrastructure, not a second authoring surface. Complex
+source/HAVING expressions and resource-specific coercions remain backend-owned
+capabilities and are not expressed by frontend presentation JSON.
 
 `queryDefinition.format: "json"` is not a supported JSON mode. Use top-level `request`.
 
@@ -96,7 +92,7 @@ the backend-supported flat `AND` or `OR` combination for applied filters.
 - Current grid sorting replaces configured `sort` after the user/grid state is established.
 - Enabled grid pagination supplies `pagination.page` and `pagination.pageSize`.
 - Disabling grid pagination stops the UI from adding pagination, but a manually authored `request.pagination` remains because the base request is spread first. Prefer `grid.pagination` for interactive reports.
-- SQL resource mode sends the same runtime fields beside `action`, `resource`, and copied `execution` metadata; the backend validates and interprets them.
+- SQL resource mode sends the same runtime fields beside `action`, `resource`, and derived `execution` metadata; the backend validates and interprets them.
 
 ## Deliberately unexposed backend actions
 

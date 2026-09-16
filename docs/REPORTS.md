@@ -16,7 +16,8 @@ The filter form applies only on **Search**. Sorting returns to page 1. Refresh b
 
 - Output column fields must match response object keys and be unique.
 - Include `filters: []` when no filters are needed.
-- Use top-level `request` for JSON mode or SQL `queryDefinition` with a discovered `reports/...` ID. Include reviewed `execution` metadata when filters, sorting, or pagination require it.
+- Use top-level `request` for JSON mode or minimal SQL `queryDefinition` with a discovered `reports/...` ID.
+- Define display fields in `columns`, controls in `filters`, and initial ordering in top-level `sort`; the loader translates these into the runtime request.
 - Prefer `grid.pagination` over embedding pagination in the base request.
 - A hidden column is excluded, not interactively restorable.
 - Configured grouping is a display contract for data already grouped by the backend.

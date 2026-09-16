@@ -7,7 +7,7 @@ Only implemented frontend behavior appears in this inventory. Backend capabiliti
 | Feature | Status | Current boundary |
 | --- | --- | --- |
 | JSON Query mode | Supported | Authored `select` requests using the public backend grammar |
-| SQL Resource mode | Supported | Discovered IDs plus reviewed execution metadata; no SQL text/path handling |
+| SQL Resource mode | Supported | Minimal discovered IDs plus derived request metadata; no SQL text/path handling |
 | Filters and operator mapping | Supported | Configured operator per field; no interactive operator builder |
 | Filter logic | Partially supported | Flat configured AND/OR; no nested groups or runtime logic editor |
 | Search | Partially supported | Search applies configured backend filters; no global multi-field search |
@@ -32,7 +32,7 @@ Only implemented frontend behavior appears in this inventory. Backend capabiliti
 ## Query
 
 - Validated JSON Query `select` configuration with fields/aliases, DISTINCT, limit, INNER/LEFT/RIGHT equality joins, flat filters, grouping, aggregate HAVING, sorting, pagination, supported functions, CASE, one-level arithmetic, filter subqueries, and one standard or recursive CTE.
-- Backend SQL Resource references using slash-separated discovered IDs, with validated execution columns, logical filter mappings, and default sorting where runtime controls require them.
+- Backend SQL Resource references using slash-separated discovered IDs; runtime execution columns/filter mappings are derived from normalized columns/filters, with initial sorting at top level.
 - A shared POST client, standard read-response validation, public error messages, and structured `ApiClientError` status/code/details.
 - In-memory five-minute successful-response caching, bounded eviction, and identical in-flight request deduplication.
 
@@ -79,7 +79,7 @@ Only implemented frontend behavior appears in this inventory. Backend capabiliti
 
 ## Unsupported frontend features
 
-- Raw SQL, SQL files, SQL parsing/generation/manipulation, resource registration, database paths, credentials, or placeholders. Reviewed configuration may declare only the backend-validated execution expression/placement grammar.
+- Raw SQL, SQL files, SQL parsing/generation/manipulation, resource registration, database paths, credentials, placeholders, or authored execution mappings.
 - Interactive nested filter groups, operator selection, global multi-field search, or AG Grid column-filter requests.
 - Interactive grouping, client aggregation, expandable group nodes, or grouping personalization.
 - Column chooser, runtime show/hide/reset, or persisted column layouts.

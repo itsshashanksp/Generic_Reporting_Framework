@@ -2,29 +2,12 @@
   "id": "item",
   "title": "Item Report",
   "description": "Displays all items.",
-
-  "queryDefinition": {
-    "format": "sql",
-    "resource": "reports/item",
-    "execution": {
-      "columns": [
-        "Item_Code",
-        "Item_Desc",
-        "Item_MRP"
-      ],
-      "filters": {
-        "UserName": {
-          "expression": "UserName",
-          "placement": "source"
-        }
-      },
-      "defaultSort": [
-        {
-          "field": "Item_Code",
-          "direction": "ASC"
-        }
-      ]
-    }
+  "request": {
+    "action": "select",
+    "source": {
+      "table": "ItemMasterTable"
+    },
+    "fields": ["Item_Code", "Item_Desc", "Item_MRP"]
   },
 
   "columns": [
@@ -38,7 +21,15 @@
     },
     {
       "field": "Item_MRP",
-      "header": "Item MRP"
+      "header": "Item MRP",
+      "dataType": "number"
+    }
+  ],
+
+  "sort": [
+    {
+      "field": "Item_Code",
+      "direction": "ASC"
     }
   ],
 
@@ -71,9 +62,7 @@
               "alias": "Frequency"
             }
           ],
-          "groupBy": [
-            "UserName"
-          ],
+          "groupBy": ["UserName"],
           "sort": [
             {
               "field": "Frequency",
@@ -93,12 +82,7 @@
     "pagination": {
       "enabled": true,
       "pageSize": 10,
-      "pageSizeOptions": [
-        10,
-        25,
-        50,
-        100
-      ]
+      "pageSizeOptions": [10, 25, 50, 100]
     },
     "rowSelection": "multiple"
   },
@@ -111,10 +95,7 @@
 
   "export": {
     "enabled": true,
-    "formats": [
-      "csv",
-      "excel"
-    ],
+    "formats": ["csv", "excel"],
     "filename": "item-report",
     "exportAll": true,
     "exportCurrentView": true
