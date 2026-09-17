@@ -5,6 +5,7 @@ import { AgGridReact } from "ag-grid-react";
 import { useGrid } from "../../engine/GridContext";
 
 import {
+    compareGridValues,
     defaultColumn,
     defaultGridOptions,
     gridTheme,
@@ -103,6 +104,7 @@ export default function GenericGrid({
                     ),
                     valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value),
                     dataType: undefined,
+                    comparator: (left: unknown, right: unknown) => compareGridValues(left, right),
                     ...getInitialSortState(group.field),
                 })),
                 ...aggregateColumns.map(aggregate => ({
@@ -123,6 +125,7 @@ export default function GenericGrid({
                     ),
                     valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value, "number"),
                     dataType: "number" as const,
+                    comparator: (left: unknown, right: unknown) => compareGridValues(left, right, "number"),
                     ...getInitialSortState(aggregate.alias ?? `${aggregate.function}_${aggregate.field}`),
                 })),
             ]
@@ -144,6 +147,7 @@ export default function GenericGrid({
                     ),
                     valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value, column.dataType),
                     dataType: column.dataType,
+                    comparator: (left: unknown, right: unknown) => compareGridValues(left, right, column.dataType),
                     ...getInitialSortState(column.field),
                 }));
     }, [columns, gridConfig.grouping, initialSort, rows]);
@@ -161,14 +165,11 @@ export default function GenericGrid({
         return [...rows].sort((left, right) => {
             const leftValue = left[mobileSort.field];
             const rightValue = right[mobileSort.field];
-            const numericLeft = Number(leftValue);
-            const numericRight = Number(rightValue);
-            const comparison = Number.isFinite(numericLeft) && Number.isFinite(numericRight)
-                ? numericLeft - numericRight
-                : String(leftValue ?? "").localeCompare(String(rightValue ?? ""), undefined, { numeric: true, sensitivity: "base" });
+            const dataType = mobileColumns.find(column => column.field === mobileSort.field)?.dataType;
+            const comparison = compareGridValues(leftValue, rightValue, dataType);
             return mobileSort.direction === "desc" ? -comparison : comparison;
         });
-    }, [mobileSort, rows]);
+    }, [mobileColumns, mobileSort, rows]);
 
     const usesClientPagination = gridConfig.pagination.enabled && !serverPagination;
     const clientTotalPages = Math.max(1, Math.ceil(mobileRows.length / mobileClientPageSize));

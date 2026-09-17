@@ -97,6 +97,15 @@ describe("GenericGrid shared configuration", () => {
         expect(screen.getByText("12,509.55")).toBeTruthy();
     });
 
+    it("passes the declared column type to the desktop grid comparator", () => {
+        const numericColumns = [{ field: "Amount", header: "Amount", dataType: "number" as const, visible: true }];
+        render(<GridProvider><GenericGrid rows={[{ Amount: "10" }, { Amount: "2" }]} columns={numericColumns} gridConfig={gridConfig} /></GridProvider>);
+        const props = agGridProps.mock.calls.at(-1)?.[0];
+        const comparator = props.columnDefs[0].comparator as (left: unknown, right: unknown) => number;
+
+        expect(["10", "2", "1"].sort(comparator)).toEqual(["1", "2", "10"]);
+    });
+
     it("renders null as an em dash without changing other falsy values", () => {
         const rows = [{ Code: null, Description: "" }];
         render(<GridProvider><GenericGrid rows={rows} columns={columns} gridConfig={gridConfig} /></GridProvider>);

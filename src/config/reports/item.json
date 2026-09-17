@@ -13,7 +13,8 @@
   "columns": [
     {
       "field": "Item_Code",
-      "header": "Item Code"
+      "header": "Item Code",
+      "dataType": "number"
     },
     {
       "field": "Item_Desc",
