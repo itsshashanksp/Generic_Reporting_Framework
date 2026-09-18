@@ -1,0 +1,310 @@
+{
+  "id": "receipts-dashboard",
+  "title": "Sales Receipts Dashboard",
+  "description": "Reports for Sales Receipts From Customers.",
+  "layout": {
+    "columns": 12,
+    "tabletColumns": 6,
+    "mobileColumns": 1
+  },
+  "autoRefresh": {
+    "enabled": false,
+    "interval": 30000
+  },
+  "filters": [
+    {
+      "field": "Bill_Date",
+      "label": "Purchase Date",
+      "type": "daterange",
+      "operator": "between"
+    }
+  ],
+  "widgets": [
+    {
+      "id": "daily-collection-summary",
+      "type": "table",
+      "title": "Daily Collection Summary",
+      "description": "Daily Collection Summary",
+      "width": 6,
+      "visible": true,
+      "position": {
+        "x": 0,
+        "y": 1
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/daily-collection-summary"
+      },
+      "columns": [
+        {
+          "field": "Date",
+          "header": "Date"
+        },
+        {
+          "field": "Receipt_Count",
+          "header": "No Of Bills",
+          "dataType": "number"
+        },
+        {
+          "field": "Total_Collection",
+          "header": "Total Collection",
+          "dataType": "number"
+        },
+        {
+          "field": "Total_Commission",
+          "header": "Total Commission",
+          "dataType": "number"
+        },
+        {
+          "field": "Bill_Date",
+          "header": "Bill Date",
+          "visible": false
+        }
+      ],
+      "sort": [
+        {
+          "field": "Bill_Date",
+          "direction": "DESC"
+        }
+      ],
+      "pageSize": 10,
+      "export": {
+        "enabled": true,
+        "formats": [
+          "csv",
+          "excel"
+        ],
+        "exportCurrentView": true,
+        "exportAll": true,
+        "filename": "daily-collection"
+      }
+    },
+    {
+      "id": "payment-mode-wise-collection",
+      "type": "table",
+      "title": "Payment Mode Wise Collection Summary",
+      "description": "Payment Mode Wise Collection Summary",
+      "width": 6,
+      "visible": true,
+      "position": {
+        "x": 6,
+        "y": 1
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/payment-mode-wise-collection"
+      },
+      "columns": [
+        {
+          "field": "Payment_Mode",
+          "header": "Payment Mode"
+        },
+        {
+          "field": "Date",
+          "header": "Date"
+        },
+        {
+          "field": "Receipt_Count",
+          "header": "No Of Bills",
+          "dataType": "number"
+        },
+        {
+          "field": "Total_Collection",
+          "header": "Total Collection",
+          "dataType": "number"
+        },
+        {
+          "field": "Average_Receipt",
+          "header": "Average Bill Amount",
+          "dataType": "number"
+        },
+        {
+          "field": "Bill_Date",
+          "header": "Bill Date",
+          "visible": false
+        }
+      ],
+      "sort": [
+        {
+          "field": "Bill_Date",
+          "direction": "DESC"
+        }
+      ],
+      "pageSize": 10,
+      "export": {
+        "enabled": true,
+        "formats": [
+          "csv",
+          "excel"
+        ],
+        "exportCurrentView": true,
+        "exportAll": true,
+        "filename": "payment-mode-wise-collection"
+      }
+    },
+    {
+      "id": "monthly-collection-trend",
+      "type": "table",
+      "title": "Monthly Collection Trend",
+      "description": "Monthly Collection Trend",
+      "width": 6,
+      "visible": true,
+      "position": {
+        "x": 0,
+        "y": 2
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/monthly-collection-trend"
+      },
+      "columns": [
+        {
+          "field": "Month",
+          "header": "Month"
+        },
+        {
+          "field": "Receipt_Count",
+          "header": "No Of Bills",
+          "dataType": "number"
+        },
+        {
+          "field": "Total_Collection",
+          "header": "Total Collection",
+          "dataType": "number"
+        }
+      ],
+      "sort": [
+        {
+          "field": "Month",
+          "direction": "DESC"
+        }
+      ],
+      "pageSize": 10,
+      "export": {
+        "enabled": true,
+        "formats": [
+          "csv",
+          "excel"
+        ],
+        "exportCurrentView": true,
+        "exportAll": true,
+        "filename": "monthly-collection-trend"
+      }
+    },
+    {
+      "id": "user-wise-day-wise-collection",
+      "type": "table",
+      "title": "User Wise Day Wise Collection",
+      "description": "User Wise Day Wise Collection",
+      "width": 6,
+      "visible": true,
+      "position": {
+        "x": 6,
+        "y": 2
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/user-wise-day-wise-collection"
+      },
+      "columns": [
+        {
+          "field": "UserName",
+          "header": "User Name"
+        },
+        {
+          "field": "Date",
+          "header": "Date"
+        },
+        {
+          "field": "Receipt_Count",
+          "header": "No Of Bills",
+          "dataType": "number"
+        },
+        {
+          "field": "Total_Collection",
+          "header": "Total Collection",
+          "dataType": "number"
+        },
+        {
+          "field": "Average_Receipt",
+          "header": "Average Bill Amount",
+          "dataType": "number"
+        },
+        {
+          "field": "Bill_Date",
+          "header": "Bill Date",
+          "visible": false
+        }
+      ],
+      "sort": [
+        {
+          "field": "Bill_Date",
+          "direction": "DESC"
+        }
+      ],
+      "pageSize": 10,
+      "export": {
+        "enabled": true,
+        "formats": [
+          "csv",
+          "excel"
+        ],
+        "exportCurrentView": true,
+        "exportAll": true,
+        "filename": "user-wise-day-wise-collection"
+      }
+    },
+    {
+      "id": "top-10-largest-receipts",
+      "type": "table",
+      "title": "Top 10 Largest Bill Collection",
+      "description": "Top 10 Largest Bill Collection",
+      "width": 6,
+      "visible": true,
+      "position": {
+        "x": 0,
+        "y": 3
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/top-10-largest-receipts"
+      },
+      "columns": [
+        {
+          "field": "Bill_No",
+          "header": "Bill No"
+        },
+        {
+          "field": "Payment_Mode",
+          "header": "Payment Mode"
+        },
+        {
+          "field": "Amount",
+          "header": "Bill Amount",
+          "dataType": "number"
+        },
+        {
+          "field": "UserName",
+          "header": "User Name"
+        }
+      ],
+      "sort": [
+        {
+          "field": "Amount",
+          "direction": "DESC"
+        }
+      ],
+      "pageSize": 10,
+      "export": {
+        "enabled": true,
+        "formats": [
+          "csv",
+          "excel"
+        ],
+        "exportCurrentView": true,
+        "exportAll": true,
+        "filename": "top-10-largest-receipts"
+      }
+    }
+  ]
+}

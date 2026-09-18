@@ -1,0 +1,514 @@
+{
+  "id": "sales-dashboard",
+  "title": "Sales Dashboard",
+  "description": "Month-wise sales, category-wise sales for the current financial year.",
+  "layout": {
+    "columns": 12,
+    "tabletColumns": 6,
+    "mobileColumns": 1
+  },
+  "autoRefresh": {
+    "enabled": false,
+    "interval": 30000
+  },
+  "filters": [
+    {
+      "field": "Bill_Date",
+      "label": "Start Date",
+      "type": "daterange",
+      "operator": "between"
+    }
+  ],
+  "widgets": [
+    {
+      "id": "sales-month-wise",
+      "type": "table",
+      "title": "Sales Month Wise (In Lakhs)",
+      "description": "Sales grouped by month for the current financial year.",
+      "width": 6,
+      "visible": true,
+      "position": {
+        "x": 0,
+        "y": 1
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/sales-month-wise"
+      },
+      "columns": [
+        {
+          "field": "Month",
+          "header": "Month"
+        },
+        {
+          "field": "Sales",
+          "header": "Sales",
+          "dataType": "number"
+        }
+      ],
+      "sort": [
+        {
+          "field": "Month",
+          "direction": "DESC"
+        }
+      ],
+      "pageSize": 10,
+      "export": {
+        "enabled": true,
+        "formats": [
+          "csv",
+          "excel"
+        ],
+        "exportCurrentView": true,
+        "exportAll": true,
+        "filename": "sales-month-wise"
+      },
+      "drillDown": {
+        "enabled": true,
+        "next": {
+          "id": "sales-month-category-detail",
+          "type": "table",
+          "title": "Sales by Month and Category",
+          "description": "Category totals for the selected month.",
+          "queryDefinition": {
+            "format": "sql",
+            "resource": "widgets/category-sales-month-wise"
+          },
+          "filters": [
+            { "field": "Month", "label": "Month", "type": "text", "operator": "equals" }
+          ],
+          "columns": [
+            { "field": "Month", "header": "Month" },
+            { "field": "Category", "header": "Category" },
+            { "field": "Sales", "header": "Sales", "dataType": "number" }
+          ],
+          "pageSize": 10,
+          "drillDown": {
+            "enabled": true,
+            "next": {
+              "id": "sales-month-category-ranking",
+              "type": "table",
+              "title": "Top Sales by Month and Category",
+              "description": "Ranked category rows for the selected month and category.",
+              "queryDefinition": {
+                "format": "sql",
+                "resource": "widgets/TOP-10-month-Wise-Category-wise"
+              },
+              "filters": [
+                { "field": "Month", "label": "Month", "type": "text", "operator": "equals" },
+                { "field": "Category", "label": "Category", "type": "text", "operator": "equals" }
+              ],
+              "columns": [
+                { "field": "Month", "header": "Month" },
+                { "field": "Category", "header": "Category" },
+                { "field": "Sales", "header": "Sales", "dataType": "number" }
+              ],
+              "pageSize": 10
+            },
+            "mappings": [
+              {
+                "sourceField": "Category",
+                "contextField": "selectedCategory",
+                "filter": { "field": "Category", "label": "Category", "type": "text", "operator": "equals" }
+              }
+            ]
+          }
+        },
+        "mappings": [
+          {
+            "sourceField": "Month",
+            "contextField": "selectedMonth",
+            "filter": { "field": "Month", "label": "Month", "type": "text", "operator": "equals" }
+          }
+        ]
+      }
+    },
+    {
+      "id": "top-10-categories",
+      "type": "table",
+      "title": "Top 10 Category Sales (In Lakhs)",
+      "description": "Ten highest selling item categories for the financial year.",
+      "width": 6,
+      "visible": true,
+      "position": {
+        "x": 6,
+        "y": 1
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/top-10-categories-sales"
+      },
+      "columns": [
+        {
+          "field": "Category",
+          "header": "Category"
+        },
+        {
+          "field": "Sales",
+          "header": "Sales",
+          "dataType": "number"
+        }
+      ],
+      "sort": [
+        {
+          "field": "Sales",
+          "direction": "DESC"
+        }
+      ],
+      "pageSize": 10,
+      "export": {
+        "enabled": true,
+        "formats": [
+          "csv",
+          "excel"
+        ],
+        "exportCurrentView": true,
+        "exportAll": true,
+        "filename": "top-10-categories"
+      }
+    },
+    {
+      "id": "top-10-month-wise-category-wise",
+      "type": "table",
+      "title": "Top 10 Month Wise Category Wise Sales (In Lakhs)",
+      "description": "Top 10 category sales by month for the financial year.",
+      "width": 6,
+      "visible": true,
+      "position": {
+        "x": 0,
+        "y": 2
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/TOP-10-month-Wise-Category-wise"
+      },
+      "columns": [
+        {
+          "field": "Month",
+          "header": "Month"
+        },
+        {
+          "field": "Category",
+          "header": "Category"
+        },
+        {
+          "field": "Sales",
+          "header": "Sales",
+          "dataType": "number"
+        }
+      ],
+      "sort": [
+        {
+          "field": "Month",
+          "direction": "ASC"
+        },
+        {
+          "field": "Sales",
+          "direction": "DESC"
+        }
+      ],
+      "pageSize": 10,
+      "export": {
+        "enabled": true,
+        "formats": [
+          "csv",
+          "excel"
+        ],
+        "exportCurrentView": true,
+        "exportAll": true,
+        "filename": "top-10-month-wise-category-wise"
+      }
+    },
+    {
+      "id": "category-sales-month-wise",
+      "type": "table",
+      "title": "Month Wise / Category Wise Sales (In Lakhs)",
+      "description": "Category sales by month for the current financial year.",
+      "width": 6,
+      "visible": true,
+      "position": {
+        "x": 6,
+        "y": 2
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/category-sales-month-wise"
+      },
+      "columns": [
+        {
+          "field": "Month",
+          "header": "Month"
+        },
+        {
+          "field": "Category",
+          "header": "Category"
+        },
+        {
+          "field": "Sales",
+          "header": "Sales",
+          "dataType": "number"
+        }
+      ],
+      "sort": [
+        {
+          "field": "Month",
+          "direction": "ASC"
+        },
+        {
+          "field": "Sales",
+          "direction": "DESC"
+        }
+      ],
+      "pageSize": 10,
+      "export": {
+        "enabled": true,
+        "formats": [
+          "csv",
+          "excel"
+        ],
+        "exportCurrentView": true,
+        "exportAll": true,
+        "filename": "category-sales-month-wise"
+      }
+    },
+    {
+      "id": "sales-day-wise",
+      "type": "table",
+      "title": "Day Wise Sales",
+      "description": "Day Wise Sales",
+      "width": 6,
+      "visible": true,
+      "position": {
+        "x": 0,
+        "y": 3
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/sales-day-wise"
+      },
+      "columns": [
+        {
+          "field": "Date",
+          "header": "Date"
+        },
+        {
+          "field": "Sales",
+          "header": "Sales",
+          "dataType": "number"
+        },
+        {
+          "field": "Bill_Date",
+          "header": "Bill Date",
+          "visible": false
+        }
+      ],
+      "sort": [
+        {
+          "field": "Bill_Date",
+          "direction": "DESC"
+        }
+      ],
+      "pageSize": 10,
+      "export": {
+        "enabled": true,
+        "formats": [
+          "csv",
+          "excel"
+        ],
+        "exportCurrentView": true,
+        "exportAll": true,
+        "filename": "sales-day-wise"
+      }
+    },
+    {
+      "id": "date-wise-gst-wise-sales",
+      "type": "table",
+      "title": "Date Wise GST Wise Sales",
+      "description": "Date Wise GST Wise Sales",
+      "width": 6,
+      "visible": true,
+      "position": {
+        "x": 6,
+        "y": 3
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/date-wise-gst-wise-sales"
+      },
+      "columns": [
+        {
+          "field": "Date",
+          "header": "Date"
+        },
+        {
+          "field": "GST_Per",
+          "header": "GST %",
+          "dataType": "number"
+        },
+        {
+          "field": "SalesOnAmt",
+          "header": "Sales Amount",
+          "dataType": "number"
+        },
+        {
+          "field": "GST_Amount",
+          "header": "GST Amount",
+          "dataType": "number"
+        },
+        {
+          "field": "TotalSalesAmount",
+          "header": "Total Sales Amount",
+          "dataType": "number"
+        },
+        {
+          "field": "Bill_Date",
+          "header": "Bill Date",
+          "visible": false
+        }
+      ],
+      "sort": [
+        {
+          "field": "Bill_Date",
+          "direction": "DESC"
+        },
+        {
+          "field": "GST_Per",
+          "direction": "ASC"
+        }
+      ],
+      "pageSize": 10,
+      "export": {
+        "enabled": true,
+        "formats": [
+          "csv",
+          "excel"
+        ],
+        "exportCurrentView": true,
+        "exportAll": true,
+        "filename": "date-wise-gst-wise-sales"
+      }
+    },
+    {
+      "id": "gst-wise-sales",
+      "type": "table",
+      "title": "GST Wise Sales",
+      "description": "GST Wise Sales",
+      "width": 6,
+      "visible": true,
+      "position": {
+        "x": 0,
+        "y": 4
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/gst-wise-sales"
+      },
+      "columns": [
+        {
+          "field": "GST_Per",
+          "header": "GST %",
+          "dataType": "number"
+        },
+        {
+          "field": "SalesOnAmt",
+          "header": "Sales Amount",
+          "dataType": "number"
+        },
+        {
+          "field": "GST_Amount",
+          "header": "GST Amount",
+          "dataType": "number"
+        },
+        {
+          "field": "TotalSalesAmount",
+          "header": "Total Sales Amount",
+          "dataType": "number"
+        }
+      ],
+      "sort": [
+        {
+          "field": "GST_Per",
+          "direction": "ASC"
+        }
+      ],
+      "pageSize": 10,
+      "export": {
+        "enabled": true,
+        "formats": [
+          "csv",
+          "excel"
+        ],
+        "exportCurrentView": true,
+        "exportAll": true,
+        "filename": "gst-wise-sales"
+      }
+    },
+    {
+      "id": "top-50-item-wise-sales",
+      "type": "table",
+      "title": "Top 50 Item Wise Sales",
+      "description": "Top 50 Item Wise Sales",
+      "width": 6,
+      "visible": true,
+      "position": {
+        "x": 6,
+        "y": 4
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/top-50-item-wise-sales"
+      },
+      "columns": [
+        {
+          "field": "Item_Code",
+          "header": "Item Code"
+        },
+        {
+          "field": "Item_Desc",
+          "header": "Item Description"
+        },
+        {
+          "field": "Sales",
+          "header": "Sales",
+          "dataType": "number"
+        }
+      ],
+      "sort": [
+        {
+          "field": "Sales",
+          "direction": "DESC"
+        }
+      ],
+      "pageSize": 10,
+      "export": {
+        "enabled": true,
+        "formats": [
+          "csv",
+          "excel"
+        ],
+        "exportCurrentView": true,
+        "exportAll": true,
+        "filename": "top-50-item-wise-sales"
+      }
+    },
+    {
+      "id": "total-sales",
+      "type": "stat",
+      "title": "Total Sales (In Lakhs)",
+      "description": "Total sales for the current financial year.",
+      "width": 4,
+      "height": 175,
+      "visible": true,
+      "position": {
+        "x": 0,
+        "y": 5
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/total-sales"
+      },
+      "valueField": "TotalSales",
+      "format": "currency"
+    }
+  ]
+}

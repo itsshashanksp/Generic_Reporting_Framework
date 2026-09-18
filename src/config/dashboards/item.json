@@ -204,28 +204,26 @@
       "valueField": "MaximumSP",
       "format": "currency"
     },
-
     {
-      "id": "stock-value",
-      "type": "stat",
-      "title": "Stock Value",
-      "description": "Stock value of items matching the selected filters.",
-      "width": 4,
-      "height": 175,
-      "visible": true,
+  "id": "stock-value",
+  "type": "chart",
+  "title": "Stock Value by Category",
+  "description": "Stock value by item category.",
+  "width": 4,
+  "height": 350,
+  "visible": true,
+  "position": {
+    "x": 0,
+    "y": 3
+  },
+  "queryDefinition": {
+    "format": "sql",
+    "resource": "widgets/item-stock-value-by-category"
+  },
+  "xField": "Category",
+  "yField": "StockValue",
+  "chartType": "pie"
+}
 
-      "position": {
-        "x": 0,
-        "y": 3
-      },
-
-      "queryDefinition": {
-        "format": "sql",
-        "resource": "widgets/item-dashboard-stats"
-      },
-
-      "valueField": "StockValue",
-      "format": "currency"
-    }
   ]
 }

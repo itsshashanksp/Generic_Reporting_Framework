@@ -1,14 +1,35 @@
 [
   {
     "id": "dashboard",
-    "title": "Dashboard",
+    "title": "Item Dashboard",
     "icon": "dashboard",
     "dashboardId": "item-dashboard",
     "visible": true
   },
   {
     "id": "dashboard2",
-    "title": "Dashboard",
+    "title": "Sales Dashboard",
+    "icon": "dashboard",
+    "dashboardId": "sales-dashboard",
+    "visible": true
+  },
+  {
+    "id": "dashboard3",
+    "title": "Sales Receipts Dashboard",
+    "icon": "dashboard",
+    "dashboardId": "receipts-dashboard",
+    "visible": true
+  },
+  {
+    "id": "dashboard4",
+    "title": "Purchase Dashboard",
+    "icon": "dashboard",
+    "dashboardId": "purchase-dashboard",
+    "visible": true
+  },
+  {
+    "id": "dashboard5",
+    "title": "Bill Dashboard",
     "icon": "dashboard",
     "dashboardId": "bill-dashboard",
     "visible": true

@@ -1,6 +1,6 @@
 {
   "id": "bill-dashboard",
-  "title": "Sales & Purchase Dashboard",
+  "title": "Bill Dashboard",
   "description": "Month-wise sales, category-wise sales and month-wise purchases for the current financial year.",
   "layout": {
     "columns": 12,

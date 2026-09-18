@@ -1,0 +1,131 @@
+{
+  "id": "purchase-dashboard",
+  "title": "Purchase Dashboard",
+  "description": "Purchases Dashboard for the current financial year.",
+  "layout": {
+    "columns": 12,
+    "tabletColumns": 6,
+    "mobileColumns": 1
+  },
+  "autoRefresh": {
+    "enabled": false,
+    "interval": 30000
+  },
+  "filters": [
+    {
+      "field": "GIN_Date",
+      "label": "Purchase Date",
+      "type": "daterange",
+      "operator": "between"
+    }
+  ],
+  "widgets": [
+    {
+      "id": "purchases-month-wise",
+      "type": "table",
+      "title": "Purchases Month Wise (In Lakhs)",
+      "description": "Purchases grouped by month for the current financial year.",
+      "width": 6,
+      "visible": true,
+      "position": {
+        "x": 0,
+        "y": 1
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/purchases-month-wise"
+      },
+      "columns": [
+        {
+          "field": "Month",
+          "header": "Month"
+        },
+        {
+          "field": "Purchases",
+          "header": "Purchases",
+          "dataType": "number"
+        }
+      ],
+      "sort": [
+        {
+          "field": "Month",
+          "direction": "DESC"
+        }
+      ],
+      "pageSize": 10,
+      "export": {
+        "enabled": true,
+        "formats": [
+          "csv",
+          "excel"
+        ],
+        "exportCurrentView": true,
+        "exportAll": true,
+        "filename": "purchases-month-wise"
+      }
+    },
+    {
+      "id": "purchases-day-wise",
+      "type": "table",
+      "title": "Purchases Day Wise",
+      "description": "Purchases grouped by Date for the current financial year.",
+      "width": 6,
+      "visible": true,
+      "position": {
+        "x": 6,
+        "y": 1
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/purchases-day-wise"
+      },
+      "columns": [
+        {
+          "field": "Date",
+          "header": "Date"
+        },
+        {
+          "field": "Purchases",
+          "header": "Purchases",
+          "dataType": "number"
+        }
+      ],
+      "sort": [
+        {
+          "field": "Date",
+          "direction": "DESC"
+        }
+      ],
+      "pageSize": 10,
+      "export": {
+        "enabled": true,
+        "formats": [
+          "csv",
+          "excel"
+        ],
+        "exportCurrentView": true,
+        "exportAll": true,
+        "filename": "purchases-day-wise"
+      }
+    },
+    {
+      "id": "total-purchases",
+      "type": "stat",
+      "title": "Total Purchases (In Lakhs)",
+      "description": "Total purchases for the current financial year.",
+      "width": 4,
+      "height": 175,
+      "visible": true,
+      "position": {
+        "x": 0,
+        "y": 2
+      },
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/total-purchases"
+      },
+      "valueField": "TotalPurchases",
+      "format": "currency"
+    }
+  ]
+}
