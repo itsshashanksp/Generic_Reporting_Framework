@@ -5,10 +5,14 @@ import Layout from "../components/Layout/Layout";
 import Dashboard from "../pages/Dashboard";
 import ReportViewer from "../pages/ReportViewer";
 import DashboardViewer from "../pages/DashboardViewer";
+import Setup from "../pages/Setup";
+import ErrorState from "../components/Common/Error";
+import Loading from "../components/Common/Loading";
 import menu from "../config/menu.json";
 import { getDashboardIds } from "../engine/DashboardEngine";
 import { getFirstDashboardRoute, loadNavigation } from "../engine/NavigationEngine";
 import { getReportIds } from "../engine/ReportEngine/reportLoader";
+import { useSetup } from "../setup";
 
 const homeRoute = getFirstDashboardRoute(loadNavigation(menu, {
     reportIds: getReportIds(),
@@ -16,38 +20,60 @@ const homeRoute = getFirstDashboardRoute(loadNavigation(menu, {
 }));
 
 export default function AppRouter() {
+    return (
+        <BrowserRouter>
+            <ApplicationRoutes />
+        </BrowserRouter>
+    );
+}
+
+export function ApplicationRoutes() {
+    const { state, refresh } = useSetup();
+
+    if (state.status === "loading") {
+        return <div className="setup-page"><Loading label="Checking application setup…" /></div>;
+    }
+    if (state.status === "error") {
+        return (
+            <div className="setup-page">
+                <ErrorState
+                    title="Unable to check application setup"
+                    message={state.error}
+                    onRetry={() => void refresh()}
+                />
+            </div>
+        );
+    }
+    if (state.status === "required") {
+        return (
+            <Routes>
+                <Route path="/setup" element={<Setup />} />
+                <Route path="*" element={<Navigate to="/setup" replace />} />
+            </Routes>
+        );
+    }
 
     return (
+        <Routes>
+            <Route path="/setup" element={<Navigate to="/" replace />} />
+            <Route element={<Layout />}>
+                <Route
+                    path="/"
+                    element={homeRoute
+                        ? <Navigate to={homeRoute} replace />
+                        : <Dashboard dashboardId="item-dashboard" />}
+                />
 
-        <BrowserRouter>
+                <Route
+                    path="/dashboard/:dashboardId"
+                    element={<DashboardViewer />}
+                />
 
-            <Routes>
-
-                <Route element={<Layout />}>
-
-                    <Route
-                        path="/"
-                        element={homeRoute
-                            ? <Navigate to={homeRoute} replace />
-                            : <Dashboard dashboardId="item-dashboard" />}
-                    />
-
-                    <Route
-                        path="/dashboard/:dashboardId"
-                        element={<DashboardViewer />}
-                    />
-
-                    <Route
-                        path="/report/:reportId"
-                        element={<ReportViewer />}
-                    />
-
-                </Route>
-
-            </Routes>
-
-        </BrowserRouter>
-
+                <Route
+                    path="/report/:reportId"
+                    element={<ReportViewer />}
+                />
+            </Route>
+        </Routes>
     );
-
 }
