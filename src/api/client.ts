@@ -1,6 +1,7 @@
 import type { ApiError, ApiResponse } from "../types/api";
 
 const API_URL = import.meta.env.VITE_API_URL;
+const API_CREDENTIALS: RequestCredentials = "same-origin";
 
 export class ApiClientError extends Error {
     readonly status: number;
@@ -21,6 +22,7 @@ export async function apiClient(
     options: RequestInit = {}
 ): Promise<ApiResponse> {
     const response = await fetch(API_URL, {
+        credentials: API_CREDENTIALS,
         ...options,
         method: "POST",
         headers: {

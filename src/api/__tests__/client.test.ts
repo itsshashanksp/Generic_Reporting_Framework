@@ -6,14 +6,18 @@ describe("apiClient", () => {
     afterEach(() => vi.unstubAllGlobals());
 
     it("accepts the backend standard query response", async () => {
-        vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+        const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
             success: true,
             message: "Data Loaded Successfully",
             data: [{ Item_Code: "A1" }],
             meta: { page: 1, pageSize: 10, totalRows: 1, rowsReturned: 1, executionTime: 2.4 },
-        }), { status: 200, headers: { "Content-Type": "application/json" } })));
+        }), { status: 200, headers: { "Content-Type": "application/json" } }));
+        vi.stubGlobal("fetch", fetchMock);
 
         await expect(apiClient({ action: "sql", resource: "reports/item" })).resolves.toMatchObject({ success: true });
+        expect(fetchMock).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+            credentials: "same-origin",
+        }));
     });
 
     it("preserves backend error code, details, and status", async () => {
