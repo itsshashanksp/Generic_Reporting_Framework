@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, ChevronRight, FileBarChart, FolderKanban, LayoutDashboard, Menu, PanelLeftClose, PanelLeftOpen, Settings, UserRound, X } from "lucide-react";
+import { ChevronDown, ChevronRight, FileBarChart, FolderKanban, LayoutDashboard, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, UserRound, X } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 
 import menu from "../../config/menu.json";
@@ -7,6 +7,7 @@ import { getNavigationRoute, loadNavigation } from "../../engine/NavigationEngin
 import { getReportIds } from "../../engine/ReportEngine/reportLoader";
 import { getDashboardIds } from "../../engine/DashboardEngine";
 import type { NavigationIcon, NavigationItem } from "../../types/navigation";
+import { useAuth } from "../../auth";
 
 const SIDEBAR_STORAGE_KEY = "generic-report-sidebar-collapsed";
 const REPORTS_STORAGE_KEY = "generic-report-sidebar-reports-expanded";
@@ -24,7 +25,10 @@ const icons: Record<NavigationIcon, typeof LayoutDashboard> = {
 
 export default function Sidebar({ items = configuredItems }: { items?: NavigationItem[] }) {
     const location = useLocation();
+    const { state: authentication, logout } = useAuth();
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [logoutError, setLogoutError] = useState("");
+    const [loggingOut, setLoggingOut] = useState(false);
     const [collapsed, setCollapsed] = useState(() => {
         try {
             return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
@@ -106,6 +110,18 @@ export default function Sidebar({ items = configuredItems }: { items?: Navigatio
     const visibleItems = items
         .filter(item => item.visible !== false)
         .filter(item => !item.children || item.children.some(child => child.visible !== false));
+
+    const handleLogout = async () => {
+        setLogoutError("");
+        setLoggingOut(true);
+        try {
+            await logout();
+        } catch {
+            setLogoutError("Unable to sign out. Please try again.");
+        } finally {
+            setLoggingOut(false);
+        }
+    };
 
     return (
         <>
@@ -246,6 +262,27 @@ export default function Sidebar({ items = configuredItems }: { items?: Navigatio
 
             })}
             </div>
+
+            {authentication.status === "authenticated" && (
+                <div className="app-sidebar__account">
+                    <div className="app-sidebar__identity" title={authentication.user.username}>
+                        <UserRound aria-hidden="true" />
+                        <span className="app-sidebar__label">{authentication.user.username}</span>
+                    </div>
+                    <button
+                        type="button"
+                        className="app-sidebar__logout"
+                        title={collapsed && !mobileOpen ? "Sign out" : undefined}
+                        aria-label="Sign out"
+                        disabled={loggingOut}
+                        onClick={() => void handleLogout()}
+                    >
+                        <LogOut aria-hidden="true" />
+                        <span className="app-sidebar__label">{loggingOut ? "Signing out…" : "Sign out"}</span>
+                    </button>
+                    {logoutError && <p className="app-sidebar__account-error" role="alert">{logoutError}</p>}
+                </div>
+            )}
 
         </nav>
         </>

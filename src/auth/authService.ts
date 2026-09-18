@@ -1,4 +1,31 @@
 import type { AuthSessionSnapshot } from "./authTypes";
+import { executeRequest } from "../api/request";
+
+export async function getCurrentSession(signal?: AbortSignal): Promise<AuthSessionSnapshot> {
+    const response = await executeRequest({ action: "auth.session" }, { signal });
+    return parseSessionData(response.data);
+}
+
+export async function login(
+    username: string,
+    password: string,
+    signal?: AbortSignal
+): Promise<AuthSessionSnapshot> {
+    const response = await executeRequest({ action: "auth.login", username, password }, { signal });
+    return parseSessionData(response.data);
+}
+
+export async function logout(signal?: AbortSignal): Promise<AuthSessionSnapshot> {
+    const response = await executeRequest({ action: "auth.logout" }, { signal });
+    return parseSessionData(response.data);
+}
+
+function parseSessionData(data: Record<string, unknown>[]): AuthSessionSnapshot {
+    if (data.length !== 1) {
+        throw new Error("The API returned an invalid authentication response.");
+    }
+    return parseAuthSessionSnapshot(data[0]);
+}
 
 /** Validate the identity payload returned by a future backend session endpoint. */
 export function parseAuthSessionSnapshot(value: unknown): AuthSessionSnapshot {
@@ -7,10 +34,11 @@ export function parseAuthSessionSnapshot(value: unknown): AuthSessionSnapshot {
     }
 
     if (value.authenticated === false) {
-        if (Object.keys(value).some(key => key !== "authenticated")) {
+        if (!("user" in value) || value.user !== null
+            || Object.keys(value).some(key => key !== "authenticated" && key !== "user")) {
             throw new Error("The API returned an invalid authentication response.");
         }
-        return { authenticated: false };
+        return { authenticated: false, user: null };
     }
     if (value.authenticated !== true || !("user" in value)
         || Object.keys(value).some(key => key !== "authenticated" && key !== "user")

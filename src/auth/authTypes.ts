@@ -9,5 +9,5 @@ export type AuthState =
     | { status: "authenticated"; user: AuthUser };
 
 export type AuthSessionSnapshot =
-    | { authenticated: false }
+    | { authenticated: false; user: null }
     | { authenticated: true; user: AuthUser };

@@ -16,7 +16,7 @@ describe("apiClient", () => {
 
         await expect(apiClient({ action: "sql", resource: "reports/item" })).resolves.toMatchObject({ success: true });
         expect(fetchMock).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-            credentials: "same-origin",
+            credentials: "include",
         }));
     });
 

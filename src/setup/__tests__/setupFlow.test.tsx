@@ -17,7 +17,8 @@ vi.mock("../../pages/ReportViewer", () => ({ default: () => <div>Report applicat
 
 import { ApplicationRoutes } from "../../router/AppRouter";
 import { ApiClientError } from "../../api/client";
-import { SetupProvider } from "../SetupContext";
+import { SetupProvider, useSetup } from "../SetupContext";
+import { AuthProvider } from "../../auth";
 
 function setupResponse(initialized: boolean) {
     return {
@@ -28,12 +29,30 @@ function setupResponse(initialized: boolean) {
     };
 }
 
+function sessionResponse(authenticated = false) {
+    return {
+        success: true,
+        message: "OK",
+        data: [authenticated
+            ? { authenticated: true, user: { username: "admin", isAdmin: true } }
+            : { authenticated: false, user: null }],
+        meta: { page: null, pageSize: null, totalRows: 1, rowsReturned: 1, executionTime: null },
+    };
+}
+
+function SetupAwareAuth({ children }: { children: React.ReactNode }) {
+    const { state } = useSetup();
+    return <AuthProvider enabled={state.status === "complete"}>{children}</AuthProvider>;
+}
+
 function renderFlow(path = "/") {
     return render(
         <SetupProvider>
-            <MemoryRouter initialEntries={[path]}>
-                <ApplicationRoutes />
-            </MemoryRouter>
+            <SetupAwareAuth>
+                <MemoryRouter initialEntries={[path]}>
+                    <ApplicationRoutes />
+                </MemoryRouter>
+            </SetupAwareAuth>
         </SetupProvider>
     );
 }
@@ -55,28 +74,31 @@ describe("first-time setup flow", () => {
     });
 
     it("does not show setup after initialization", async () => {
-        executeRequestMock.mockResolvedValue(setupResponse(true));
+        executeRequestMock
+            .mockResolvedValueOnce(setupResponse(true))
+            .mockResolvedValueOnce(sessionResponse());
         renderFlow("/setup");
-        expect(await screen.findByText("Dashboard application")).not.toBeNull();
+        expect(await screen.findByRole("heading", { name: "Sign in" })).not.toBeNull();
         expect(screen.queryByRole("heading", { name: "Application setup" })).toBeNull();
     });
 
-    it("submits the first administrator and transitions to the application", async () => {
+    it("submits the first administrator and transitions to login", async () => {
         executeRequestMock
             .mockResolvedValueOnce(setupResponse(false))
-            .mockResolvedValueOnce(setupResponse(true));
+            .mockResolvedValueOnce(setupResponse(true))
+            .mockResolvedValueOnce(sessionResponse());
         renderFlow("/setup");
         await screen.findByRole("heading", { name: "Application setup" });
         await completeForm();
 
-        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(2));
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(3));
         expect(executeRequestMock.mock.calls[1][0]).toEqual({
             action: "setup.createAdmin",
             username: "First.Admin",
             password: "a-secure-password",
             passwordConfirmation: "a-secure-password",
         });
-        expect(await screen.findByText("Dashboard application")).not.toBeNull();
+        expect(await screen.findByRole("heading", { name: "Sign in" })).not.toBeNull();
     });
 
     it("rejects mismatched confirmation before sending the password", async () => {
@@ -104,5 +126,55 @@ describe("first-time setup flow", () => {
         await screen.findByRole("heading", { name: "Application setup" });
         await completeForm();
         expect((await screen.findByRole("alert")).textContent).toContain("Username is invalid.");
+    });
+
+    it("validates empty login credentials without sending them", async () => {
+        executeRequestMock
+            .mockResolvedValueOnce(setupResponse(true))
+            .mockResolvedValueOnce(sessionResponse());
+        renderFlow("/login");
+        await screen.findByRole("heading", { name: "Sign in" });
+
+        fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+        expect((await screen.findByRole("alert")).textContent).toBe("Username and password are required.");
+        expect(executeRequestMock).toHaveBeenCalledTimes(2);
+    });
+
+    it("logs in and enters the application", async () => {
+        executeRequestMock
+            .mockResolvedValueOnce(setupResponse(true))
+            .mockResolvedValueOnce(sessionResponse())
+            .mockResolvedValueOnce(sessionResponse(true));
+        renderFlow("/login");
+        await screen.findByRole("heading", { name: "Sign in" });
+
+        fireEvent.change(screen.getByLabelText("Username"), { target: { value: " Administrator " } });
+        fireEvent.change(screen.getByLabelText("Password"), { target: { value: "private-password" } });
+        fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+
+        expect(await screen.findByText("Dashboard application")).not.toBeNull();
+        expect(executeRequestMock.mock.calls[2][0]).toEqual({
+            action: "auth.login",
+            username: "Administrator",
+            password: "private-password",
+        });
+    });
+
+    it("shows the generic backend error when login fails", async () => {
+        executeRequestMock
+            .mockResolvedValueOnce(setupResponse(true))
+            .mockResolvedValueOnce(sessionResponse())
+            .mockRejectedValueOnce(new ApiClientError("Invalid username or password.", 401, {
+                code: "INVALID_CREDENTIALS",
+                details: [],
+            }));
+        renderFlow("/login");
+        await screen.findByRole("heading", { name: "Sign in" });
+
+        fireEvent.change(screen.getByLabelText("Username"), { target: { value: "Administrator" } });
+        fireEvent.change(screen.getByLabelText("Password"), { target: { value: "wrong-password" } });
+        fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+
+        expect((await screen.findByRole("alert")).textContent).toBe("Invalid username or password.");
     });
 });

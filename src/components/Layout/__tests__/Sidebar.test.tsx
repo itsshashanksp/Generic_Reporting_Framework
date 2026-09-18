@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 
 import Sidebar from "../Sidebar";
 import type { NavigationItem } from "../../../types/navigation";
+import { AuthProvider } from "../../../auth";
 
 const items: NavigationItem[] = [
     { id: "dashboard", title: "Dashboard", icon: "dashboard", route: "/" },
@@ -15,11 +16,19 @@ const items: NavigationItem[] = [
     },
 ];
 
+function renderSidebar() {
+    return render(
+        <AuthProvider enabled={false}>
+            <MemoryRouter><Sidebar items={items} /></MemoryRouter>
+        </AuthProvider>
+    );
+}
+
 describe("Sidebar", () => {
     beforeEach(() => localStorage.clear());
 
     it("renders branding and nested report navigation", () => {
-        render(<MemoryRouter><Sidebar items={items} /></MemoryRouter>);
+        renderSidebar();
         expect(screen.getAllByText("Generic Reporting Framework")).toHaveLength(2);
         fireEvent.click(screen.getByRole("button", { name: "Reports" }));
         expect(screen.getByRole("link", { name: "Customer Report" })).toBeTruthy();
@@ -27,7 +36,7 @@ describe("Sidebar", () => {
     });
 
     it("keeps labels mounted while collapsing the navigation", () => {
-        const { container } = render(<MemoryRouter><Sidebar items={items} /></MemoryRouter>);
+        const { container } = renderSidebar();
         fireEvent.click(screen.getByRole("button", { name: "Collapse navigation" }));
         expect(container.querySelector("nav")?.getAttribute("data-collapsed")).toBe("true");
         expect(screen.getByText("Dashboard")).toBeTruthy();
@@ -35,7 +44,7 @@ describe("Sidebar", () => {
     });
 
     it("closes mobile navigation after selecting a destination", () => {
-        const { container } = render(<MemoryRouter><Sidebar items={items} /></MemoryRouter>);
+        const { container } = renderSidebar();
         fireEvent.click(screen.getByRole("button", { name: "Open navigation" }));
         expect(container.querySelector("nav")?.getAttribute("data-mobile-open")).toBe("true");
 
@@ -44,7 +53,7 @@ describe("Sidebar", () => {
     });
 
     it("closes mobile navigation from the backdrop and Escape key", () => {
-        const { container } = render(<MemoryRouter><Sidebar items={items} /></MemoryRouter>);
+        const { container } = renderSidebar();
         const open = screen.getByRole("button", { name: "Open navigation" });
 
         fireEvent.click(open);

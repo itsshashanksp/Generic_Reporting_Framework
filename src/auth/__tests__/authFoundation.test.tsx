@@ -18,7 +18,7 @@ describe("authentication foundation", () => {
 
     it("starts unresolved and invalidates report data when identity changes", () => {
         const wrapper = ({ children }: { children: ReactNode }) => (
-            <AuthProvider>{children}</AuthProvider>
+            <AuthProvider enabled={false}>{children}</AuthProvider>
         );
         const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -40,7 +40,7 @@ describe("authentication foundation", () => {
         }));
         expect(clearRequestCacheMock).toHaveBeenCalledTimes(1);
 
-        act(() => result.current.applySessionSnapshot({ authenticated: false }));
+        act(() => result.current.applySessionSnapshot({ authenticated: false, user: null }));
         expect(result.current.state).toEqual({ status: "unauthenticated", user: null });
         expect(clearRequestCacheMock).toHaveBeenCalledTimes(2);
     });
@@ -57,5 +57,9 @@ describe("authentication foundation", () => {
             authenticated: true,
             user: { username: "reporter", isAdmin: false, passwordHash: "secret" },
         })).toThrow("invalid authentication response");
+        expect(parseAuthSessionSnapshot({ authenticated: false, user: null })).toEqual({
+            authenticated: false,
+            user: null,
+        });
     });
 });

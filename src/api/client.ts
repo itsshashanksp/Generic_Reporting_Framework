@@ -1,7 +1,7 @@
 import type { ApiError, ApiResponse } from "../types/api";
 
 const API_URL = import.meta.env.VITE_API_URL;
-const API_CREDENTIALS: RequestCredentials = "same-origin";
+const API_CREDENTIALS: RequestCredentials = "include";
 
 export class ApiClientError extends Error {
     readonly status: number;

@@ -6,6 +6,7 @@ import Dashboard from "../pages/Dashboard";
 import ReportViewer from "../pages/ReportViewer";
 import DashboardViewer from "../pages/DashboardViewer";
 import Setup from "../pages/Setup";
+import Login from "../pages/Login";
 import ErrorState from "../components/Common/Error";
 import Loading from "../components/Common/Loading";
 import menu from "../config/menu.json";
@@ -13,6 +14,7 @@ import { getDashboardIds } from "../engine/DashboardEngine";
 import { getFirstDashboardRoute, loadNavigation } from "../engine/NavigationEngine";
 import { getReportIds } from "../engine/ReportEngine/reportLoader";
 import { useSetup } from "../setup";
+import { useAuth } from "../auth";
 
 const homeRoute = getFirstDashboardRoute(loadNavigation(menu, {
     reportIds: getReportIds(),
@@ -29,6 +31,7 @@ export default function AppRouter() {
 
 export function ApplicationRoutes() {
     const { state, refresh } = useSetup();
+    const authentication = useAuth();
 
     if (state.status === "loading") {
         return <div className="setup-page"><Loading label="Checking application setup…" /></div>;
@@ -53,8 +56,21 @@ export function ApplicationRoutes() {
         );
     }
 
+    if (authentication.state.status === "loading") {
+        return <div className="setup-page"><Loading label="Restoring your session…" /></div>;
+    }
+    if (authentication.state.status === "unauthenticated") {
+        return (
+            <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+        );
+    }
+
     return (
         <Routes>
+            <Route path="/login" element={<Navigate to="/" replace />} />
             <Route path="/setup" element={<Navigate to="/" replace />} />
             <Route element={<Layout />}>
                 <Route
