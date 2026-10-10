@@ -35,7 +35,7 @@ describe("production SQL and JSON responsibility separation", () => {
         expect(Object.keys(frontendReportSql)).toEqual([]);
         expect(Object.keys(frontendWidgetSql)).toEqual([]);
         const table = itemDashboard.widgets.find(widget => widget.id === "item-table")!;
-        expect(table.queryDefinition).toEqual({ format: "sql", resource: "widgets/item-dashboard-table" });
+        expect(table.queryDefinition).toEqual({ format: "sql", database: "loyal-ibms", resource: "widgets/item-dashboard-table" });
         expect(table.columns?.map(column => column.field)).toEqual([
             "Item_Code", "Item_Desc", "Sale_Rate", "Item_MRP", "Std_Vat", "cl_stock", "stock_value",
         ]);
@@ -52,6 +52,7 @@ describe("production SQL and JSON responsibility separation", () => {
         for (const widget of billDashboard.widgets.filter(widget => widget.type === "table")) {
             expect(widget.queryDefinition).toEqual({
                 format: "sql",
+                database: "loyal-ibms",
                 resource: expect.stringContaining("widgets/"),
             });
             expect(widget.sort).toEqual(expect.any(Array));

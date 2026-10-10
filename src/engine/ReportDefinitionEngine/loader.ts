@@ -65,6 +65,9 @@ export function buildSqlResourceRequest(
 
     return {
         action: "sql",
+        ...(report.queryDefinition.database !== undefined
+            ? { database: report.queryDefinition.database }
+            : {}),
         resource: report.queryDefinition.resource,
         ...(Object.keys(execution).length > 0 ? { execution } : {}),
         ...(report.sort?.length ? { sort: report.sort } : {}),

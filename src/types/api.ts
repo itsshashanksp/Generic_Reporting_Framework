@@ -42,7 +42,7 @@ export interface QueryFilter {
     field?: string;
     operator: QueryOperator;
     value?: unknown;
-    query?: Omit<UniversalQueryRequest, "action">;
+    query?: Omit<UniversalQueryRequest, "action" | "database">;
 }
 
 export interface SqlRuntimeFilter {
@@ -88,6 +88,8 @@ export interface HavingCondition {
 
 export interface UniversalQueryRequest {
     action: "select";
+    /** Logical V3 database id; omitted requests use the backend default database. */
+    database?: string;
     source: { table: string; alias?: string };
     fields: QueryField[];
     filters?: QueryFilter[];
@@ -104,6 +106,8 @@ export interface UniversalQueryRequest {
 
 export interface SqlResourceRequest {
     action: "sql";
+    /** Logical V3 database id; omitted requests use the backend default database. */
+    database?: string;
     resource: string;
     execution?: SqlExecutionMetadata;
     filters?: SqlRuntimeFilter[];

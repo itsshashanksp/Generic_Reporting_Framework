@@ -20,6 +20,8 @@ export type ReportRequest = DataRequest & { sort?: QuerySort[] };
 export interface ReportQueryDefinitionReference {
     format: "sql";
     resource: string;
+    /** Logical V3 database id sent with the SQL Resource request. */
+    database?: string;
 }
 
 export interface ToolbarConfig {

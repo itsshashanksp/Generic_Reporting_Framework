@@ -3,7 +3,11 @@ import type { FilterDefinition } from "../types/filter";
 import {
     validateFilters as validateFilterDefinitions,
 } from "./FilterEngine/validator";
-import { getJsonQueryRequestValidationErrors, getReportValidationErrors } from "./ReportDefinitionEngine/validator";
+import {
+    getJsonQueryRequestValidationErrors,
+    getReportValidationErrors,
+    validateDatabaseId,
+} from "./ReportDefinitionEngine/validator";
 
 export interface DashboardValidationResult {
     valid: boolean;
@@ -779,12 +783,13 @@ function validateRequest(
     rejectUnknownProperties(
         request,
         [
-            "action", "source", "fields", "filters", "joins", "groupBy", "having",
+            "action", "database", "source", "fields", "filters", "joins", "groupBy", "having",
             "sort", "pagination", "distinct", "limit", "filterLogic", "with",
         ],
         `${widgetLabel} request`,
         errors
     );
+    validateDatabaseId(request.database, `${widgetLabel} request database`, errors);
 
     if (request.action !== "select") {
         errors.push(`${widgetLabel} request action must be select.`);

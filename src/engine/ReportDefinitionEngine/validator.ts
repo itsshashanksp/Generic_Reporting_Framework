@@ -2,7 +2,7 @@ import type { FilterType } from "../../types/filter";
 import { allowedOperators } from "../FilterEngine/validator";
 
 const REPORT_KEYS = ["id", "title", "description", "queryDefinition", "request", "columns", "filters", "sort", "filterLogic", "grid", "toolbar", "export"];
-const REQUEST_KEYS = ["action", "source", "fields", "filters", "joins", "groupBy", "having", "sort", "pagination", "distinct", "limit", "filterLogic", "with"];
+const REQUEST_KEYS = ["action", "database", "source", "fields", "filters", "joins", "groupBy", "having", "sort", "pagination", "distinct", "limit", "filterLogic", "with"];
 const REQUEST_FIELD_KEYS = ["field", "fields", "function", "alias", "sort", "case", "expression", "buckets", "offset", "default", "separator", "datatype", "style", "value", "values", "index", "datepart", "number", "start", "end", "year", "month", "day", "hour", "minute", "second", "millisecond", "precision", "power", "part", "length", "search", "replace", "pattern", "format", "condition", "true", "false"];
 const COLUMN_KEYS = ["field", "header", "visible", "sortable", "width", "dataType"];
 const FILTER_KEYS = ["field", "label", "type", "operator", "options", "dynamicOptions", "visible", "required", "placeholder"];
@@ -18,6 +18,8 @@ const QUERY_FUNCTIONS = [
 ];
 const HAVING_FUNCTIONS = ["COUNT", "SUM", "AVG", "MIN", "MAX", "STRING_AGG"];
 const COMPARISON_OPERATORS = ["=", "!=", "<>", ">", "<", ">=", "<="];
+/** Mirrors the V3 backend logical database id rule (DatabaseRegistry::isValidId). */
+const DATABASE_ID_PATTERN = /^[a-z][a-z0-9_-]{0,63}$/;
 const DATE_PARTS = ["YEAR", "QUARTER", "MONTH", "DAYOFYEAR", "DAY", "WEEK", "WEEKDAY", "HOUR", "MINUTE", "SECOND", "MILLISECOND"];
 
 export function validateReport(report: unknown): boolean {
@@ -102,7 +104,8 @@ function validateSqlPresentationCompatibility(report: Record<string, unknown>, e
 function validateQueryDefinitionReference(value: unknown, errors: string[]) {
     if (value === undefined) return;
     if (!isRecord(value)) return errors.push("Report queryDefinition must be an object.");
-    rejectUnknown(value, ["format", "resource"], "Report queryDefinition", errors);
+    rejectUnknown(value, ["format", "resource", "database"], "Report queryDefinition", errors);
+    validateDatabaseId(value.database, "Report queryDefinition database", errors);
     if (value.format !== "sql") errors.push("Report queryDefinition format must be sql.");
     requireString(value.resource, "Report queryDefinition resource", errors);
     if (
@@ -118,6 +121,7 @@ function validateRequest(value: unknown, errors: string[]) {
     if (!isRecord(value)) return errors.push("Report request must be an object.");
     rejectUnknown(value, REQUEST_KEYS, "Report request", errors);
     if (value.action !== "select") errors.push("Report request action must be select.");
+    validateDatabaseId(value.database, "Report request database", errors);
     if (!isRecord(value.source)) errors.push("Report request source must be an object.");
     else {
         rejectUnknown(value.source, ["table", "alias"], "Report request source", errors);
@@ -464,7 +468,7 @@ function validateWith(value: unknown, errors: string[]) {
 
 function validateNestedSelect(value: unknown, label: string, errors: string[], requireSingleField: boolean) {
     if (!isRecord(value)) return errors.push(`${label} must be a SELECT body.`);
-    for (const key of ["action", "sort", "pagination", "with"]) {
+    for (const key of ["action", "sort", "pagination", "with", "database"]) {
         if (key in value) errors.push(`${label} does not support ${key}.`);
     }
     const nestedErrors: string[] = [];
@@ -508,6 +512,14 @@ function validateNamedFields(value: unknown, label: string, errors: string[]) {
         requireString(entry.field, `${label} entry at index ${index} field`, errors);
         optionalString(entry.header, `${label} entry at index ${index} header`, errors);
     });
+}
+
+/** Optional logical database id; omitted means the backend default database. */
+export function validateDatabaseId(value: unknown, label: string, errors: string[]) {
+    if (value === undefined) return;
+    if (typeof value !== "string" || !DATABASE_ID_PATTERN.test(value)) {
+        errors.push(`${label} must be a logical database id (lowercase letters, digits, "_" or "-", starting with a letter).`);
+    }
 }
 
 function rejectUnknown(value: Record<string, unknown>, allowed: string[], label: string, errors: string[]) {

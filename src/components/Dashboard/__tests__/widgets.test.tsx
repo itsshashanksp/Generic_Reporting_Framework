@@ -89,6 +89,34 @@ describe("dashboard widgets", () => {
         expect(executeRequestMock).toHaveBeenCalledTimes(1);
     });
 
+    it("sends the configured database with table filters, sorting, and pagination", async () => {
+        executeRequestMock.mockResolvedValue({
+            success: true,
+            message: "ok",
+            data: [{ Month: "2021-06", Sales: 1 }],
+            meta: { page: 1, pageSize: 10, totalRows: 1, rowsReturned: 1, executionTime: 1 },
+        });
+        const sqlRequest = {
+            action: "sql" as const,
+            database: "loyal-ibms",
+            resource: "widgets/sales-month-wise",
+            execution: { columns: ["Month", "Sales"], filters: { Bill_Date: { placement: "source" as const } } },
+            sort: [{ field: "Month", direction: "DESC" as const }],
+        };
+        render(
+            <DashboardProvider>
+                <TableWidget title="Sales" request={sqlRequest} pageSize={10} />
+            </DashboardProvider>
+        );
+
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(1));
+        expect(executeRequestMock.mock.calls[0][0]).toEqual({
+            ...sqlRequest,
+            filters: [],
+            pagination: { page: 1, pageSize: 10 },
+        });
+    });
+
     it("sizes dashboard table viewports for ten complete rows without growing for larger pages", () => {
         expect(getDashboardTableViewportHeight(10)).toBe(466);
         expect(getDashboardTableViewportHeight(25)).toBe(466);

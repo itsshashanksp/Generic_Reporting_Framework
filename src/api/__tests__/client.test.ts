@@ -25,6 +25,31 @@ describe("apiClient", () => {
         expect(fetchMock.mock.calls[0][0]).toBe(import.meta.env.VITE_API_URL || "/api");
     });
 
+    it("sends database-scoped reads with session cookies and without a CSRF bootstrap", async () => {
+        const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({
+            success: true,
+            message: "ok",
+            data: [],
+            meta: { page: null, pageSize: null, totalRows: 0, rowsReturned: 0, executionTime: 1 },
+        }), { status: 200, headers: { "Content-Type": "application/json" } })));
+        vi.stubGlobal("fetch", fetchMock);
+        const requests = [
+            { action: "select", database: "test", source: { table: "Company" }, fields: ["*"] },
+            { action: "sql", database: "loyal-ibms", resource: "reports/customer" },
+        ];
+
+        for (const request of requests) await apiClient(request);
+
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        requests.forEach((request, index) => {
+            const init = fetchMock.mock.calls[index][1] as RequestInit;
+            expect(init).toMatchObject({ method: "POST", credentials: "include" });
+            expect(JSON.parse(init.body as string)).toEqual(request);
+            expect(new Headers(init.headers).get("Content-Type")).toBe("application/json");
+            expect(new Headers(init.headers).has("X-CSRF-Token")).toBe(false);
+        });
+    });
+
     it("preserves backend error code, details, and status", async () => {
         vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
             success: false,

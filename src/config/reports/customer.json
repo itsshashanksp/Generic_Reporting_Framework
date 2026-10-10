@@ -4,6 +4,7 @@
   "description": "Displays all customers.",
   "request": {
     "action": "select",
+    "database": "loyal-ibms",
     "source": {
       "table": "CustomerTable"
     },

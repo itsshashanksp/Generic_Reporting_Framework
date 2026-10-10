@@ -37,6 +37,7 @@
       "dynamicOptions": {
         "request": {
           "action": "select",
+          "database": "loyal-ibms",
           "source": {
             "table": "ItemMasterTable"
           },
@@ -78,6 +79,7 @@
 
       "queryDefinition": {
         "format": "sql",
+        "database": "loyal-ibms",
         "resource": "widgets/item-dashboard-table"
       },
 
@@ -152,6 +154,7 @@
 
       "queryDefinition": {
         "format": "sql",
+        "database": "loyal-ibms",
         "resource": "widgets/item-dashboard-stats"
       },
 
@@ -175,6 +178,7 @@
 
       "queryDefinition": {
         "format": "sql",
+        "database": "loyal-ibms",
         "resource": "widgets/item-dashboard-stats"
       },
 
@@ -198,6 +202,7 @@
 
       "queryDefinition": {
         "format": "sql",
+        "database": "loyal-ibms",
         "resource": "widgets/item-dashboard-stats"
       },
 
@@ -218,6 +223,7 @@
   },
   "queryDefinition": {
     "format": "sql",
+    "database": "loyal-ibms",
     "resource": "widgets/item-stock-value-by-category"
   },
   "xField": "Category",

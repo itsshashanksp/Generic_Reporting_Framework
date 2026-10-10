@@ -71,7 +71,8 @@ The resource is a slash-separated logical ID such as `reports/customer` or
 without `.sql`. Each segment matches `[A-Za-z0-9][A-Za-z0-9_-]*`. The frontend
 does not construct a path or inspect the file.
 
-`queryDefinition` intentionally contains only `format` and `resource`.
+`queryDefinition` intentionally contains only `format`, `resource`, and the
+optional `database` described below.
 The loader translates the normalized definition into the backend SQL action:
 
 - top-level `columns` become constrained execution output columns;
@@ -85,6 +86,31 @@ source/HAVING expressions and resource-specific coercions remain backend-owned
 capabilities and are not expressed by frontend presentation JSON.
 
 `queryDefinition.format: "json"` is not a supported JSON mode. Use top-level `request`.
+
+## Logical database selection
+
+Both modes accept an optional V3 logical database id: `request.database` in
+JSON request mode and `queryDefinition.database` in SQL resource mode. The
+value is copied unchanged into the API request and every runtime request
+derived from it (paging, sorting, filters, export).
+
+```json
+{
+  "queryDefinition": {
+    "format": "sql",
+    "database": "loyal-ibms",
+    "resource": "reports/customer"
+  }
+}
+```
+
+The id is a logical name registered in the backend database registry, not a
+physical SQL Server database name. It must match `^[a-z][a-z0-9_-]{0,63}$`.
+When `database` is omitted, the request carries no `database` property and the
+backend uses its default database. Nested SELECT bodies (filter subqueries and
+CTE branches) do not accept `database`. Request cache keys include the
+database, so identical queries against different databases never share a
+cached response. There is no database selection UI.
 
 ## Runtime merge rules
 
