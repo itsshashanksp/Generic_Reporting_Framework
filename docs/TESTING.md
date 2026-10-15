@@ -7,11 +7,11 @@ The frontend uses Vitest, React Testing Library and jsdom. Tests are frontend-on
 ```bash
 npm test
 npm run lint
-npx tsc --noEmit
+npm run typecheck
 npm run build
 ```
 
-Use `npm test -- --watch` while developing. The build already invokes a TypeScript project build, but the standalone check makes type failures easier to isolate.
+Use `npm test -- --watch` while developing. `npm run typecheck` checks the application (`tsconfig.app.json`) and Node/tooling (`tsconfig.node.json`) projects. The root `tsconfig.json` only lists project references, so a bare `tsc --noEmit` checks no files. The build also runs a TypeScript project build.
 
 Tests are colocated in `__tests__` directories and cover definition validators/loaders, JSON and discovered SQL Resource request modes, normalized-config request translation, filter serialization, report and dashboard request flow, standard responses/errors, widgets, grid behavior, exports, saved state, caching, and navigation.
 

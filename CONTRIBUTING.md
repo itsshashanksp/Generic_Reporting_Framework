@@ -20,7 +20,7 @@ Thank you for contributing to the Generic Reporting Framework frontend.
 ```bash
 npm test
 npm run lint
-npx tsc --noEmit
+npm run typecheck
 npm run build
 ```
 

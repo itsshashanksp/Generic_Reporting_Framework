@@ -40,7 +40,7 @@ Open the local URL printed by Vite. Reports and dashboards that request data als
 ```bash
 npm test
 npm run lint
-npx tsc --noEmit
+npm run typecheck
 npm run build
 ```
 

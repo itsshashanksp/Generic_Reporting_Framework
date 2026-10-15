@@ -24,7 +24,7 @@ The active loaders discover JSON with Vite glob imports. There is no frontend SQ
 npm run dev
 npm test
 npm run lint
-npx tsc --noEmit
+npm run typecheck
 npm run build
 npm run preview
 ```

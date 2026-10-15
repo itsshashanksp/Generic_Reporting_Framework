@@ -51,7 +51,7 @@ Run the project checks with:
 ```bash
 npm test
 npm run lint
-npx tsc --noEmit
+npm run typecheck
 npm run build
 ```
 
