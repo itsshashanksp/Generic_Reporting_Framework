@@ -1,10 +1,22 @@
 import type { SavedReport } from "../../types/savedReport";
 
-const STORAGE_KEY = "generic-report-saved-reports";
+/**
+ * Saved views hold report filters, sorting and paging (never row data) and
+ * are kept per signed-in username so users sharing a browser cannot see each
+ * other's views. Browser storage is a convenience, not a security boundary:
+ * the backend still authorizes every data request.
+ */
+const STORAGE_KEY_PREFIX = "generic-report-saved-reports:user:";
+/** Pre-scoping key shared by every user; its owner cannot be determined. */
+const UNSCOPED_STORAGE_KEY = "generic-report-saved-reports";
 
-export function loadSavedReports(): SavedReport[] {
+function storageKey(owner: string) {
+    return `${STORAGE_KEY_PREFIX}${encodeURIComponent(owner)}`;
+}
+
+export function loadSavedReports(owner: string): SavedReport[] {
     try {
-        const stored = localStorage.getItem(STORAGE_KEY);
+        const stored = localStorage.getItem(storageKey(owner));
 
         if (!stored) {
             return [];
@@ -50,10 +62,11 @@ function isSavedReport(value: unknown): value is SavedReport {
 }
 
 export function saveSavedReport(
+    owner: string,
     report: SavedReport
 ): void {
 
-    const reports = loadSavedReports();
+    const reports = loadSavedReports(owner);
 
     const existingIndex = reports.findIndex(
         item => item.id === report.id
@@ -70,23 +83,33 @@ export function saveSavedReport(
     }
 
     localStorage.setItem(
-        STORAGE_KEY,
+        storageKey(owner),
         JSON.stringify(reports)
     );
 }
 
 export function deleteSavedReport(
+    owner: string,
     id: string
 ): void {
 
-    const reports = loadSavedReports();
+    const reports = loadSavedReports(owner);
 
     const updatedReports = reports.filter(
         report => report.id !== id
     );
 
     localStorage.setItem(
-        STORAGE_KEY,
+        storageKey(owner),
         JSON.stringify(updatedReports)
     );
+}
+
+/** Removes views saved before per-user scoping; they cannot be attributed to a user. */
+export function removeUnscopedSavedReports(): void {
+    try {
+        localStorage.removeItem(UNSCOPED_STORAGE_KEY);
+    } catch {
+        // Storage may be unavailable (private mode or blocked site data).
+    }
 }

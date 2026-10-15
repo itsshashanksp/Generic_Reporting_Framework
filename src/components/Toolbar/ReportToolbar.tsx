@@ -1,6 +1,7 @@
 import ToolbarButton from "./ToolbarButton";
 import ExportMenu, { type ExportMenuOption } from "../Common/ExportMenu";
 
+import { getRequestErrorMessage } from "../../api/request";
 import { useGrid } from "../../engine/GridContext";
 
 import {
@@ -28,6 +29,9 @@ interface ReportToolbarProps {
         format: "csv" | "excel"
     ) => void;
 
+    /** Shows a current-view export message; an empty string clears it. */
+    onExportMessage?: (message: string) => void;
+
     onSaveReport?: () => void;
     onRefresh?: () => void;
     isRefreshing?: boolean;
@@ -40,6 +44,7 @@ export default function ReportToolbar({
     exportConfig,
     rows = [],
     onExportAll,
+    onExportMessage,
     onSaveReport,
     onRefresh,
     isRefreshing = false,
@@ -57,24 +62,32 @@ export default function ReportToolbar({
             return;
         }
 
-        exportCSV(
-            api,
-            exportConfig?.filename
-                ? `${exportConfig.filename}.csv`
-                : "report.csv"
-        );
+        onExportMessage?.("");
+        try {
+            exportCSV(
+                api,
+                exportConfig?.filename
+                    ? `${exportConfig.filename}.csv`
+                    : "report.csv"
+            );
+        } catch {
+            onExportMessage?.("The CSV file could not be created.");
+        }
 
     };
 
 
     const handleExcelExport = () => {
 
+        onExportMessage?.("");
         exportExcel(
             rows,
             exportConfig?.filename
                 ? `${exportConfig.filename}.xlsx`
                 : "report.xlsx"
-        );
+        ).catch((error: unknown) => {
+            onExportMessage?.(getRequestErrorMessage(error, "Unable to create the Excel file."));
+        });
 
     };
 

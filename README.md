@@ -29,7 +29,7 @@ Data can be described by a top-level universal JSON request or by a discovered S
 - Automated Vitest and React Testing Library coverage
 - GitHub Actions checks for tests, lint, type-checking, and production builds
 
-The application is built with React, TypeScript, Vite, Material UI, AG Grid, and Recharts.
+The application is built with React, TypeScript, Vite, AG Grid, and Recharts.
 
 ## Architecture
 

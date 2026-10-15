@@ -105,7 +105,8 @@ function ProtectedRoute() {
     if (!state.user.frontendAccess) {
         return <Navigate to="/login" replace />;
     }
-    return <Outlet />;
+    // A different user gets a fresh page tree with no previous user's state.
+    return <Outlet key={state.user.username} />;
 }
 
 function LoginRoute() {

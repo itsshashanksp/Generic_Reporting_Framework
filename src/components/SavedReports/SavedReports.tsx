@@ -11,6 +11,9 @@ import {
 interface SavedReportsProps {
     reportId: string;
 
+    /** Signed-in username that owns the saved views. */
+    owner: string;
+
     onLoad: (
         report: SavedReport
     ) => void;
@@ -18,15 +21,16 @@ interface SavedReportsProps {
 
 export default function SavedReports({
     reportId,
+    owner,
     onLoad,
 }: SavedReportsProps) {
 
     const [, setLocalRevision] = useState(0);
-    const reports = loadSavedReports().filter(report => report.reportId === reportId);
+    const reports = loadSavedReports(owner).filter(report => report.reportId === reportId);
 
     const handleDelete = (id: string) => {
 
-        deleteSavedReport(id);
+        deleteSavedReport(owner, id);
 
         setLocalRevision(previous => previous + 1);
     };

@@ -6,6 +6,7 @@ import {
     getRequestErrorMessage,
     isRequestAbort,
 } from "../api/request";
+import { useAuthenticatedUsername } from "../auth";
 import Empty from "../components/Common/Empty";
 import ErrorState from "../components/Common/Error";
 import Loading from "../components/Common/Loading";
@@ -23,7 +24,7 @@ import { getReportPaginationParameters, isSavedReportsEnabled } from "../engine/
 import { getReport, getReportError } from "../engine/ReportEngine/reportLoader";
 import { createRequestCacheKey, getCachedResponse, getOrCreateInFlightRequest, setCachedResponse } from "../engine/RequestCache";
 import { saveSavedReport } from "../engine/SavedReportEngine";
-import { exportExcel, exportRowsCSV } from "../engine/ExportEngine";
+import { assertWithinExportLimit, ExportFileError, exportExcel, exportRowsCSV } from "../engine/ExportEngine";
 import type { ApiResponse } from "../types/api";
 import type { FilterValue } from "../engine/FilterContext/FilterContext";
 import type { SavedReport } from "../types/savedReport";
@@ -33,6 +34,8 @@ import type { SortDefinition } from "../types/report";
 export default function ReportViewer() {
     const { reportId } = useParams();
     const { filters, replaceFilters, clearFilters } = useFilters();
+    // Saved views are scoped to the signed-in user; without one they are unavailable.
+    const savedReportsOwner = useAuthenticatedUsername();
     const { api } = useGrid();
     const report = getReport(reportId || "") ?? null;
     const reportConfigurationError = getReportError(reportId || "");
@@ -232,7 +235,7 @@ export default function ReportViewer() {
     });
 
     const handleSaveReport = () => {
-        if (!report) {
+        if (!report || !savedReportsOwner) {
             return;
         }
 
@@ -241,7 +244,7 @@ export default function ReportViewer() {
         const savedPageSize = currentPageSize;
         const sorting = currentSorting;
 
-        saveSavedReport({
+        saveSavedReport(savedReportsOwner, {
             id: `${report.id}-${Date.now()}`,
             reportId: report.id,
             name: report.title,
@@ -321,13 +324,24 @@ export default function ReportViewer() {
                 return;
             }
 
+            const totalRows = response.meta?.totalRows ?? exportRows.length;
+            assertWithinExportLimit(Math.max(totalRows, exportRows.length));
+            if (totalRows > exportRows.length) {
+                setExportStatus("The data service returned an incomplete export result. Nothing was exported.");
+                return;
+            }
+
             if (format === "csv") {
-                exportRowsCSV(
-                    exportRows,
-                    report.export?.filename ? `${report.export.filename}.csv` : "report.csv"
-                );
+                try {
+                    exportRowsCSV(
+                        exportRows,
+                        report.export?.filename ? `${report.export.filename}.csv` : "report.csv"
+                    );
+                } catch (cause: unknown) {
+                    throw new ExportFileError("The CSV file could not be created.", { cause });
+                }
             } else {
-                exportExcel(
+                await exportExcel(
                     exportRows,
                     report.export?.filename
                         ? `${report.export.filename}.xlsx`
@@ -379,10 +393,11 @@ export default function ReportViewer() {
                 />
             )}
 
-            {isSavedReportsEnabled(report.toolbar) && (
+            {isSavedReportsEnabled(report.toolbar) && savedReportsOwner && (
                 <SavedReports
                     key={`${report.id}-${savedReportsRevision}`}
                     reportId={report.id}
+                    owner={savedReportsOwner}
                     onLoad={handleLoadSavedReport}
                 />
             )}
@@ -408,7 +423,8 @@ export default function ReportViewer() {
                             isRefreshing={isGridLoading}
                             isExporting={exportStatus === "Preparing export…"}
                             onExportAll={handleExportAll}
-                            onSaveReport={handleSaveReport}
+                            onExportMessage={setExportStatus}
+                            onSaveReport={savedReportsOwner ? handleSaveReport : undefined}
                             rows={rows}
                         />
                     </>

@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { clearRequestCache } from "../engine/RequestCache";
+import { removeUnscopedSavedReports } from "../engine/SavedReportEngine";
 import { subscribeToAuthenticationRequired } from "../api/client";
 import { getRequestErrorMessage, isRequestAbort } from "../api/request";
 import { getCurrentSession, login as loginRequest, logout as logoutRequest } from "./authService";
@@ -28,18 +29,40 @@ interface AuthContextValue {
 const loadingState: AuthState = { status: "loading", user: null };
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+/**
+ * Tabs of this origin tell each other that sign-in state changed. The message
+ * carries no identity or credentials; receivers re-check the backend session,
+ * which remains the authority.
+ */
+const AUTH_CHANNEL_NAME = "generic-reporting-auth";
+const AUTH_CHANGED_MESSAGE = { type: "auth-changed" } as const;
+
+function openAuthChannel(): BroadcastChannel | null {
+    return typeof BroadcastChannel === "function" ? new BroadcastChannel(AUTH_CHANNEL_NAME) : null;
+}
+
 export function AuthProvider({ children, enabled = true }: { children: ReactNode; enabled?: boolean }) {
     const [state, setState] = useState<AuthState>(loadingState);
     const [error, setError] = useState<string | null>(null);
     const stateRef = useRef<AuthState>(loadingState);
     const mounted = useRef(true);
+    const authChannel = useRef<BroadcastChannel | null>(null);
 
     const updateState = useCallback((next: AuthState) => {
         if (identityKey(stateRef.current) !== identityKey(next)) {
             clearRequestCache();
+            removeUnscopedSavedReports();
         }
         stateRef.current = next;
         setState(next);
+    }, []);
+
+    const notifyOtherTabs = useCallback(() => {
+        try {
+            authChannel.current?.postMessage(AUTH_CHANGED_MESSAGE);
+        } catch {
+            // A closed channel during unmount has no other tabs to notify.
+        }
     }, []);
 
     const beginSessionCheck = useCallback(() => {
@@ -71,9 +94,31 @@ export function AuthProvider({ children, enabled = true }: { children: ReactNode
     useEffect(() => {
         if (!enabled) return;
         return subscribeToAuthenticationRequired(() => {
+            const wasAuthenticated = stateRef.current.status === "authenticated";
             applySessionSnapshot({ authenticated: false, user: null });
+            if (wasAuthenticated) notifyOtherTabs();
         });
-    }, [enabled, applySessionSnapshot]);
+    }, [enabled, applySessionSnapshot, notifyOtherTabs]);
+
+    useEffect(() => {
+        if (!enabled) return;
+        const channel = openAuthChannel();
+        if (!channel) return;
+        authChannel.current = channel;
+        // Re-check without a loading state; fail closed if the check fails.
+        channel.onmessage = (event: MessageEvent) => {
+            if (event.data?.type !== AUTH_CHANGED_MESSAGE.type) return;
+            void getCurrentSession().then(snapshot => {
+                if (mounted.current) applySessionSnapshot(snapshot);
+            }).catch(() => {
+                if (mounted.current) updateState({ status: "unauthenticated", user: null });
+            });
+        };
+        return () => {
+            authChannel.current = null;
+            channel.close();
+        };
+    }, [enabled, applySessionSnapshot, updateState]);
 
     useEffect(() => {
         mounted.current = true;
@@ -100,7 +145,8 @@ export function AuthProvider({ children, enabled = true }: { children: ReactNode
             throw new Error("The API did not establish an authenticated session.");
         }
         if (mounted.current) applySessionSnapshot(snapshot);
-    }, [applySessionSnapshot]);
+        notifyOtherTabs();
+    }, [applySessionSnapshot, notifyOtherTabs]);
 
     const logout = useCallback(async () => {
         const snapshot = await logoutRequest();
@@ -108,7 +154,8 @@ export function AuthProvider({ children, enabled = true }: { children: ReactNode
             throw new Error("The API did not end the authenticated session.");
         }
         if (mounted.current) applySessionSnapshot(snapshot);
-    }, [applySessionSnapshot]);
+        notifyOtherTabs();
+    }, [applySessionSnapshot, notifyOtherTabs]);
 
     const value = useMemo(() => ({
         state,
@@ -127,6 +174,13 @@ function identityKey(state: AuthState): string {
     return state.status === "authenticated"
         ? `authenticated:${state.user.username}:${state.user.backendRole ?? "none"}:${String(state.user.frontendAccess)}:${state.user.frontendRole ?? "none"}`
         : state.status;
+}
+
+/** The signed-in username, or null when signed out or outside an AuthProvider. */
+// eslint-disable-next-line react-refresh/only-export-components
+export function useAuthenticatedUsername(): string | null {
+    const context = useContext(AuthContext);
+    return context?.state.status === "authenticated" ? context.state.user.username : null;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

@@ -14,7 +14,7 @@ import {
 import { useDashboard } from "../../engine/DashboardContext";
 import { buildFilters } from "../../engine/FilterQueryBuilder";
 import { createRequestCacheKey, getCachedResponse, getOrCreateInFlightRequest, setCachedResponse } from "../../engine/RequestCache";
-import { exportExcel, exportRowsCSV, fetchAllRowsForExport } from "../../engine/ExportEngine";
+import { ExportFileError, exportExcel, exportRowsCSV, fetchAllRowsForExport } from "../../engine/ExportEngine";
 
 import type { ExportConfig, ExportFormat } from "../../types/export";
 import type { FilterDefinition } from "../../types/filter";
@@ -357,9 +357,16 @@ export default function TableWidget({
     };
 
     const exportFileName = exportConfig?.filename || title.replace(/\s+/g, "-").toLowerCase();
-    const exportRows = useCallback((data: Record<string, unknown>[], format: ExportFormat) => {
-        if (format === "csv") exportRowsCSV(data, `${exportFileName}.csv`);
-        else exportExcel(data, `${exportFileName}.xlsx`);
+    const exportRows = useCallback(async (data: Record<string, unknown>[], format: ExportFormat) => {
+        if (format === "excel") {
+            await exportExcel(data, `${exportFileName}.xlsx`);
+            return;
+        }
+        try {
+            exportRowsCSV(data, `${exportFileName}.csv`);
+        } catch (cause: unknown) {
+            throw new ExportFileError("The CSV file could not be created.", { cause });
+        }
     }, [exportFileName]);
 
     const handleExportAll = useCallback(async (format: ExportFormat) => {
@@ -393,7 +400,7 @@ export default function TableWidget({
                 setExportError("Export failed: there are no matching rows to export.");
                 return;
             }
-            exportRows(data, format);
+            await exportRows(data, format);
         } catch (caughtError: unknown) {
             if (!isRequestAbort(caughtError)) {
                 const message = getRequestErrorMessage(caughtError, "Unable to prepare the table export.");
@@ -413,7 +420,12 @@ export default function TableWidget({
                 id: `current-${format}`,
                 label: `Current page — ${format === "csv" ? "CSV" : "Excel"}`,
                 disabled: visibleRows.length === 0,
-                onSelect: () => exportRows(visibleRows, format),
+                onSelect: () => {
+                    setExportError("");
+                    void exportRows(visibleRows, format).catch((caughtError: unknown) => {
+                        setExportError(`Export failed: ${getRequestErrorMessage(caughtError, "Unable to create the export file.")}`);
+                    });
+                },
             }));
         }
         if (exportConfig.exportAll) {

@@ -7,6 +7,8 @@ import {
     type ReactNode,
 } from "react";
 
+import { useAuthenticatedUsername } from "../../auth";
+
 export type FilterValue =
     | string
     | number
@@ -26,36 +28,50 @@ interface FilterContextType {
 
 const FilterContext = createContext<FilterContextType | undefined>(undefined);
 
+const EMPTY_FILTERS: FilterValues = {};
+
 export function FilterProvider({
     children,
 }: {
     children: ReactNode;
 }) {
 
-    const [filters, setFilters] = useState<FilterValues>({});
+    // Filter values belong to the user who entered them. Sign-out or a user
+    // switch discards them before anything renders, so no page can show them.
+    const owner = useAuthenticatedUsername();
+    const [state, setState] = useState<{ owner: string | null; filters: FilterValues }>(
+        () => ({ owner, filters: {} })
+    );
+    if (state.owner !== owner) {
+        setState({ owner, filters: {} });
+    }
+    const filters = state.owner === owner ? state.filters : EMPTY_FILTERS;
 
     const setFilter = useCallback((field: string, value: FilterValue) => {
 
-        setFilters(prev => ({
-            ...prev,
-            [field]: value,
+        setState(prev => ({
+            owner,
+            filters: {
+                ...(prev.owner === owner ? prev.filters : {}),
+                [field]: value,
+            },
         }));
 
-    }, []);
+    }, [owner]);
 
     const clearFilters = useCallback(() => {
 
-        setFilters({});
+        setState({ owner, filters: {} });
 
-    }, []);
+    }, [owner]);
 
     const replaceFilters = useCallback((
         nextFilters: FilterValues
     ) => {
 
-        setFilters({ ...nextFilters });
+        setState({ owner, filters: { ...nextFilters } });
 
-    }, []);
+    }, [owner]);
 
     const contextValue = useMemo(
         () => ({

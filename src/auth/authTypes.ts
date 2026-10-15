@@ -28,16 +28,6 @@ export interface CreateUserRequest {
     role: "read-only" | "data-operator" | "application-administrator";
 }
 
-export type UserManagementRequest =
-    | { action: "auth.frontendUsers.list" }
-    | { action: "auth.frontendUsers.create"; name: string; username: string; mobile: string; email: string | null; password: string; passwordConfirmation: string; role: "read-only" | "data-operator" | "application-administrator" }
-    | { action: "auth.frontendUsers.update"; username: string; name: string; newUsername: string; mobile: string; email: string | null }
-    | { action: "auth.frontendUsers.enable" | "auth.frontendUsers.disable" | "auth.frontendUsers.delete"; username: string }
-    | { action: "auth.frontendUsers.changePassword"; username: string; newPassword: string; passwordConfirmation: string }
-    | { action: "auth.frontendUsers.assignRole"; username: string; frontendAccess: boolean; frontendRole: "application-administrator" | null };
-
-export type UserManagementResponse = ManagedAuthUser[];
-
 export type AuthState =
     | { status: "loading"; user: null }
     | { status: "unauthenticated"; user: null }

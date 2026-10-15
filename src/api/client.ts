@@ -3,16 +3,11 @@ import type { ApiError, ApiResponse } from "../types/api";
 const API_URL = resolveApiUrl(import.meta.env.VITE_API_URL || "/api");
 const API_CREDENTIALS: RequestCredentials = "include";
 const authenticationRequiredListeners = new Set<() => void>();
+// Admin Console actions (auth.users.*) are not public API actions and are
+// handled by the separate Admin API with its own CSRF handling.
 const csrfProtectedActions = new Set([
     "auth.login",
     "auth.logout",
-    "auth.users.create",
-    "auth.users.enable",
-    "auth.users.disable",
-    "auth.users.delete",
-    "auth.users.changePassword",
-    "auth.users.update",
-    "auth.users.assignAuthorization",
     "auth.frontendUsers.create",
     "auth.frontendUsers.update",
     "auth.frontendUsers.enable",
