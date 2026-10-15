@@ -7,6 +7,7 @@ import {
 } from "../../api/request";
 import { useDashboard } from "../../engine/DashboardContext";
 import { buildFilters } from "../../engine/FilterQueryBuilder";
+import { mapWidgetFilters, type WidgetFilterFields } from "../../engine/DashboardEngine/filterFields";
 import {
     createRequestCacheKey,
     getCachedResponse,
@@ -31,7 +32,8 @@ interface WidgetRequestState {
 export function useDashboardWidgetRequest(
     request: (object & RequestWithFilters) | null,
     filterDefinitions: FilterDefinition[],
-    cacheScope = "dashboard-widget"
+    cacheScope = "dashboard-widget",
+    filterFields?: WidgetFilterFields
 ) {
     const { refreshKey, appliedFilters } = useDashboard();
     const [retryKey, setRetryKey] = useState(0);
@@ -39,10 +41,10 @@ export function useDashboardWidgetRequest(
     const previousRefreshKey = useRef(refreshKey);
     const previousRetryKey = useRef(retryKey);
 
-    const dashboardFilters = useMemo(
-        () => buildFilters(appliedFilters, filterDefinitions, request?.action === "sql"),
-        [appliedFilters, filterDefinitions, request?.action]
-    );
+    const dashboardFilters = useMemo(() => {
+        const { filters, values } = mapWidgetFilters(filterDefinitions, appliedFilters, filterFields);
+        return buildFilters(values, filters, request?.action === "sql");
+    }, [appliedFilters, filterDefinitions, filterFields, request?.action]);
     const queryKey = useMemo(
         () => JSON.stringify({ request, dashboardFilters }),
         [request, dashboardFilters]

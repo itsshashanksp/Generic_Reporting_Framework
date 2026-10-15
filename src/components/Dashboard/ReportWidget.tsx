@@ -1,5 +1,6 @@
 import { getReport } from "../../engine/ReportEngine/reportLoader";
 import type { FilterDefinition } from "../../types/filter";
+import type { WidgetFilterFields } from "../../engine/DashboardEngine/filterFields";
 import type { ReportDefinition } from "../../types/report";
 import Empty from "../Common/Empty";
 import ErrorState from "../Common/Error";
@@ -16,6 +17,8 @@ interface ReportWidgetProps {
     title: string;
     description?: string;
     filterDefinitions?: FilterDefinition[];
+    /** Renames shared dashboard filter fields for this widget (see DashboardWidget). */
+    filterFields?: WidgetFilterFields;
     cacheScope?: string;
 }
 
@@ -25,13 +28,15 @@ export default function ReportWidget({
     title,
     description,
     filterDefinitions = EMPTY_FILTER_DEFINITIONS,
+    filterFields,
     cacheScope,
 }: ReportWidgetProps) {
     const report = definition ?? (reportId ? getReport(reportId) : undefined) ?? null;
     const { response, loading, error, retry } = useDashboardWidgetRequest(
         report?.request ?? null,
         filterDefinitions,
-        cacheScope
+        cacheScope,
+        filterFields
     );
     const rows = response?.data ?? [];
 

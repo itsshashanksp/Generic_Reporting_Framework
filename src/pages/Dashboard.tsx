@@ -11,13 +11,14 @@ import StatWidget from "../components/Dashboard/StatWidget";
 import ChartWidget from "../components/Dashboard/ChartWidget";
 
 import { useFilters } from "../engine/FilterContext";
-import { isEmptyFilterValue } from "../engine/FilterEngine";
+import { isRequiredFilterIncomplete } from "../engine/FilterEngine";
 import {
     useDashboard,
     DashboardProvider,
 } from "../engine/DashboardContext";
 
 import type { DashboardDefinition } from "../types/dashboard";
+import type { FilterDefinition } from "../types/filter";
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -129,7 +130,14 @@ function DashboardContent({
         isRefreshing,
         finishRefresh,
         applyFilters,
+        appliedFilters,
     } = useDashboard();
+
+    // Widgets mount (and so request, refresh and export) only once the applied
+    // filters complete every required filter, e.g. both dates of a range.
+    const missingAppliedFilters = (dashboard.filters ?? []).filter(
+        filter => isRequiredFilterIncomplete(filter, appliedFilters[filter.field])
+    );
 
     useEffect(() => {
 
@@ -138,13 +146,14 @@ function DashboardContent({
     }, [dashboard.id, clearFilters]);
 
     const handleSearch = () => {
-        const missing = (dashboard.filters ?? []).filter(filter => {
-            const value = filters[filter.field];
-            return filter.required && isEmptyFilterValue(value);
-        });
+        const missing = (dashboard.filters ?? []).filter(
+            filter => isRequiredFilterIncomplete(filter, filters[filter.field])
+        );
 
         if (missing.length > 0) {
-            setFilterError(`Complete the required filter${missing.length > 1 ? "s" : ""}: ${missing.map(filter => filter.label).join(", ")}.`);
+            setFilterError(`Complete the required filter${missing.length > 1 ? "s" : ""}: ${missing.map(describeRequiredFilter).join(", ")}.`);
+            // Remove results for an earlier range rather than show them as current.
+            applyFilters({});
             return false;
         }
 
@@ -192,7 +201,7 @@ function DashboardContent({
                     type="button"
                     className="app-button app-button--primary"
                     onClick={refreshDashboard}
-                    disabled={isRefreshing}
+                    disabled={isRefreshing || missingAppliedFilters.length > 0}
                     title="Refresh dashboard data"
                 >
                     {isRefreshing ? "Refreshing…" : "Refresh"}
@@ -210,7 +219,14 @@ function DashboardContent({
                     />
                 )}
 
-            {visibleWidgets.length === 0 ? (
+            {missingAppliedFilters.length > 0 ? (
+                <div
+                    className="dashboard-empty"
+                    role="status"
+                >
+                    Enter {missingAppliedFilters.map(describeRequiredFilter).join(", ")} and choose Search to load this dashboard.
+                </div>
+            ) : visibleWidgets.length === 0 ? (
                 <div
                     className="dashboard-empty"
                     role="status"
@@ -358,6 +374,7 @@ function DashboardContent({
                                                 filterDefinitions={
                                                     dashboard.filters ?? []
                                                 }
+                                                filterFields={widget.filterFields}
                                                 cacheScope={`${dashboard.id}:${widget.id}`}
                                             />
                                         )}
@@ -381,6 +398,7 @@ function DashboardContent({
                                                 filterDefinitions={
                                                     dashboard.filters ?? []
                                                 }
+                                                filterFields={widget.filterFields}
                                                 cacheScope={`${dashboard.id}:${widget.id}`}
                                             />
                                         )}
@@ -409,6 +427,7 @@ function DashboardContent({
                                                 filterDefinitions={
                                                     dashboard.filters ?? []
                                                 }
+                                                filterFields={widget.filterFields}
                                                 cacheScope={`${dashboard.id}:${widget.id}`}
                                                 exportConfig={widget.export}
                                             />
@@ -452,6 +471,7 @@ function DashboardContent({
                                                 filterDefinitions={
                                                     dashboard.filters ?? []
                                                 }
+                                                filterFields={widget.filterFields}
                                                 cacheScope={`${dashboard.id}:${widget.id}`}
                                             />
                                         )}
@@ -484,4 +504,10 @@ function getResponsiveWidgetWidth(
             )
         )
     );
+}
+
+function describeRequiredFilter(filter: FilterDefinition) {
+    return filter.type === "daterange"
+        ? `${filter.label} (start and end dates)`
+        : filter.label;
 }

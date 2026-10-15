@@ -13,6 +13,7 @@ import {
 } from "../../api/request";
 import { useDashboard } from "../../engine/DashboardContext";
 import { buildFilters } from "../../engine/FilterQueryBuilder";
+import { mapWidgetFilters, type WidgetFilterFields } from "../../engine/DashboardEngine/filterFields";
 import { createRequestCacheKey, getCachedResponse, getOrCreateInFlightRequest, setCachedResponse } from "../../engine/RequestCache";
 import { ExportFileError, exportExcel, exportRowsCSV, fetchAllRowsForExport } from "../../engine/ExportEngine";
 
@@ -39,6 +40,8 @@ interface TableWidgetProps {
     request: WidgetRequest;
     columns?: ColumnDefinition[];
     filterDefinitions?: FilterDefinition[];
+    /** Renames shared dashboard filter fields for this widget (see DashboardWidget). */
+    filterFields?: WidgetFilterFields;
     cacheScope?: string;
     exportConfig?: ExportConfig;
 }
@@ -98,6 +101,7 @@ export default function TableWidget({
     request,
     columns: configuredColumns,
     filterDefinitions = EMPTY_FILTER_DEFINITIONS,
+    filterFields,
     cacheScope = title,
     exportConfig,
 }: TableWidgetProps) {
@@ -131,10 +135,11 @@ export default function TableWidget({
     const [exportProgress, setExportProgress] = useState("");
     const [exportError, setExportError] = useState("");
 
-    const dashboardFilters = useMemo(
-        () => buildFilters(appliedFilters, filterDefinitions, request.action === "sql"),
-        [appliedFilters, filterDefinitions, request.action]
-    );
+    // Screen requests and export-all share these, so both use the mapped fields.
+    const dashboardFilters = useMemo(() => {
+        const { filters, values } = mapWidgetFilters(filterDefinitions, appliedFilters, filterFields);
+        return buildFilters(values, filters, request.action === "sql");
+    }, [appliedFilters, filterDefinitions, filterFields, request.action]);
 
     const queryKey = useMemo(
         () => JSON.stringify({

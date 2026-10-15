@@ -18,6 +18,7 @@ import {
     getWidgetDefinition,
     getWidgetDefinitionIds,
 } from "../WidgetEngine";
+import { mapWidgetFilters } from "./filterFields";
 
 export type DashboardLoadResult =
     | {
@@ -138,11 +139,16 @@ export function getDashboardIds(): string[] {
     return Object.keys(dashboards);
 }
 
-/** Resolves inline definitions first, then existing report/widget references. */
+/**
+ * Resolves inline definitions first, then existing report/widget references.
+ * Shared filters are renamed by the widget's `filterFields` first, so its SQL
+ * Resource declaration names the same field as its runtime filters.
+ */
 export function resolveDashboardWidgetDefinition(
     widget: DashboardWidget,
-    sharedFilters: FilterDefinition[] = []
+    dashboardFilters: FilterDefinition[] = []
 ): ReportDefinition | undefined {
+    const sharedFilters = mapWidgetFilters(dashboardFilters, {}, widget.filterFields).filters;
     const filters = mergeFilterDefinitions(widget.filters ?? [], sharedFilters);
     if (widget.queryDefinition || widget.request) {
         const configuration: ReportConfiguration = {

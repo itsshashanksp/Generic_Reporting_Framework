@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { formatNumberForDisplay, NULL_DISPLAY_VALUE } from "../../engine/ValueFormatter";
 
 import type { FilterDefinition } from "../../types/filter";
+import type { WidgetFilterFields } from "../../engine/DashboardEngine/filterFields";
 import type { WidgetRequest } from "../../types/widget";
 import Empty from "../Common/Empty";
 import ErrorState from "../Common/Error";
@@ -18,6 +19,8 @@ interface StatWidgetProps {
     valueField?: string;
     format?: "number" | "currency" | "decimal";
     filterDefinitions?: FilterDefinition[];
+    /** Renames shared dashboard filter fields for this widget (see DashboardWidget). */
+    filterFields?: WidgetFilterFields;
     cacheScope?: string;
 }
 
@@ -59,12 +62,14 @@ export default function StatWidget({
     valueField,
     format,
     filterDefinitions = EMPTY_FILTER_DEFINITIONS,
+    filterFields,
     cacheScope,
 }: StatWidgetProps) {
     const { response, loading, error, retry } = useDashboardWidgetRequest(
         request,
         filterDefinitions,
-        cacheScope
+        cacheScope,
+        filterFields
     );
     const statistic = useMemo(() => {
         const firstRow = response?.data?.[0];

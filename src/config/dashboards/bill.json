@@ -1,7 +1,7 @@
 {
   "id": "bill-dashboard",
   "title": "Bill Dashboard",
-  "description": "Month-wise sales, category-wise sales and month-wise purchases for the current financial year.",
+  "description": "Month-wise sales, category-wise sales and month-wise purchases for the selected date range.",
   "layout": {
     "columns": 12,
     "tabletColumns": 6,
@@ -11,12 +11,21 @@
     "enabled": false,
     "interval": 30000
   },
+    "filters": [
+    {
+      "field": "Bill_Date",
+      "label": "Start Date",
+      "type": "daterange",
+      "operator": "between",
+      "required": true
+    }
+  ],
   "widgets": [
     {
       "id": "sales-month-wise",
       "type": "table",
       "title": "Total Sales Month Wise",
-      "description": "Sales grouped by month for the current financial year.",
+      "description": "Sales by calendar month for the selected date range; the same month in different years is combined.",
       "width": 6,
       "visible": true,
       "position": {
@@ -52,8 +61,9 @@
     {
       "id": "purchases-month-wise",
       "type": "table",
+      "filterFields": { "Bill_Date": "GIN_Date" },
       "title": "Purchases Month Wise",
-      "description": "Purchases grouped by month for the current financial year.",
+      "description": "Purchases by calendar month for the selected date range; the same month in different years is combined.",
       "width": 6,
       "visible": true,
       "position": {
@@ -90,7 +100,7 @@
       "id": "top-10-categories",
       "type": "table",
       "title": "Top 10 Item Category Sales",
-      "description": "Ten highest selling item categories for the financial year.",
+      "description": "Ten highest selling item categories for the selected date range.",
       "width": 6,
       "visible": true,
       "position": {
@@ -127,7 +137,7 @@
       "id": "top-10-month-wise-category-wise",
       "type": "table",
       "title": "Top 10 Month Wise Category Wise Sales",
-      "description": "Top 10 category sales by month for the financial year.",
+      "description": "Top 10 category sales for each calendar month in the selected date range; the same month in different years is combined.",
       "width": 6,
       "visible": true,
       "position": {
@@ -137,7 +147,7 @@
       "queryDefinition": {
         "format": "sql",
         "database": "loyal-ibms",
-        "resource": "widgets/TOP-10-month-Wise-Category-wise"
+        "resource": "widgets/bill-top-10-month-wise-category-wise"
       },
       "columns": [
         {
@@ -168,7 +178,7 @@
       "id": "category-sales-month-wise",
       "type": "table",
       "title": "Month Wise / Category Wise Sales",
-      "description": "Category sales by month for the current financial year.",
+      "description": "Category sales by calendar month for the selected date range; the same month in different years is combined.",
       "width": 6,
       "visible": true,
       "position": {
@@ -212,7 +222,7 @@
       "id": "total-sales",
       "type": "stat",
       "title": "Total Sales",
-      "description": "Total sales for the current financial year.",
+      "description": "Total sales for the selected date range.",
       "width": 4,
       "height": 175,
       "visible": true,
@@ -231,8 +241,9 @@
     {
       "id": "total-purchases",
       "type": "stat",
+      "filterFields": { "Bill_Date": "GIN_Date" },
       "title": "Total Purchases",
-      "description": "Total purchases for the current financial year.",
+      "description": "Total purchases for the selected date range.",
       "width": 4,
       "height": 175,
       "visible": true,

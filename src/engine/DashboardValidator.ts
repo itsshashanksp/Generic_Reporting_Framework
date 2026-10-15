@@ -1,5 +1,6 @@
 import type { DashboardWidget } from "../types/widget";
 import type { FilterDefinition } from "../types/filter";
+import { mapWidgetFilters } from "./DashboardEngine/filterFields";
 import {
     validateFilters as validateFilterDefinitions,
 } from "./FilterEngine/validator";
@@ -387,7 +388,7 @@ function validateWidget(
 
 
     const commonKeys = [
-        "id", "type", "title", "description", "width", "height", "visible", "position",
+        "id", "type", "title", "description", "width", "height", "visible", "position", "filterFields",
     ];
     const definitionKeys = ["queryDefinition", "columns", "filters", "sort", "filterLogic", "grid", "toolbar"];
     const typeKeys: Record<string, string[]> = {
@@ -469,6 +470,13 @@ function validateWidget(
         errors
     );
 
+    // Inline definitions are checked as the widget sees the shared filters.
+    const widgetSharedFilters = mapWidgetFilters(
+        sharedFilters,
+        {},
+        validateFilterFields(widget, widgetLabel, sharedFilters, errors)
+    ).filters;
+
     const hasReportId = widget.reportId !== undefined;
     const hasWidgetId = widget.widgetId !== undefined;
     const hasRequest = widget.request !== undefined;
@@ -486,7 +494,7 @@ function validateWidget(
                 description: widget.description,
                 queryDefinition: widget.queryDefinition,
                 columns: widget.columns,
-                filters: mergeFilterDefinitions(widget.filters, sharedFilters),
+                filters: mergeFilterDefinitions(widget.filters, widgetSharedFilters),
                 sort: widget.sort,
                 filterLogic: widget.filterLogic,
                 grid: widget.grid,
@@ -523,7 +531,7 @@ function validateWidget(
                 title: widget.title,
                 request: widget.request,
                 columns: widget.columns,
-                filters: mergeFilterDefinitions(widget.filters, sharedFilters),
+                filters: mergeFilterDefinitions(widget.filters, widgetSharedFilters),
                 sort: widget.sort,
                 filterLogic: widget.filterLogic,
                 grid: widget.grid,
@@ -627,6 +635,57 @@ function validateWidget(
             );
         }
     }
+}
+
+/**
+ * `filterFields` renames shared dashboard filter fields for one widget. Each
+ * source must be a shared filter field; each target a SQL runtime identifier
+ * (a field name, never an expression) that no other shared or widget filter
+ * uses, and no two sources share a target. Returns the mapping when valid.
+ */
+function validateFilterFields(
+    widget: Record<string, unknown>,
+    widgetLabel: string,
+    sharedFilters: FilterDefinition[],
+    errors: string[]
+): Record<string, string> | undefined {
+    if (widget.filterFields === undefined) return undefined;
+    const label = `${widgetLabel} filterFields`;
+    if (!isRecord(widget.filterFields) || Object.keys(widget.filterFields).length === 0) {
+        errors.push(`${label} must be an object mapping shared filter fields to field names, e.g. { "Bill_Date": "GIN_Date" }.`);
+        return undefined;
+    }
+    const initialErrorCount = errors.length;
+    const sharedFields = new Set(sharedFilters.map(filter => filter.field));
+    const widgetFields = Array.isArray(widget.filters)
+        ? widget.filters.filter(isRecord).map(filter => filter.field).filter(isNonEmptyString)
+        : [];
+    const targets = new Map<string, string>();
+
+    Object.entries(widget.filterFields).forEach(([source, target]) => {
+        if (!sharedFields.has(source)) {
+            errors.push(`${label} source "${source}" is not a shared dashboard filter field.`);
+        }
+        if (typeof target !== "string" || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(target)) {
+            errors.push(`${label} target for "${source}" must be a field name (letters, digits and underscores, not starting with a digit).`);
+            return;
+        }
+        const key = target.toLowerCase();
+        if (key === source.toLowerCase()) {
+            errors.push(`${label} maps "${source}" to itself; remove the mapping.`);
+        } else if (targets.has(key)) {
+            errors.push(`${label} maps both "${targets.get(key)}" and "${source}" to "${target}".`);
+        } else if (sharedFilters.some(filter => filter.field.toLowerCase() === key)) {
+            errors.push(`${label} target "${target}" collides with shared dashboard filter "${target}".`);
+        } else if (widgetFields.some(field => field.toLowerCase() === key)) {
+            errors.push(`${label} target "${target}" collides with this widget's filter "${target}".`);
+        }
+        targets.set(key, source);
+    });
+
+    return errors.length === initialErrorCount
+        ? widget.filterFields as Record<string, string>
+        : undefined;
 }
 
 function mergeFilterDefinitions(widgetFilters: unknown, sharedFilters: FilterDefinition[]) {

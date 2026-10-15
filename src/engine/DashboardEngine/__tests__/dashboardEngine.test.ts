@@ -108,7 +108,7 @@ describe("DashboardEngine", () => {
             "widgets/bill-sales-month-wise",
             "widgets/bill-purchases-month-wise",
             "widgets/bill-top-10-categories",
-            "widgets/TOP-10-month-Wise-Category-wise",
+            "widgets/bill-top-10-month-wise-category-wise",
             "widgets/bill-category-sales-month-wise",
             "widgets/bill-total-sales",
             "widgets/bill-total-purchases",

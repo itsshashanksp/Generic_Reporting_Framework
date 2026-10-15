@@ -94,7 +94,7 @@ Export requires `enabled`; optional keys are `formats` (non-empty subset of `csv
 | `filters` | no | same filter definitions; loader default `[]` |
 | `widgets` | yes | array; empty is permitted with a warning |
 
-Every widget requires unique `id`, supported `type`, and `title`. Common optional keys are `description`, positive `width`, positive pixel `height`, `visible`, and `position:{x,y}`. Desktop `x` is zero-based and `y` is a one-based CSS grid row; `x + width` cannot exceed desktop columns. Width defaults to 12. At tablet/mobile breakpoints, explicit positions are ignored and widths are scaled with `ceil`.
+Every widget requires unique `id`, supported `type`, and `title`. Common optional keys are `description`, positive `width`, positive pixel `height`, `visible`, `position:{x,y}`, and `filterFields` (renames shared filter fields for one widget; see [Per-widget filter fields](DASHBOARDS.md#per-widget-filter-fields)). Desktop `x` is zero-based and `y` is a one-based CSS grid row; `x + width` cannot exceed desktop columns. Width defaults to 12. At tablet/mobile breakpoints, explicit positions are ignored and widths are scaled with `ceil`.
 
 ## Dashboard widget sources
 

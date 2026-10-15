@@ -77,6 +77,13 @@ export interface DashboardWidgetPresentation {
 
     visible?: boolean;
 
+    /**
+     * Renames shared dashboard filter fields for this widget only, e.g.
+     * `{ "Bill_Date": "GIN_Date" }`: one dashboard input filters a resource
+     * whose column has another name. A field-name mapping, never SQL.
+     */
+    filterFields?: Record<string, string>;
+
     position?: {
         x: number;
         y: number;

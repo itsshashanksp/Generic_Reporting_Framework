@@ -16,6 +16,7 @@ import {
 } from "recharts";
 
 import type { FilterDefinition } from "../../types/filter";
+import type { WidgetFilterFields } from "../../engine/DashboardEngine/filterFields";
 import type { WidgetRequest } from "../../types/widget";
 import Empty from "../Common/Empty";
 import ErrorState from "../Common/Error";
@@ -38,6 +39,8 @@ interface ChartWidgetProps {
     showGrid?: boolean;
     showLabels?: boolean;
     filterDefinitions?: FilterDefinition[];
+    /** Renames shared dashboard filter fields for this widget (see DashboardWidget). */
+    filterFields?: WidgetFilterFields;
     cacheScope?: string;
 }
 
@@ -53,12 +56,14 @@ export default function ChartWidget({
     showGrid = true,
     showLabels = false,
     filterDefinitions = EMPTY_FILTER_DEFINITIONS,
+    filterFields,
     cacheScope,
 }: ChartWidgetProps) {
     const { response, loading, error, retry } = useDashboardWidgetRequest(
         request,
         filterDefinitions,
-        cacheScope
+        cacheScope,
+        filterFields
     );
     const data = useMemo(
         () => response?.data?.map(row => {
