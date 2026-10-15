@@ -2,12 +2,13 @@
 
 Status reflects executable frontend code, not backend capability or aspirational configuration.
 
-Status summary: Completed — 36 and 36A; In Progress — none; Next — 37; Planned — 39, 40, 41, 42, 44, 45, and 46; Deferred / Last — 38 and 43. Removed and not-supported work is listed below the table.
+Status summary: Completed — 36 and 36A; In Progress — 47; Next — 37; Planned — 39, 40, 41, 42, 44, 45, and 46; Deferred / Last — 38 and 43. Removed and not-supported work is listed below the table.
 
 | # | Workstream | Status | Evidence / remaining scope |
 | ---: | --- | --- | --- |
 | 36 | Report layout and responsive UX | Completed | Shared report/table frame, mobile labeled cards, filters, sort, pagination, pull-to-refresh, and portaled More/Export sheet |
 | 36A | Backend read-capability alignment and cleanup | Completed | JSON/SQL Resource contracts, validation, dead SQL parser removal, API/error documentation and tests |
+| 47 | Configurable dashboard date-filter behavior | In Progress | Frontend implemented and tested: dashboard-level `dateFilterBehavior` with `"required"` (nothing loads until Search applies both dates) and `"optional"` (loads without a date filter; Search applies only complete ranges); draft form values versus Search-applied values, with an applied-range indicator; omitted keeps each dashboard's existing filter behavior; configuration validation and regression tests, including per-widget `filterFields`. Remaining release dependency: SQL Server integration validation of the date-filtered SQL Resources (not yet performed) and access-scope entries for their filter fields |
 | 37 | Report actions | Next | Define frontend mutation UX and a safe resource/action schema before exposing backend insert/update/delete/upsert; none are currently supported |
 | 39 | Chart engine | Planned | Basic bar/line/pie widgets exist; multi-series configuration, formatting, accessibility, interactions, and export remain |
 | 40 | Dashboard builder | Planned | Current dashboards are authored JSON; no interactive builder or saved dashboard model |

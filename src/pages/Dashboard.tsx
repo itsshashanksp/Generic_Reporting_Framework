@@ -1,6 +1,7 @@
 import { ResponsiveFilterPanel } from "../components/Filters";
 import {
     getDashboard,
+    getPartialDateRanges,
     resolveDashboardWidgetDefinition,
     resolveDashboardWidgetColumns,
     resolveDashboardWidgetRequest,
@@ -18,6 +19,7 @@ import {
 } from "../engine/DashboardContext";
 
 import type { DashboardDefinition } from "../types/dashboard";
+import type { FilterValues } from "../engine/FilterContext";
 import type { FilterDefinition } from "../types/filter";
 
 import { useEffect, useMemo, useState } from "react";
@@ -157,6 +159,14 @@ function DashboardContent({
             return false;
         }
 
+        // "optional": a range applies only with both dates. The applied
+        // filters stay as they were, and the applied-range line says so.
+        const partial = getPartialDateRanges(dashboard.filters ?? [], filters, dashboard.dateFilterBehavior);
+        if (partial.length > 0) {
+            setFilterError(`Enter both a start and an end date for ${partial.map(filter => filter.label).join(", ")}, or clear the dates to search without a date range. The results shown are unchanged.`);
+            return false;
+        }
+
         setFilterError("");
         applyFilters(filters);
         return true;
@@ -218,6 +228,12 @@ function DashboardContent({
                         onClear={handleClearFilters}
                     />
                 )}
+
+            {dashboard.dateFilterBehavior && missingAppliedFilters.length === 0 && (
+                <p className="dashboard-applied-range" aria-live="polite">
+                    {describeAppliedDateRanges(dashboard.filters ?? [], appliedFilters)}
+                </p>
+            )}
 
             {missingAppliedFilters.length > 0 ? (
                 <div
@@ -510,4 +526,17 @@ function describeRequiredFilter(filter: FilterDefinition) {
     return filter.type === "daterange"
         ? `${filter.label} (start and end dates)`
         : filter.label;
+}
+
+/** Which date range the shown results use, so an edited but unsearched form is not mistaken for them. */
+function describeAppliedDateRanges(filters: FilterDefinition[], applied: FilterValues) {
+    return filters
+        .filter(filter => filter.type === "daterange")
+        .map(filter => {
+            const value = applied[filter.field];
+            return Array.isArray(value) && value.length === 2 && value.every(item => item !== "" && item !== null && item !== undefined)
+                ? `Showing results for ${filter.label} ${String(value[0])} to ${String(value[1])}.`
+                : `Showing results without a ${filter.label} range.`;
+        })
+        .join(" ");
 }

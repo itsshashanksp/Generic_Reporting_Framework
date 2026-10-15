@@ -4,6 +4,7 @@
 
 ### Added
 
+- Configurable dashboard date-filter behavior: the optional dashboard property `dateFilterBehavior` is `"required"` (no widget requests, refresh, or export until Search applies both dates of every shared date range) or `"optional"` (widgets load without a date runtime filter; Search applies a range only with both dates). Omitting it keeps the existing filter behavior. Dashboards using it show which date range the results reflect. The Bill dashboard uses `"required"`.
 - Backend capability matrix and concise frontend-facing API reference.
 - Boolean filter controls and configured NOT LIKE filter variants.
 - Contract tests for JSON Query mode, SQL Resource mode, filter serialization, grouping, pagination, response validation, and backend error details.

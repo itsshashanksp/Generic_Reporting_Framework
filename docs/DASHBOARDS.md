@@ -10,9 +10,25 @@ Widgets without explicit position flow through the CSS grid. Invisible widgets a
 
 ## Filters and refresh
 
-Dashboard filters use the same controls and operators as reports. **Search** applies the current form to all widgets; **Clear** removes applied dashboard filters.
+Dashboard filters use the same controls and operators as reports. Editing the filter form changes only its draft values; widgets keep using the applied values until **Search** validates the form and applies it, once, to every widget. **Clear filters** empties the form and removes every applied filter. Searching again for the values already applied sends no new requests (the request cache may answer repeated requests); **Refresh** asks again.
 
-A shared filter with `"required": true` gates the whole dashboard: its widgets are not shown, so they send no requests and offer no refresh or export, until **Search** applies a complete value. A required `daterange` needs both its start and its end date. Searching with a missing or partial required value shows an error, keeps the form editable, and removes results from an earlier search; **Clear** removes them too. Dashboards without required filters load immediately, as before.
+A shared filter with `"required": true` gates the whole dashboard: its widgets are not shown, so they send no requests and offer no refresh or export, until **Search** applies a complete value. A required `daterange` needs both its start and its end date. Searching with a missing or partial required value shows an error, keeps the form editable, and removes results from an earlier search; **Clear** removes them too.
+
+### Date filter behavior
+
+The optional dashboard property `dateFilterBehavior` decides how the dashboard's shared `daterange` filters work:
+
+| Value | Before the first Search | Search |
+| --- | --- | --- |
+| `"required"` | Nothing loads: every shared date range is treated as required, so the gate above applies | Needs both dates of every range; a missing or partial range is refused, and earlier results are removed |
+| `"optional"` | Every widget loads without a date runtime filter | Applies a range only with both dates. A range with one date is refused, and the results already shown stay with their range unchanged. Both dates empty searches without a date range |
+| omitted | Filters behave as configured: a filter marked `required` gates the dashboard, and an unmarked range may be searched with only a start (`>=`) or only an end (`<=`) | As configured |
+
+Dashboards that set `dateFilterBehavior` show which date range the displayed results use ("Showing results for Start Date … to …" or "Showing results without a Start Date range"), so edited but unsearched dates are not mistaken for the shown results.
+
+Validation rejects any other value, a `dateFilterBehavior` on a dashboard without a shared `daterange` filter, and `"optional"` together with a `daterange` filter marked `"required": true`.
+
+The applied range reaches each widget through its `filterFields`, if it has one (see below), so a widget whose date column has another name still gets the range under its own field. `"optional"` only omits the frontend's runtime date filter: a SQL Resource that limits dates in its own SQL still returns only those dates.
 
 ### Per-widget filter fields
 

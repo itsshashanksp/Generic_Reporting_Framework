@@ -1,0 +1,234 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { FilterProvider } from "../../engine/FilterContext";
+import { clearRequestCache } from "../../engine/RequestCache";
+import Dashboard from "../Dashboard";
+
+const { executeRequestMock } = vi.hoisted(() => ({ executeRequestMock: vi.fn() }));
+
+vi.mock("../../api/request", async importOriginal => ({
+    ...await importOriginal<typeof import("../../api/request")>(),
+    executeRequest: executeRequestMock,
+}));
+
+vi.mock("../../components/Grid/GenericGrid", () => ({
+    default: () => <div data-testid="table-grid" />,
+}));
+
+// Test-only copies of the Bill dashboard, loaded through the real loader, so
+// no production dashboard changes. Their date filter has no own `required`.
+vi.mock("../../engine/DashboardEngine", async importOriginal => {
+    const actual = await importOriginal<typeof import("../../engine/DashboardEngine")>();
+    const bill = (await import("../../config/dashboards/bill.json")).default;
+    const unflagged = bill.filters.map(filter => Object.fromEntries(Object.entries(filter).filter(([key]) => key !== "required")));
+    const fixtures: Record<string, unknown> = {
+        "optional-bill-test": { ...bill, id: "optional-bill-test", dateFilterBehavior: "optional", filters: unflagged },
+        "required-bill-test": { ...bill, id: "required-bill-test", dateFilterBehavior: "required", filters: unflagged },
+    };
+    return {
+        ...actual,
+        getDashboard: (id: string) => id in fixtures
+            ? actual.loadDashboardConfiguration(fixtures[id], id)
+            : actual.getDashboard(id),
+    };
+});
+
+type SentRequest = { resource: string; filters: { field: string; type?: string; operator: string; value: unknown }[] };
+const sent = () => executeRequestMock.mock.calls.map(call => call[0] as SentRequest);
+const exportMenus = () => screen.queryAllByRole("button").filter(button => button.getAttribute("aria-haspopup") === "menu");
+const appliedRange = () => document.querySelector(".dashboard-applied-range")?.textContent;
+
+const RANGE = ["2021-04-01", "2022-03-31"];
+const MAPPED_FIELDS: Record<string, string> = {
+    "widgets/bill-sales-month-wise": "Bill_Date",
+    "widgets/bill-purchases-month-wise": "GIN_Date",
+    "widgets/bill-top-10-categories": "Bill_Date",
+    "widgets/bill-top-10-month-wise-category-wise": "Bill_Date",
+    "widgets/bill-category-sales-month-wise": "Bill_Date",
+    "widgets/bill-total-sales": "Bill_Date",
+    "widgets/bill-total-purchases": "GIN_Date",
+};
+const mappedRangeFilters = (range: unknown[]) => Object.fromEntries(Object.entries(MAPPED_FIELDS)
+    .map(([resource, field]) => [resource, [{ field, type: "daterange", operator: "BETWEEN", value: range }]]));
+const filtersByResource = (requests: SentRequest[]) => Object.fromEntries(requests.map(request => [request.resource, request.filters]));
+
+function renderDashboard(dashboardId: string) {
+    render(<FilterProvider><Dashboard dashboardId={dashboardId} /></FilterProvider>);
+}
+
+function enterDates(start: string, end: string) {
+    fireEvent.change(screen.getByLabelText("Start Date start"), { target: { value: start } });
+    fireEvent.change(screen.getByLabelText("Start Date end"), { target: { value: end } });
+}
+
+const search = () => fireEvent.click(screen.getByRole("button", { name: "Search" }));
+const settle = () => new Promise(resolve => setTimeout(resolve, 50));
+
+beforeEach(() => {
+    clearRequestCache();
+    executeRequestMock.mockReset().mockResolvedValue({
+        success: true,
+        message: "ok",
+        data: [{ Month: "04", Category: "A", Sales: 2, Purchases: 1, TotalSales: 3, TotalPurchases: 4 }],
+        meta: { page: 1, pageSize: 10, totalRows: 1, rowsReturned: 1, executionTime: 1 },
+    });
+});
+
+afterEach(() => vi.restoreAllMocks());
+
+describe('dateFilterBehavior "required"', () => {
+    it("holds back a dashboard by its configured behavior alone", async () => {
+        renderDashboard("required-bill-test");
+        expect(screen.getByRole("status").textContent).toBe("Enter Start Date (start and end dates) and choose Search to load this dashboard.");
+        await settle();
+        expect(executeRequestMock).not.toHaveBeenCalled();
+
+        enterDates("2021-04-01", "");
+        search();
+        expect(screen.getByRole("alert").textContent).toBe("Complete the required filter: Start Date (start and end dates).");
+        await settle();
+        expect(executeRequestMock).not.toHaveBeenCalled();
+
+        enterDates(RANGE[0], RANGE[1]);
+        search();
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(7));
+        expect(filtersByResource(sent())).toEqual(mappedRangeFilters(RANGE));
+    });
+
+    it("keeps the applied range while the dates are edited, and sends each search once", async () => {
+        renderDashboard("bill-dashboard");
+        enterDates(RANGE[0], RANGE[1]);
+        search();
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(7));
+        expect(appliedRange()).toBe("Showing results for Start Date 2021-04-01 to 2022-03-31.");
+
+        enterDates("2023-04-01", "2024-03-31");
+        await settle();
+        expect(executeRequestMock).toHaveBeenCalledTimes(7);
+        expect(appliedRange()).toBe("Showing results for Start Date 2021-04-01 to 2022-03-31.");
+
+        search();
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(14));
+        await settle();
+        expect(executeRequestMock).toHaveBeenCalledTimes(14);
+        expect(filtersByResource(sent().slice(7))).toEqual(mappedRangeFilters(["2023-04-01", "2024-03-31"]));
+        expect(appliedRange()).toBe("Showing results for Start Date 2023-04-01 to 2024-03-31.");
+    });
+});
+
+describe('dateFilterBehavior "optional"', () => {
+    async function loadInitial() {
+        renderDashboard("optional-bill-test");
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(7));
+        await waitFor(() => expect(screen.getAllByTestId("table-grid")).toHaveLength(5));
+    }
+
+    async function searchRange(range = RANGE, expectedCalls = 14) {
+        enterDates(range[0], range[1]);
+        search();
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(expectedCalls));
+    }
+
+    it("loads every widget without a date runtime filter", async () => {
+        await loadInitial();
+        expect(Object.keys(filtersByResource(sent())).sort()).toEqual(Object.keys(MAPPED_FIELDS).sort());
+        expect(sent().every(request => request.filters.length === 0)).toBe(true);
+        expect(appliedRange()).toBe("Showing results without a Start Date range.");
+        expect(screen.queryByText(/choose Search to load this dashboard/)).toBeNull();
+        expect(screen.getByLabelText("Start Date start")).toBeTruthy();
+        expect(screen.getByLabelText("Start Date end")).toBeTruthy();
+    });
+
+    it("sends nothing while dates are selected, then applies both dates once on Search", async () => {
+        await loadInitial();
+        enterDates(RANGE[0], RANGE[1]);
+        await settle();
+        expect(executeRequestMock).toHaveBeenCalledTimes(7);
+
+        search();
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(14));
+        await settle();
+        expect(executeRequestMock).toHaveBeenCalledTimes(14);
+        expect(filtersByResource(sent().slice(7))).toEqual(mappedRangeFilters(RANGE));
+        expect(appliedRange()).toBe("Showing results for Start Date 2021-04-01 to 2022-03-31.");
+    });
+
+    it.each([
+        ["only a start date", "2023-04-01", ""],
+        ["only an end date", "", "2024-03-31"],
+    ])("rejects %s and keeps the applied range and its results", async (_name, start, end) => {
+        await loadInitial();
+        await searchRange();
+
+        enterDates(start, end);
+        search();
+        await settle();
+
+        expect(screen.getByRole("alert").textContent).toBe(
+            "Enter both a start and an end date for Start Date, or clear the dates to search without a date range. The results shown are unchanged."
+        );
+        expect(executeRequestMock).toHaveBeenCalledTimes(14);
+        expect(appliedRange()).toBe("Showing results for Start Date 2021-04-01 to 2022-03-31.");
+        expect(screen.getAllByTestId("table-grid")).toHaveLength(5);
+        expect((screen.getByLabelText("Start Date start") as HTMLInputElement).value).toBe(start);
+        expect((screen.getByLabelText("Start Date end") as HTMLInputElement).disabled).toBe(false);
+    });
+
+    // Requests without a date range repeat the initial ones, so the in-memory
+    // request cache may answer them; Refresh asks the API again.
+    async function expectUndatedResults() {
+        await waitFor(() => expect(appliedRange()).toBe("Showing results without a Start Date range."));
+        await settle();
+        expect(sent().slice(14).every(request => request.filters.length === 0)).toBe(true);
+        expect(screen.getAllByTestId("table-grid")).toHaveLength(5);
+        const before = executeRequestMock.mock.calls.length;
+        fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+        await waitFor(() => expect(executeRequestMock.mock.calls.length).toBe(before + 7));
+        expect(sent().slice(before).every(request => request.filters.length === 0)).toBe(true);
+    }
+
+    it("searching with both dates empty applies no date range", async () => {
+        await loadInitial();
+        await searchRange();
+        enterDates("", "");
+        search();
+        expect(screen.queryByRole("alert")).toBeNull();
+        await expectUndatedResults();
+    });
+
+    it("Clear filters removes the applied range from later requests", async () => {
+        await loadInitial();
+        await searchRange();
+
+        fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+        expect((screen.getByLabelText("Start Date start") as HTMLInputElement).value).toBe("");
+        expect((screen.getByLabelText("Start Date end") as HTMLInputElement).value).toBe("");
+        await expectUndatedResults();
+    });
+
+    it("exports all rows with the filters of the on-screen table", async () => {
+        vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:export");
+        vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+        vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+        const purchases = () => sent().filter(request => request.resource === "widgets/bill-purchases-month-wise");
+        const exportAllPurchases = async (calls: number) => {
+            fireEvent.click(exportMenus()[1]);
+            fireEvent.click(screen.getByRole("menuitem", { name: "All rows — CSV" }));
+            await waitFor(() => expect(purchases()).toHaveLength(calls));
+            return purchases().at(-1)!;
+        };
+
+        await loadInitial();
+        await searchRange();
+        const screenFilters = purchases().at(-1)!.filters;
+        const exported = await exportAllPurchases(3);
+        expect(exported.filters).toEqual(screenFilters);
+        expect(exported.filters).toEqual([{ field: "GIN_Date", type: "daterange", operator: "BETWEEN", value: RANGE }]);
+
+        fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+        await waitFor(() => expect(appliedRange()).toBe("Showing results without a Start Date range."));
+        const afterClear = purchases().length;
+        expect((await exportAllPurchases(afterClear + 1)).filters).toEqual([]);
+    });
+});

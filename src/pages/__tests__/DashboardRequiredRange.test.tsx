@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import salesDashboard from "../../config/dashboards/sales.json";
+import purchaseDashboard from "../../config/dashboards/purchases.json";
 import { FilterProvider } from "../../engine/FilterContext";
 import { clearRequestCache } from "../../engine/RequestCache";
 import Dashboard from "../Dashboard";
@@ -128,10 +128,12 @@ describe("Bill dashboard required date range", () => {
     });
 
     it("keeps loading other dashboards without a required filter", async () => {
-        expect(salesDashboard.filters.some(filter => "required" in filter)).toBe(false);
-        render(<FilterProvider><Dashboard dashboardId="sales-dashboard" /></FilterProvider>);
+        // A dashboard with a date range but neither dateFilterBehavior nor a required filter.
+        expect("dateFilterBehavior" in purchaseDashboard).toBe(false);
+        expect(purchaseDashboard.filters.some(filter => filter.type === "daterange" && !("required" in filter))).toBe(true);
+        render(<FilterProvider><Dashboard dashboardId="purchase-dashboard" /></FilterProvider>);
 
-        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(salesDashboard.widgets.length));
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(purchaseDashboard.widgets.length));
         expect(screen.queryByText(/choose Search to load this dashboard/)).toBeNull();
         expect(sentRequests().every(request => request.filters.length === 0)).toBe(true);
     });

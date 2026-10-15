@@ -1,6 +1,7 @@
 import type { DashboardWidget } from "../types/widget";
 import type { FilterDefinition } from "../types/filter";
 import { mapWidgetFilters } from "./DashboardEngine/filterFields";
+import { dashboardDateFilterBehaviors } from "./DashboardEngine/dateFilterBehavior";
 import {
     validateFilters as validateFilterDefinitions,
 } from "./FilterEngine/validator";
@@ -70,7 +71,7 @@ export function validateDashboard(
 
     rejectUnknownProperties(
         dashboard,
-        ["id", "title", "description", "layout", "autoRefresh", "filters", "widgets"],
+        ["id", "title", "description", "layout", "autoRefresh", "filters", "dateFilterBehavior", "widgets"],
         "Dashboard",
         errors
     );
@@ -105,6 +106,12 @@ export function validateDashboard(
     );
 
     validateFilters(
+        dashboard.filters,
+        errors
+    );
+
+    validateDateFilterBehavior(
+        dashboard.dateFilterBehavior,
         dashboard.filters,
         errors
     );
@@ -246,6 +253,36 @@ function validateAutoRefresh(
         errors.push(
             "Dashboard autoRefresh interval is required when auto refresh is enabled."
         );
+    }
+}
+
+/**
+ * `dateFilterBehavior` applies to the dashboard's shared `daterange` filters,
+ * so it needs at least one; `"optional"` cannot be combined with a date range
+ * that is itself marked required.
+ */
+function validateDateFilterBehavior(
+    behavior: unknown,
+    filters: unknown,
+    errors: string[]
+) {
+    if (behavior === undefined) return;
+    if (!dashboardDateFilterBehaviors.includes(behavior as typeof dashboardDateFilterBehaviors[number])) {
+        errors.push(`Dashboard dateFilterBehavior must be "required" or "optional"; received ${JSON.stringify(behavior)}.`);
+        return;
+    }
+    const dateRanges = Array.isArray(filters)
+        ? filters.filter(filter => isRecord(filter) && filter.type === "daterange")
+        : [];
+    if (dateRanges.length === 0) {
+        errors.push(`Dashboard dateFilterBehavior "${behavior}" requires at least one shared daterange filter.`);
+    }
+    if (behavior === "optional") {
+        dateRanges
+            .filter(filter => isRecord(filter) && filter.required === true)
+            .forEach(filter => errors.push(
+                `Dashboard dateFilterBehavior "optional" conflicts with required daterange filter "${String((filter as Record<string, unknown>).field)}"; remove one.`
+            ));
     }
 }
 

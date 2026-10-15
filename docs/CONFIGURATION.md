@@ -92,6 +92,7 @@ Export requires `enabled`; optional keys are `formats` (non-empty subset of `csv
 | `layout` | no | positive `columns`, `tabletColumns`, `mobileColumns`; rendered defaults `12/6/1` |
 | `autoRefresh` | no | `{enabled:boolean, interval?:positive integer}`; interval required when enabled |
 | `filters` | no | same filter definitions; loader default `[]` |
+| `dateFilterBehavior` | no | `"required"` or `"optional"`; needs a shared `daterange` filter; omitted keeps filters as configured (see [Date filter behavior](DASHBOARDS.md#date-filter-behavior)) |
 | `widgets` | yes | array; empty is permitted with a warning |
 
 Every widget requires unique `id`, supported `type`, and `title`. Common optional keys are `description`, positive `width`, positive pixel `height`, `visible`, `position:{x,y}`, and `filterFields` (renames shared filter fields for one widget; see [Per-widget filter fields](DASHBOARDS.md#per-widget-filter-fields)). Desktop `x` is zero-based and `y` is a one-based CSS grid row; `x + width` cannot exceed desktop columns. Width defaults to 12. At tablet/mobile breakpoints, explicit positions are ignored and widths are scaled with `ceil`.

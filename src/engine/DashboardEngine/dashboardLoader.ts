@@ -19,6 +19,7 @@ import {
     getWidgetDefinitionIds,
 } from "../WidgetEngine";
 import { mapWidgetFilters } from "./filterFields";
+import { applyDateFilterBehavior } from "./dateFilterBehavior";
 
 export type DashboardLoadResult =
     | {
@@ -48,9 +49,6 @@ export function getDashboard(
     dashboardId: string
 ): DashboardLoadResult {
 
-    const dashboardConfiguration =
-        dashboards[dashboardId];
-
     if (
         !Object.prototype.hasOwnProperty.call(
             dashboards,
@@ -63,6 +61,19 @@ export function getDashboard(
             validation: null,
         };
     }
+
+    return loadDashboardConfiguration(dashboards[dashboardId], dashboardId);
+}
+
+/**
+ * Validates one dashboard configuration and normalizes its shared filters,
+ * including its `dateFilterBehavior`. `getDashboard` uses it for registered
+ * dashboards.
+ */
+export function loadDashboardConfiguration(
+    dashboardConfiguration: unknown,
+    dashboardId = "dashboard"
+): Exclude<DashboardLoadResult, { status: "not-found" }> {
 
     const validation =
         validateDashboard(
@@ -103,8 +114,9 @@ export function getDashboard(
         status: "valid",
         dashboard: {
             ...(dashboardConfiguration as DashboardDefinition),
-            filters: loadFilters(
-                (dashboardConfiguration as DashboardDefinition).filters ?? []
+            filters: applyDateFilterBehavior(
+                loadFilters((dashboardConfiguration as DashboardDefinition).filters ?? []),
+                (dashboardConfiguration as DashboardDefinition).dateFilterBehavior
             ),
         },
         validation,
