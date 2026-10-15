@@ -108,7 +108,7 @@ describe("DashboardEngine", () => {
             "widgets/bill-sales-month-wise",
             "widgets/bill-purchases-month-wise",
             "widgets/bill-top-10-categories",
-            "widgets/bill-top-10-month-wise-category-wise",
+            "widgets/sales-top-10-month-wise-category-wise",
             "widgets/bill-category-sales-month-wise",
             "widgets/bill-total-sales",
             "widgets/bill-total-purchases",
@@ -117,6 +117,38 @@ describe("DashboardEngine", () => {
         const salesTable = result.dashboard.widgets[0];
         expect(resolveDashboardWidgetColumns(salesTable)?.map(column => column.field))
             .toEqual(["Month", "Sales"]);
+    });
+
+    it("shares one TOP-10 SQL Resource between the Bill and Sales dashboards", () => {
+        const topTen = (dashboardId: string) => {
+            const result = getDashboard(dashboardId);
+            if (result.status !== "valid") throw new Error(`Expected a valid ${dashboardId}`);
+            const widget = result.dashboard.widgets.find(item => item.id === "top-10-month-wise-category-wise")!;
+            return {
+                behavior: result.dashboard.dateFilterBehavior,
+                request: resolveDashboardWidgetRequest(widget, result.dashboard.filters ?? []),
+                filename: widget.export?.filename,
+            };
+        };
+        const execution = {
+            columns: ["Month", "Category", "Sales"],
+            filters: { Bill_Date: { placement: "source" } },
+        };
+
+        expect(topTen("bill-dashboard")).toEqual({
+            behavior: "required",
+            request: expect.objectContaining({
+                action: "sql", database: "loyal-ibms", resource: "widgets/sales-top-10-month-wise-category-wise", execution,
+            }),
+            filename: "top-10-month-wise-category-wise",
+        });
+        const sales = topTen("sales-dashboard");
+        expect(sales).toEqual({
+            behavior: "optional",
+            request: expect.objectContaining({ action: "sql", resource: "widgets/sales-top-10-month-wise-category-wise", execution }),
+            filename: "top-10-month-wise-category-wise",
+        });
+        expect(sales.request).not.toHaveProperty("database");
     });
 
     it("validates inline definitions and rejects ambiguous widget sources", () => {

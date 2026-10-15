@@ -157,7 +157,7 @@ describe("dashboard filterFields requests", () => {
             "widgets/bill-sales-month-wise": ["Bill_Date"],
             "widgets/bill-purchases-month-wise": ["GIN_Date"],
             "widgets/bill-top-10-categories": ["Bill_Date"],
-            "widgets/bill-top-10-month-wise-category-wise": ["Bill_Date"],
+            "widgets/sales-top-10-month-wise-category-wise": ["Bill_Date"],
             "widgets/bill-category-sales-month-wise": ["Bill_Date"],
             "widgets/bill-total-sales": ["Bill_Date"],
             "widgets/bill-total-purchases": ["GIN_Date"],

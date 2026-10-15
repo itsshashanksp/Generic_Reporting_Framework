@@ -11,6 +11,7 @@
 
 ### Changed
 
+- The Bill dashboard's TOP-10 month-wise category widget uses `widgets/sales-top-10-month-wise-category-wise`, the SQL Resource the Sales dashboard already uses, instead of a byte-identical copy. Each dashboard keeps its own database, date-filter behavior, and export filename.
 - Migrated production SQL Resource references from legacy basename IDs to discovered `reports/...` and `widgets/...` IDs.
 - Added reviewed SQL `execution` metadata to definitions that need runtime filtering, sorting, or deterministic pagination.
 - Consolidated the repeated Item statistics SQL definition into one reusable widget configuration.

@@ -148,7 +148,7 @@
       "queryDefinition": {
         "format": "sql",
         "database": "loyal-ibms",
-        "resource": "widgets/bill-top-10-month-wise-category-wise"
+        "resource": "widgets/sales-top-10-month-wise-category-wise"
       },
       "columns": [
         {

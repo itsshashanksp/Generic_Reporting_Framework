@@ -45,7 +45,7 @@ const MAPPED_FIELDS: Record<string, string> = {
     "widgets/bill-sales-month-wise": "Bill_Date",
     "widgets/bill-purchases-month-wise": "GIN_Date",
     "widgets/bill-top-10-categories": "Bill_Date",
-    "widgets/bill-top-10-month-wise-category-wise": "Bill_Date",
+    "widgets/sales-top-10-month-wise-category-wise": "Bill_Date",
     "widgets/bill-category-sales-month-wise": "Bill_Date",
     "widgets/bill-total-sales": "Bill_Date",
     "widgets/bill-total-purchases": "GIN_Date",
@@ -269,6 +269,7 @@ describe("Bill dashboard export-all under a backend page-size maximum", () => {
         for (const [index, resource, file] of [
             [1, "widgets/bill-purchases-month-wise", "purchases-month-wise.csv"],
             [0, "widgets/bill-sales-month-wise", "sales-month-wise.csv"],
+            [3, "widgets/sales-top-10-month-wise-category-wise", "top-10-month-wise-category-wise.csv"],
         ] as const) {
             const before = executeRequestMock.mock.calls.length;
             fireEvent.click(exportMenus()[index]);
@@ -281,5 +282,42 @@ describe("Bill dashboard export-all under a backend page-size maximum", () => {
             expect(exportRequests.at(-1)!.filters).toEqual(mappedRangeFilters(RANGE)[resource]);
         }
         expect(screen.queryByText(/Export failed/)).toBeNull();
+    });
+});
+
+describe("Sales dashboard TOP-10 export", () => {
+    it("exports the shared TOP-10 resource with the Sales dashboard's applied filters", async () => {
+        const downloads: string[] = [];
+        vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:export");
+        vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+        vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+            downloads.push(this.download);
+        });
+        const TOP_TEN = "widgets/sales-top-10-month-wise-category-wise";
+        const topTen = () => sent().filter(request => request.resource === TOP_TEN) as (SentRequest & { database?: string; pagination?: unknown })[];
+        const exportTopTen = async () => {
+            const before = topTen().length;
+            downloads.length = 0;
+            fireEvent.click(exportMenus()[2]);
+            fireEvent.click(screen.getByRole("menuitem", { name: "All rows — CSV" }));
+            await waitFor(() => expect(downloads).toEqual(["top-10-month-wise-category-wise.csv"]));
+            return topTen().slice(before);
+        };
+
+        renderDashboard("sales-dashboard");
+        await waitFor(() => expect(topTen()).toHaveLength(1));
+        expect(topTen()[0].filters).toEqual([]);
+        expect(topTen()[0]).not.toHaveProperty("database");
+        const undated = await exportTopTen();
+        expect(undated.length).toBeGreaterThan(0);
+        expect(undated.every(request => request.filters.length === 0 && !("database" in request))).toBe(true);
+
+        enterDates(RANGE[0], RANGE[1]);
+        search();
+        await waitFor(() => expect(topTen().some(request => request.filters.length > 0)).toBe(true));
+        const onScreen = topTen().at(-1)!.filters;
+        expect(onScreen).toEqual([{ field: "Bill_Date", type: "daterange", operator: "BETWEEN", value: RANGE }]);
+        const dated = await exportTopTen();
+        expect(dated.every(request => JSON.stringify(request.filters) === JSON.stringify(onScreen))).toBe(true);
     });
 });

@@ -280,21 +280,22 @@ SELECT
     MIN(Bill_Amt) AS MinimumBill,
     MAX(Bill_Amt) AS MaximumBill
 FROM CustomerTable
-/*__RUNTIME_FILTERS__*/
 GROUP BY Cust_Name
 ```
 
-The existing marker is part of the backend-owned file and is harmless in discovered mode. It is neither known nor sent by the frontend.
+Runtime filters are placed by the backend in the resource's own `WHERE`, before `GROUP BY`; the frontend sends only filter fields and values.
 
 ## Actual dashboard SQL Resources
 
 The current dashboards use these discovered IDs:
 
-- `widgets/item-dashboard-table`, `widgets/item-dashboard-stats`
-- `widgets/bill-total-sales`, `widgets/bill-total-purchases`
-- `widgets/bill-sales-month-wise`, `widgets/bill-purchases-month-wise`
-- `widgets/bill-top-10-categories`, `widgets/bill-category-sales-month-wise`
-- `widgets/TOP-10-month-Wise-Category-wise`
+- Item: `widgets/item-dashboard-table`, `widgets/item-dashboard-stats`, `widgets/item-stock-value-by-category`
+- Bill: `widgets/bill-sales-month-wise`, `widgets/bill-purchases-month-wise`, `widgets/bill-top-10-categories`, `widgets/bill-category-sales-month-wise`, `widgets/bill-total-sales`, `widgets/bill-total-purchases`, and the shared `widgets/sales-top-10-month-wise-category-wise`
+- Sales: `widgets/sales-month-wise`, `widgets/top-10-categories-sales`, `widgets/sales-top-10-month-wise-category-wise`, `widgets/category-sales-month-wise`, `widgets/sales-day-wise`, `widgets/date-wise-gst-wise-sales`, `widgets/gst-wise-sales`, `widgets/top-50-item-wise-sales`, `widgets/total-sales`
+- Purchases: `widgets/purchases-month-wise`, `widgets/purchases-day-wise`, `widgets/total-purchases`
+- Sales Receipts: `widgets/daily-collection-summary`, `widgets/payment-mode-wise-collection`, `widgets/monthly-collection-trend`, `widgets/user-wise-day-wise-collection`, `widgets/top-10-largest-receipts`
+
+The Bill and Sales dashboards share one TOP-10 month-wise category resource: Bill requests it from the `loyal-ibms` database, Sales from the default database, and each sends its own applied `Bill_Date` range. The ID released before this change, `widgets/TOP-10-month-Wise-Category-wise`, is no longer available.
 
 Dashboard JSON contains a logical resource ID and presentation fields. Shared dashboard filters are merged into widget definitions before the request envelope is derived. It never contains the backend file path or SQL text.
 
