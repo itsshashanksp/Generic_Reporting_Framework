@@ -35,7 +35,7 @@ Only CSV and Excel are supported.
 | Surface | Current view | All rows |
 | --- | --- | --- |
 | Report | CSV uses AG Grid's presented current page/columns; Excel serializes raw current response rows | One unpaginated request with applied filters/current sort |
-| Dashboard table | Serializes raw rows on the current page | Fetches pages in batches of 5,000 until `totalRows`, with progress and cancellation |
+| Dashboard table | Serializes raw rows on the current page | Fetches pages of 1,000 rows (the backend's default `maxPageSize`) until `totalRows`, with progress and cancellation; if the backend refuses the first page size as above its configured maximum, retries with 500, 250, 100, 50, 25, 10, then 1 |
 
 Current-view actions default on unless `exportCurrentView:false`; all-row actions require `exportAll:true`. Report all-row export is a single request rather than a batched fetch. Export filenames may be configured. PDF and print export are not implemented.
 

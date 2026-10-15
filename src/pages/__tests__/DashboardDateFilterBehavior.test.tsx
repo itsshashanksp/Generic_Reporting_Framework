@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ApiClientError } from "../../api/client";
 import { FilterProvider } from "../../engine/FilterContext";
 import { clearRequestCache } from "../../engine/RequestCache";
 import Dashboard from "../Dashboard";
@@ -230,5 +231,55 @@ describe('dateFilterBehavior "optional"', () => {
         await waitFor(() => expect(appliedRange()).toBe("Showing results without a Start Date range."));
         const afterClear = purchases().length;
         expect((await exportAllPurchases(afterClear + 1)).filters).toEqual([]);
+    });
+});
+
+describe("Bill dashboard export-all under a backend page-size maximum", () => {
+    it("exports with each widget's applied filter in batches the backend accepts", async () => {
+        const downloads: string[] = [];
+        vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:export");
+        vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+        vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+            downloads.push(this.download);
+        });
+        // Like a deployment whose runtime maxPageSize is 100.
+        executeRequestMock.mockImplementation(async (request: { pagination?: { pageSize: number } }) => {
+            if ((request.pagination?.pageSize ?? 0) > 100) {
+                throw new ApiClientError("Invalid request.", 400, {
+                    code: "INVALID_REQUEST",
+                    details: [{ path: "pagination.pageSize", message: "Page size exceeds the configured maximum." }],
+                });
+            }
+            return {
+                success: true,
+                message: "ok",
+                data: [{ Month: "04", Category: "A", Sales: 2, Purchases: 1 }],
+                meta: { page: 1, pageSize: 10, totalRows: 1, rowsReturned: 1, executionTime: 1 },
+            };
+        });
+
+        renderDashboard("bill-dashboard");
+        expect(exportMenus()).toHaveLength(0);
+        enterDates(RANGE[0], RANGE[1]);
+        search();
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(7));
+        await waitFor(() => expect(exportMenus()).toHaveLength(5));
+        const onScreen = filtersByResource(sent());
+
+        for (const [index, resource, file] of [
+            [1, "widgets/bill-purchases-month-wise", "purchases-month-wise.csv"],
+            [0, "widgets/bill-sales-month-wise", "sales-month-wise.csv"],
+        ] as const) {
+            const before = executeRequestMock.mock.calls.length;
+            fireEvent.click(exportMenus()[index]);
+            fireEvent.click(screen.getByRole("menuitem", { name: "All rows — CSV" }));
+            await waitFor(() => expect(downloads).toContain(file));
+            const exportRequests = executeRequestMock.mock.calls.slice(before).map(call => call[0] as SentRequest & { pagination: { pageSize: number } });
+            expect(exportRequests.map(request => request.pagination.pageSize)).toEqual([1000, 500, 250, 100]);
+            expect(exportRequests.every(request => request.resource === resource)).toBe(true);
+            expect(exportRequests.at(-1)!.filters).toEqual(onScreen[resource]);
+            expect(exportRequests.at(-1)!.filters).toEqual(mappedRangeFilters(RANGE)[resource]);
+        }
+        expect(screen.queryByText(/Export failed/)).toBeNull();
     });
 });

@@ -1,7 +1,15 @@
+import { ApiClientError } from "../../api/client";
 import { executeRequest } from "../../api/request";
 import type { ApiResponse } from "../../types/api";
 
-const DEFAULT_EXPORT_BATCH_SIZE = 5000;
+/**
+ * Rows requested per export batch. The backend refuses a page size above its
+ * runtime `maxPageSize` (1000 by default, configurable per deployment), and
+ * does not publish that maximum, so a refused first batch is retried with the
+ * next smaller of these sizes.
+ */
+const DEFAULT_EXPORT_BATCH_SIZE = 1000;
+const FALLBACK_EXPORT_BATCH_SIZES = [500, 250, 100, 50, 25, 10, 1];
 /**
  * Client-side safety limit for "export all": every row is held in browser
  * memory before the file is written. It protects the browser only; the
@@ -56,12 +64,23 @@ export async function fetchAllRowsForExport(
     const rows: Record<string, unknown>[] = [];
     let page = 1;
     let totalRows: number | null = null;
+    const smallerBatchSizes = FALLBACK_EXPORT_BATCH_SIZES.filter(size => size < batchSize);
 
     while (totalRows === null || rows.length < totalRows) {
-        const response = await execute(
-            { ...request, pagination: { page, pageSize: batchSize } },
-            { signal }
-        );
+        let response: ApiResponse;
+        try {
+            response = await execute(
+                { ...request, pagination: { page, pageSize: batchSize } },
+                { signal }
+            );
+        } catch (error: unknown) {
+            // Only the first batch may be retried, before any row is held.
+            if (page === 1 && isPageSizeRefusal(error) && smallerBatchSizes.length > 0) {
+                batchSize = smallerBatchSizes.shift()!;
+                continue;
+            }
+            throw error;
+        }
 
         if (!response.success) {
             throw new Error(response.message || "The data service could not prepare the export.");
@@ -93,6 +112,15 @@ export async function fetchAllRowsForExport(
     }
 
     return totalRows === null ? rows : rows.slice(0, totalRows);
+}
+
+/** The backend refused the request only because the page size exceeds its maximum. */
+function isPageSizeRefusal(error: unknown): boolean {
+    return error instanceof ApiClientError
+        && error.status === 400
+        && error.code === "INVALID_REQUEST"
+        && error.details.length > 0
+        && error.details.every(detail => typeof detail === "object" && detail.path === "pagination.pageSize");
 }
 
 export const exportRequestPolicy = {

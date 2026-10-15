@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { ApiClientError } from "../../../api/client";
+
 import {
     assertWithinExportLimit,
     DEFAULT_EXPORT_MAX_ROWS,
@@ -64,7 +66,7 @@ describe("export-all row limit", () => {
         expect(() => assertWithinExportLimit(DEFAULT_EXPORT_MAX_ROWS + 1)).toThrow(ExportLimitError);
     });
 
-    describe("at the default 100,000-row limit with 5,000-row batches", () => {
+    describe("at the default 100,000-row limit with 1,000-row batches", () => {
         /** Serves `available` rows in pages; `reportTotal` false omits meta.totalRows. */
         function server(available: number, reportTotal = true) {
             let largestHeld = 0;
@@ -80,7 +82,7 @@ describe("export-all row limit", () => {
         it("permits exactly 100,000 rows without an extra request", async () => {
             const { execute, onProgress } = server(100_000);
             await expect(fetchAllRowsForExport({ action: "sql" }, { execute, onProgress })).resolves.toHaveLength(100_000);
-            expect(execute).toHaveBeenCalledTimes(20);
+            expect(execute).toHaveBeenCalledTimes(100);
         });
 
         it("rejects a reported 100,001 rows after the first batch", async () => {
@@ -94,7 +96,7 @@ describe("export-all row limit", () => {
         it("permits exactly 100,000 unreported rows, confirmed by one empty page", async () => {
             const { execute, onProgress } = server(100_000, false);
             await expect(fetchAllRowsForExport({ action: "sql" }, { execute, onProgress })).resolves.toHaveLength(100_000);
-            expect(execute).toHaveBeenCalledTimes(21);
+            expect(execute).toHaveBeenCalledTimes(101);
         });
 
         it("stops unreported exports one batch past the limit without holding more rows", async () => {
@@ -102,7 +104,7 @@ describe("export-all row limit", () => {
             await expect(fetchAllRowsForExport({ action: "sql" }, { execute, onProgress })).rejects.toThrow(
                 "This export has more than 100,000 rows"
             );
-            expect(execute).toHaveBeenCalledTimes(21);
+            expect(execute).toHaveBeenCalledTimes(101);
             expect(largestHeld()).toBeLessThanOrEqual(100_000);
         });
     });
@@ -130,5 +132,62 @@ describe("export-all row limit", () => {
                 "The data service returned an incomplete export result."
             );
         });
+    });
+});
+
+describe("export batch size and the backend page-size maximum", () => {
+    const pageSizeRefusal = () => new ApiClientError("Invalid request.", 400, {
+        code: "INVALID_REQUEST",
+        details: [{ path: "pagination.pageSize", message: "Page size exceeds the configured maximum." }],
+    });
+    /** A backend that refuses page sizes above `maxPageSize` and holds `available` rows. */
+    function backend(maxPageSize: number, available: number) {
+        return vi.fn().mockImplementation(async (request: { pagination: { page: number; pageSize: number } }) => {
+            const { page: pageNumber, pageSize } = request.pagination;
+            if (pageSize > maxPageSize) throw pageSizeRefusal();
+            return page(Math.max(0, Math.min(pageSize, available - (pageNumber - 1) * pageSize)), available);
+        });
+    }
+    const sizes = (execute: ReturnType<typeof vi.fn>) => execute.mock.calls.map(call => call[0].pagination.pageSize);
+
+    it("requests 1,000 rows per batch by default, within the backend's default maximum", async () => {
+        const execute = backend(1000, 1_500);
+        await expect(fetchAllRowsForExport({ action: "sql" }, { execute })).resolves.toHaveLength(1_500);
+        expect(exportRequestPolicy.batchSize).toBe(1000);
+        expect(sizes(execute)).toEqual([1000, 1000]);
+    });
+
+    it("retries a refused first batch with smaller sizes and keeps the accepted size", async () => {
+        const execute = backend(100, 250);
+        const rows = await fetchAllRowsForExport({ action: "sql", resource: "widgets/bill-purchases-month-wise" }, { execute });
+        expect(rows).toHaveLength(250);
+        expect(sizes(execute)).toEqual([1000, 500, 250, 100, 100, 100]);
+        expect(execute.mock.calls.map(call => call[0].pagination.page)).toEqual([1, 1, 1, 1, 2, 3]);
+        expect(execute.mock.calls.every(call => call[0].resource === "widgets/bill-purchases-month-wise")).toBe(true);
+    });
+
+    it("does not retry other invalid requests", async () => {
+        const invalid = new ApiClientError("Invalid request.", 400, {
+            code: "INVALID_REQUEST",
+            details: [{ path: "filters.0.field", message: "Unknown field." }],
+        });
+        const execute = vi.fn().mockRejectedValue(invalid);
+        await expect(fetchAllRowsForExport({ action: "sql" }, { execute })).rejects.toBe(invalid);
+        expect(execute).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not retry a page-size refusal after rows were received", async () => {
+        const refusal = pageSizeRefusal();
+        const execute = vi.fn()
+            .mockResolvedValueOnce(page(1000, 3_000))
+            .mockRejectedValueOnce(refusal);
+        await expect(fetchAllRowsForExport({ action: "sql" }, { execute })).rejects.toBe(refusal);
+        expect(sizes(execute)).toEqual([1000, 1000]);
+    });
+
+    it("reports the refusal when even one-row batches are refused", async () => {
+        const execute = backend(0, 10);
+        await expect(fetchAllRowsForExport({ action: "sql" }, { execute })).rejects.toThrow("Invalid request.");
+        expect(sizes(execute)).toEqual([1000, 500, 250, 100, 50, 25, 10, 1]);
     });
 });

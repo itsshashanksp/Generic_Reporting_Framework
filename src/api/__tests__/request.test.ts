@@ -43,6 +43,22 @@ describe("request error classification", () => {
         expect(getRequestErrorMessage(new Error("The API returned HTTP 502."), FALLBACK)).toBe("The API returned HTTP 502.");
     });
 
+    it("adds backend validation details so the error says what to fix", () => {
+        expect(getRequestErrorMessage(new ApiClientError("Invalid request.", 400, {
+            code: "INVALID_REQUEST",
+            details: [
+                { path: "pagination.pageSize", message: "Page size exceeds the configured maximum." },
+                { path: "pagination.pageSize", message: "Page size exceeds the configured maximum." },
+                "unstructured detail",
+                { attemptsRemaining: 2 },
+            ],
+        }), FALLBACK)).toBe("Invalid request. pagination.pageSize: Page size exceeds the configured maximum.");
+        expect(getRequestErrorMessage(new ApiClientError("Invalid credentials.", 401, {
+            code: "AUTHENTICATION_FAILED",
+            details: [{ attemptsRemaining: 2 }],
+        }), FALLBACK)).toBe("Invalid credentials.");
+    });
+
     it("shows the friendly message of a local export file failure", () => {
         const error = new ExportFileError("The Excel file could not be created.", { cause: new TypeError("internal") });
         expect(getRequestErrorMessage(error, FALLBACK)).toBe("The Excel file could not be created.");

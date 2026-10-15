@@ -348,7 +348,7 @@ derived alias, or an explicit mapped `expression`.
 
 | Pattern | Requests | Status |
 |---|---|---|
-| Paginated | Q1 report grids (customer, item; `pageSize` 10), Q3 table widgets (22 instances; `pageSize` 10), Q4 table-widget export (5,000-row batches) | Paginated |
+| Paginated | Q1 report grids (customer, item; `pageSize` 10), Q3 table widgets (22 instances; `pageSize` 10), Q4 table-widget export (1,000-row batches, smaller when the backend `maxPageSize` is lower) | Paginated |
 | Explicitly limited | Q6 dynamic filter options (`limit: 1000`, `item.json:59`, `reports/item.json:74`) | Bounded at 1,000 |
 | Unpaginated | Q2 report "Export all" (`ReportViewer.tsx:301`, `pagination: undefined`) | **Can exceed `GENERIC_MAX_RESULT_ROWS`** (default 10,000) |
 | Unpaginated | Q5 stat (7) and chart (1) widgets | Aggregate resources, small results |

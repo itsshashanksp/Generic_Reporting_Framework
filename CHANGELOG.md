@@ -33,6 +33,8 @@
 
 ### Fixed
 
+- Dashboard table "All rows" export no longer fails with "Invalid request.": it requested 5,000-row pages, above the backend's runtime `maxPageSize` (1,000 by default). It now requests 1,000-row pages and, when a deployment's maximum is lower, retries the first page with smaller sizes.
+- Request error messages include the backend's validation details (for example `pagination.pageSize: Page size exceeds the configured maximum.`) instead of only "Invalid request.".
 - NULL runtime filters now omit `value`, matching the backend contract.
 - Mobile More/Export sheets render outside clipping/transform contexts through the existing menu portal.
 

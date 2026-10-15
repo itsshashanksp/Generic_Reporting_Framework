@@ -120,7 +120,7 @@ describe("TableWidget CSV export and export-all limits", () => {
         chooseExport("All rows — CSV");
 
         await waitFor(() => expect(downloads).toEqual(["sales.csv"]), { timeout: 10_000 });
-        expect(executeRequestMock).toHaveBeenCalledTimes(20);
+        expect(executeRequestMock).toHaveBeenCalledTimes(100);
         expect(screen.queryByRole("alert")).toBeNull();
     });
 
@@ -131,7 +131,7 @@ describe("TableWidget CSV export and export-all limits", () => {
         mockBrowserDownloads();
         await renderTable();
         executeRequestMock.mockReset()
-            .mockResolvedValueOnce(response(5_000, 7_000))
+            .mockResolvedValueOnce(response(1_000, 7_000))
             .mockImplementationOnce(secondBatch);
 
         chooseExport("All rows — CSV");

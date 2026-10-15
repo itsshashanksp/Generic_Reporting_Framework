@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import itemDashboard from "../../config/dashboards/item.json";
 import purchaseDashboard from "../../config/dashboards/purchases.json";
 import { FilterProvider } from "../../engine/FilterContext";
 import { clearRequestCache } from "../../engine/RequestCache";
@@ -127,14 +128,27 @@ describe("Bill dashboard required date range", () => {
             JSON.stringify(request.filters[0].value) === JSON.stringify(["2022-04-01", "2023-03-31"]))).toBe(true);
     });
 
-    it("keeps loading other dashboards without a required filter", async () => {
-        // A dashboard with a date range but neither dateFilterBehavior nor a required filter.
-        expect("dateFilterBehavior" in purchaseDashboard).toBe(false);
+    it("loads an optional date-filter dashboard immediately without a date filter", async () => {
+        expect(purchaseDashboard.dateFilterBehavior).toBe("optional");
         expect(purchaseDashboard.filters.some(filter => filter.type === "daterange" && !("required" in filter))).toBe(true);
         render(<FilterProvider><Dashboard dashboardId="purchase-dashboard" /></FilterProvider>);
 
         await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(purchaseDashboard.widgets.length));
         expect(screen.queryByText(/choose Search to load this dashboard/)).toBeNull();
         expect(sentRequests().every(request => request.filters.length === 0)).toBe(true);
+    });
+
+    it("keeps loading a dashboard that omits dateFilterBehavior and has no required filter", async () => {
+        expect("dateFilterBehavior" in itemDashboard).toBe(false);
+        expect(itemDashboard.filters.some(filter => "required" in filter)).toBe(false);
+        render(<FilterProvider><Dashboard dashboardId="item-dashboard" /></FilterProvider>);
+
+        // Widget data requests only; the filter panel also loads select options.
+        const widgetResources = new Set(itemDashboard.widgets.map(widget => widget.queryDefinition.resource));
+        const widgetRequests = () => sentRequests().filter(request => widgetResources.has(request.resource));
+        await waitFor(() => expect(new Set(widgetRequests().map(request => request.resource))).toEqual(widgetResources));
+        expect(screen.queryByText(/choose Search to load this dashboard/)).toBeNull();
+        expect(document.querySelector(".dashboard-applied-range")).toBeNull();
+        expect(widgetRequests().every(request => request.filters.length === 0)).toBe(true);
     });
 });

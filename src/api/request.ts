@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { ApiClientError, apiClient } from "./client";
 
 import type { ApiResponse } from "../types/api";
 
@@ -33,6 +33,14 @@ export function getRequestErrorMessage(
     // meant for users; show the caller's fallback instead of internals.
     if (PROGRAMMING_ERRORS.some(type => error instanceof type)) {
         return fallback;
+    }
+
+    if (error instanceof ApiClientError) {
+        // Validation details name the field and what is wrong with it, e.g.
+        // "pagination.pageSize: Page size exceeds the configured maximum."
+        const details = error.details.flatMap(detail =>
+            typeof detail === "object" && detail.path && detail.message ? [`${detail.path}: ${detail.message}`] : []);
+        return [error.message || fallback, ...new Set(details)].join(" ");
     }
 
     if (error instanceof Error) {
