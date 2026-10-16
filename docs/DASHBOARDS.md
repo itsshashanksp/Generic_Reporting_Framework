@@ -1,18 +1,37 @@
-# Dashboards
+# Dashboards and widgets
 
-A dashboard is one JSON file in `src/config/dashboards` containing layout, optional shared filters/refresh, and widgets.
+A dashboard is one JSON file in `src/config/dashboards/`. It contains a layout, optional shared filters and refresh settings, and its widgets. Every property is listed in the [Configuration reference](CONFIGURATION.md#dashboard-definition). Validated examples: [`examples/dashboards/minimal-dashboard.json`](../examples/dashboards/minimal-dashboard.json) and [`examples/dashboards/date-filtered-dashboard.json`](../examples/dashboards/date-filtered-dashboard.json).
+
+Checked-in dashboards: `item-dashboard`, `sales-dashboard`, `receipts-dashboard`, `purchase-dashboard`, and `bill-dashboard`.
 
 ## Layout
 
-The rendered column defaults are 12 desktop, 6 tablet and 1 mobile. Desktop honors widget `position.x` (zero-based), `position.y` (one-based CSS row), width and pixel height. Position and width must fit desktop columns. At 1024px and 768px breakpoints, explicit positions are removed and widths are proportionally scaled upward with `ceil`.
+The rendered column defaults are 12 on desktop, 6 on tablet, and 1 on mobile. On desktop, a widget's `position.x` (zero-based), `position.y` (one-based CSS row), `width`, and pixel `height` are honored; the position and width must fit the desktop columns. At the 1024px and 768px breakpoints, explicit positions are dropped and widths are scaled up proportionally with `ceil`.
 
-Widgets without explicit position flow through the CSS grid. Invisible widgets are omitted.
+Widgets without an explicit position flow through the CSS grid. Invisible widgets are left out.
 
-## Filters and refresh
+## Widget types and sources
 
-Dashboard filters use the same controls and operators as reports. Editing the filter form changes only its draft values; widgets keep using the applied values until **Search** validates the form and applies it, once, to every widget. **Clear filters** empties the form and removes every applied filter. Searching again for the values already applied sends no new requests (the request cache may answer repeated requests); **Refresh** asks again.
+| Type | Allowed source | Renders |
+| --- | --- | --- |
+| `report` | exactly `reportId` | The report's columns and grid, in the shared report/table frame, with compact mobile pagination over the returned rows |
+| `stat` | exactly one of `request`, `queryDefinition`, `reportId`, `widgetId` | One value: `valueField` of the first row (or its first property), formatted with `format` in the `en-IN` locale |
+| `table` | as `stat` | A server-paginated table with sorting, multiple row selection, and optional CSV/Excel export. When `columns` is omitted, they are inferred from the first row |
+| `chart` | as `stat` | A Recharts `bar`, `line`, or `pie` chart of `xField` against `yField`. Non-numeric Y values become zero |
 
-A shared filter with `"required": true` gates the whole dashboard: its widgets are not shown, so they send no requests and offer no refresh or export, until **Search** applies a complete value. A required `daterange` needs both its start and its end date. Searching with a missing or partial required value shows an error, keeps the form editable, and removes results from an earlier search; **Clear** removes them too.
+- **Inline** `request` or `queryDefinition` keeps the dashboard self-contained. This is what every checked-in dashboard uses.
+- **`reportId`** reuses a normalized report definition (request and columns).
+- **`widgetId`** references a file in `src/config/widgets/`. It is supported, but no such files are checked in.
+
+Each widget has its own loading, empty, error, and retry states, and its own cache scope `dashboard:<dashboardId>:<widgetId>`. A dashboard table widget sends only its first active sort column (reports can send several). Its paging and export are configured on the widget itself (`pageSize`, `pageSizeOptions`, `export`).
+
+## Shared filters and Search
+
+Dashboard filters use the same controls and operators as report filters. They are merged into every resolved widget definition (inline, `reportId`, or `widgetId`) before the request is built. That is how the SQL Resource translator derives filter mappings without repeating the controls in each widget.
+
+Editing the filter form changes only its draft values. Widgets keep using the applied values until **Search** validates the form and applies it, once, to every widget. **Clear filters** empties the form and removes every applied filter. Searching again with the values already applied sends no new requests (the cache may answer). **Refresh** asks again.
+
+A shared filter with `"required": true` gates the whole dashboard. Its widgets are not shown (so they send no requests and offer no refresh or export) until **Search** applies a complete value. A required `daterange` needs both its start and its end date. Searching with a missing or partial required value shows an error, keeps the form editable, and removes the results of the earlier search. **Clear** removes them too.
 
 ### Date filter behavior
 
@@ -20,15 +39,19 @@ The optional dashboard property `dateFilterBehavior` decides how the dashboard's
 
 | Value | Before the first Search | Search |
 | --- | --- | --- |
-| `"required"` | Nothing loads: every shared date range is treated as required, so the gate above applies | Needs both dates of every range; a missing or partial range is refused, and earlier results are removed |
-| `"optional"` | Every widget loads without a date runtime filter | Applies a range only with both dates. A range with one date is refused, and the results already shown stay with their range unchanged. Both dates empty searches without a date range |
-| omitted | Filters behave as configured: a filter marked `required` gates the dashboard, and an unmarked range may be searched with only a start (`>=`) or only an end (`<=`) | As configured |
+| `"required"` | Nothing loads. Every shared date range is treated as required, so the gate above applies | Needs both dates of every range. A missing or partial range is refused, and earlier results are removed |
+| `"optional"` | Every widget loads without a date runtime filter | Applies a range only when both dates are set. A range with one date is refused, and the results already shown keep their range. Both dates empty searches without a date range |
+| omitted | Filters behave as configured. A filter marked `required` gates the dashboard. An unmarked range may be searched with only a start (`>=`) or only an end (`<=`) | As configured |
 
-Dashboards that set `dateFilterBehavior` show which date range the displayed results use ("Showing results for Start Date … to …" or "Showing results without a Start Date range"), so edited but unsearched dates are not mistaken for the shown results.
+Current use: Bill is `"required"`; Sales, Purchases, and Receipts are `"optional"`; Item omits it.
 
-Validation rejects any other value, a `dateFilterBehavior` on a dashboard without a shared `daterange` filter, and `"optional"` together with a `daterange` filter marked `"required": true`.
+Dashboards that set `dateFilterBehavior` show which date range the displayed results use ("Showing results for Start Date … to …" or "Showing results without a Start Date range"). That way, dates that were edited but not searched aren't mistaken for the range of the results on screen.
 
-The applied range reaches each widget through its `filterFields`, if it has one (see below), so a widget whose date column has another name still gets the range under its own field. `"optional"` only omits the frontend's runtime date filter: a SQL Resource that limits dates in its own SQL still returns only those dates.
+Validation rejects any other value, `dateFilterBehavior` on a dashboard without a shared `daterange` filter, and `"optional"` together with a `daterange` filter marked `"required": true`.
+
+The applied range reaches each widget through that widget's `filterFields`, if it has one (see below). A widget whose date column has another name therefore still receives the range under its own field. `"optional"` only leaves out the frontend's runtime date filter. A SQL Resource that limits dates in its own SQL still returns only those dates.
+
+Implementation: `engine/DashboardEngine/dateFilterBehavior.ts` and `src/pages/Dashboard.tsx`. Status: implemented and unit-tested. Validation against SQL Server is still pending (roadmap 47 / E1).
 
 ### Per-widget filter fields
 
@@ -36,28 +59,32 @@ Every widget receives every shared filter under the filter's `field`. When one w
 
 ```json
 {
-  "id": "total-purchases",
-  "type": "stat",
+  "id": "purchases-month-wise",
+  "type": "table",
+  "title": "Purchases Month Wise",
   "filterFields": { "Bill_Date": "GIN_Date" },
-  "queryDefinition": { "format": "sql", "resource": "widgets/bill-total-purchases" }
+  "queryDefinition": { "format": "sql", "database": "loyal-ibms", "resource": "widgets/bill-purchases-month-wise" },
+  "columns": [
+    { "field": "Month", "header": "Month" },
+    { "field": "Purchases", "header": "Purchases", "dataType": "number" }
+  ],
+  "sort": [{ "field": "Month", "direction": "DESC" }]
 }
 ```
 
-With a shared `Bill_Date` date range, this widget declares and sends `GIN_Date` instead (in SQL Resource mode, the source filter declaration and the runtime filter both name `GIN_Date`), while other widgets keep `Bill_Date`. Only the field name changes: the label, type, operator and values, including start-only and end-only date ranges, stay those of the shared filter. An empty selection sends no runtime filter, and table exports use the same mapped filters as the table.
+With a shared `Bill_Date` date range, this widget declares and sends `GIN_Date` instead. In SQL Resource mode, both the source-filter declaration and the runtime filter use `GIN_Date`. Other widgets keep `Bill_Date`. Only the field name changes: the label, type, operator, and values (including start-only and end-only date ranges) stay those of the shared filter. An empty selection sends no runtime filter, and table exports use the same mapped filters as the table.
 
 Validation rejects a mapping unless:
 
 - it is a non-empty object;
 - each key is the `field` of a shared dashboard filter;
-- each value is a plain field name (letters, digits and underscores, not starting with a digit), different from its key;
-- no two keys map to the same field, and no value equals another shared filter's or the widget's own filter's field (compared without case).
+- each value is a plain field name (letters, digits, and underscores, not starting with a digit) that differs from its key;
+- no two keys map to the same field, and no value equals another shared filter's field or one of the widget's own filter fields (compared case-insensitively).
 
-`filterFields` renames a field; it is never SQL. The backend resolves the mapped name exactly as it would a shared filter's name, and access scopes check that name.
+`filterFields` renames a field; it is never SQL. The backend resolves the mapped name exactly as it would resolve a shared filter's name, and access scopes check that name.
 
-Auto-refresh requires a positive millisecond interval when enabled. The timer refreshes all widget request keys. Manual refresh does the same. The page indicator ends after a fixed one second and is not a promise that all widgets finished.
+## Refresh
 
-## Data composition
+Auto-refresh requires a positive millisecond `interval` when it is enabled. The timer (`setInterval`) bumps a refresh key for all widgets, and manual **Refresh** does the same. The page indicator ends after a fixed one second. It does not mean that every widget has finished.
 
-A dashboard may mix inline JSON requests, inline SQL resource references, report-backed widgets and reusable widget references. An empty widget list is allowed but warns during validation.
-
-See [Widgets](WIDGETS.md), [Configuration reference](CONFIGURATION.md#dashboard-definition), and the [responsive dashboard example](EXAMPLES.md#13-responsive-dashboard).
+See [Configuration reference](CONFIGURATION.md#widgets), [Feature behavior](FEATURES.md), and [Examples](EXAMPLES.md#dashboard-sql-resources-in-use).

@@ -117,7 +117,7 @@ describe("ReportViewer Excel export", () => {
         await downloadCleanup();
         await waitFor(() => expect(screen.queryByRole("status")).toBeNull());
         expect(executeRequestMock).toHaveBeenLastCalledWith(
-            expect.objectContaining({ pagination: undefined }),
+            expect.objectContaining({ pagination: { page: 1, pageSize: 1000 } }),
             expect.anything()
         );
     });

@@ -22,7 +22,18 @@ Report widgets render through the same grid and compact mobile pager. Desktop re
 
 ## Columns and personalization
 
-Configured visible columns can be resized and reordered in AG Grid. `sortable` controls whether a header can sort. `visible:false` prevents column creation. The current UI has no column chooser, show/hide action, reset action, or persisted column width/order/visibility. The former disabled Settings placeholder and schema flag were removed.
+`sortable` controls whether a header can sort. `visible:false` means the column is never created; users cannot show it.
+
+On report pages, a signed-in user can personalize the configured columns:
+
+- **Columns** (toolbar button, or the mobile "More" sheet) opens a dialog. It can show or hide each column, move it up or down, and **Reset columns** to the configured layout. At least one column always stays visible.
+- Dragging a header to reorder it, or a header edge to resize it, is saved too.
+- The layout is stored per signed-in user and report under the local-storage key `generic-report-column-layout:user:<user>:report:<reportId>`. It is not synced to the account, and it is separate from saved views (a saved view does not restore columns). When the configuration changes, removed fields are ignored and new fields appear at the end. Corrupt entries and storage errors fall back to the configured layout.
+- A hidden column stays in the grid as hidden, so a sort on it is kept.
+- **Exports**: current-view **CSV** follows the layout (only shown columns, in the shown order). Current-view **Excel** and **All rows** exports contain every field of the response rows, as before.
+- There is no chooser when `toolbar.columns` is `false`, when the report uses configured `grid.grouping`, when it has fewer than two configured columns, or when no user is signed in. Dashboards (table and report widgets) are not personalized.
+
+Automated tests cover the dialog, storage, and the grid's handling of AG Grid's drag and resize events (with AG Grid itself mocked). Real drag and resize in a browser has not been checked.
 
 ## Grouping
 
@@ -34,16 +45,23 @@ Only CSV and Excel are supported.
 
 | Surface | Current view | All rows |
 | --- | --- | --- |
-| Report | CSV uses AG Grid's presented current page/columns; Excel serializes raw current response rows | One unpaginated request with applied filters/current sort |
+| Report | CSV uses AG Grid's presented current page/columns; Excel serializes raw current response rows | The same paged fetch as dashboard tables, with the report's applied filters, filter logic, database, and current sort on every page, and "Preparing export… N of M rows" progress |
 | Dashboard table | Serializes raw rows on the current page | Fetches pages of 1,000 rows (the backend's default `maxPageSize`) until `totalRows`, with progress and cancellation; if the backend refuses the first page size as above its configured maximum, retries with 500, 250, 100, 50, 25, 10, then 1 |
 
-Current-view actions default on unless `exportCurrentView:false`; all-row actions require `exportAll:true`. Report all-row export is a single request rather than a batched fetch. Export filenames may be configured. PDF and print export are not implemented.
+Current-view actions default on unless `exportCurrentView:false`; all-row actions require `exportAll:true`. Both all-row flows use `fetchAllRowsForExport`. Pages are addressed by `page` and `pageSize`, so a stable result needs a deterministic sort: rows that tie on the sort columns can move between pages if the database orders them differently on different requests. That stays a limitation of offset paging; configure a unique sort column where it matters. Export filenames may be configured. PDF and print export are not implemented.
+
+Safety limits (`src/engine/ExportEngine`):
+
+- "All rows" stops at **100,000 rows** (`DEFAULT_EXPORT_MAX_ROWS`). Every row is held in browser memory before the file is written, so a larger export is refused with "… exceeds the 100,000-row export limit. Narrow the filters and try again." Nothing is saved.
+- Inconsistent paging is refused rather than exported: a short page before `totalRows` ("…incomplete export result."), a page that repeats the previous page's rows, a page with more rows than requested or than remain, and a `totalRows` that changes between pages ("The matching rows changed while the export was running. Try again."). Reports add "Nothing was exported." A page whose rows are all identical is not treated as a repeat, because such data can legitimately repeat.
+- CSV cells that begin with a spreadsheet formula trigger (`=`, `+`, `-`, `@`, including full-width forms and leading control characters) are prefixed with `'`, which stops them from running as formulas. Numeric values stay unchanged.
+- Excel files are written with `write-excel-file`. A failure to create the file is shown as a message instead of being lost silently.
 
 ## Saved reports
 
 When `toolbar.saveReport` is enabled (the default), the report toolbar can save, load, and delete browser-local views. A saved view records applied filters, sorting, and current page/page size. Loading restores those fields. It does not restore columns or grouping. Each UI save creates a new timestamped record—there is no rename/update workflow.
 
-Records live under local-storage key `generic-report-saved-reports`. They are neither account-synced nor shared, and there is no storage schema migration. Invalid records are filtered and storage errors fall back to an empty list. Dashboards do not have saved views.
+Records are stored per signed-in user under the local-storage key `generic-report-saved-reports:user:<URL-encoded username>`. The old shared key `generic-report-saved-reports` is deleted when the identity changes, and its views are not migrated. Records are neither synced to the account nor shared, and there is no storage schema migration. Invalid records are filtered out, and storage errors fall back to an empty list. Browser storage is a convenience, not a security boundary. Dashboards do not have saved views.
 
 ## Request caching
 
@@ -52,11 +70,11 @@ The request cache is an in-memory map of successful completed responses:
 - TTL: five minutes.
 - Capacity: 100 completed entries; the least recently accessed is evicted after overflow.
 - Key: scope plus the full recursively stabilized request. Object key order and `undefined` properties do not matter; array order does.
-- Scopes: `report:<reportId>` and `dashboard:<dashboardId>:<widgetId>`.
+- Scopes: `report:<reportId>`, `dashboard:<dashboardId>:<widgetId>`, and `dynamic-filter-options` (shared by every filter with the same options request).
 - Exact simultaneous requests share one underlying call. Each consumer may abort; the underlying call aborts only when no consumers remain.
 - Dashboard widget effects abort their consumer and invalidate its request sequence during cleanup. Navigation therefore discards late results even if the transport or server cannot stop work already in progress; intentional aborts do not render errors.
 - Refresh and retry bypass completed entries but may still join identical in-flight work.
-- Failures are not cached. Expiration, eviction, or page reload removes entries.
+- Failures are not cached. Expiration, eviction, page reload, or a change of signed-in user removes entries.
 
 There is no production configuration switch, manual invalidation UI, persistent cache, or implied backend cache. `clearRequestCache` is primarily used by tests.
 

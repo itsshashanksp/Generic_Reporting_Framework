@@ -1,11 +1,13 @@
 # Backend capability matrix
 
+**Point-in-time record.** This matrix documents the backend read-capability alignment (roadmap 36A, commits `04573fb` and `4c5e061`, 2026-09-12). "Before" and "after" refer to that change. Rows that later work changed are marked *(updated 2026-10-16)*; for the current frontend boundary, use [Supported features](SUPPORTED.md).
+
 This inventory was verified against the backend documentation and the public validators, normalizer, controllers, repositories, discovery resolver, legacy compatibility registry, and response envelope. “Configured” means a frontend author can place the capability in a report/widget JSON request. “Runtime UI” means an end user can change it in the current interface.
 
 | Backend capability | Frontend before | Frontend after | Status / notes |
 | --- | --- | --- | --- |
 | JSON `select` | Configured `request` | Same, with stricter validation | Supported |
-| SQL Resource `sql` | Legacy basename resource IDs | Migrated to discovered `reports/...` and `widgets/...` IDs | Supported; frontend never derives a file path |
+| SQL Resource `sql` | Legacy basename resource IDs | Migrated to discovered `reports/...` and `widgets/...` IDs | Supported; frontend never derives a file path. *(updated 2026-10-16)* The checked-in reports have used JSON Query mode since `a7b8f1f`; dashboards use `widgets/...` |
 | SQL execution metadata | Not supported by frontend model | Derived at request time from normalized columns and filters | Infrastructure detail; backend validates it |
 | SQL Resource runtime filters | UI filters appended against legacy registry metadata | Exact serialization plus derived output/source logical mappings | Supported for normalized configured fields |
 | SQL Resource discovery | Assumed every resource was manually registered | Uses relative slash-separated IDs without extension | Backend-owned, frontend-consumed |
@@ -39,13 +41,13 @@ This inventory was verified against the backend documentation and the public val
 | Metadata actions | Backend actions exist | Documented boundary | Not exposed by current UI |
 | INSERT/UPDATE/DELETE/UPSERT | Backend registered Write API exists | Documented separately from reads | Not exposed; no mutation controls or `actions` schema in frontend |
 | Column visibility/order/width | Presentation config and grid | Retained | Does not rewrite query or SQL |
-| Column chooser/personalization | None | None | Not supported |
+| Column chooser/personalization | None | None | Not supported. *(updated 2026-10-16)* Now available on report pages, frontend-only; see [Feature behavior](FEATURES.md#columns-and-personalization) |
 | Search | “Search” applied filters; unused global context existed | Dead global context removed | No global search operation; Search means apply configured filters |
 | Export | CSV/Excel current/all | Retained | Frontend feature; report all-row and dashboard batched behavior differ |
 | Saved reports | Local filters/sort/page plus unused grouping snapshot | Unused grouping snapshot removed | Local save/load/delete only |
 | Common report/table presentation | Shared grid, mixed frames | Shared frame/grid/mobile cards/pager/menu | Supported across reports and dashboard tables/widgets |
 | Standard response | Validated success/meta | Backend error code/details now retained in `ApiClientError` | Supported |
-| Authentication/roles/rate limiting | None | None | Backend and frontend do not implement them |
+| Authentication/roles/rate limiting | None | None | *(updated 2026-10-16)* Now implemented: the backend session and roles are consumed by the frontend (sign-in, `frontendAccess`, admin role, user management), and login rate-limit errors are displayed. See [Authentication](AUTHENTICATION.md) |
 
 ## Verified backend discrepancies
 

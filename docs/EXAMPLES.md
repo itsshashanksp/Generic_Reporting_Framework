@@ -1,43 +1,157 @@
-# Backend-verified examples
+# Examples
 
-These examples use only the backend public request contract. Physical table names in JSON Query examples must exist in the connected database. SQL Resource examples use IDs discovered by the current backend.
+## Example files
 
-## JSON Query: select, filter, sort, and page
+[`examples/`](../examples/) holds complete definitions you can copy into `src/config/`. They use real backend SQL Resource IDs, plus the field names of the checked-in configuration.
+
+| File | Copy to | Shows |
+| --- | --- | --- |
+| [`reports/json-query-report.json`](../examples/reports/json-query-report.json) | `src/config/reports/` | JSON Query mode, text/number/dynamic-select filters, paging, toolbar, CSV/Excel export |
+| [`reports/sql-resource-report.json`](../examples/reports/sql-resource-report.json) | `src/config/reports/` | SQL Resource mode with `database`, `sort`, `filterLogic` |
+| [`dashboards/minimal-dashboard.json`](../examples/dashboards/minimal-dashboard.json) | `src/config/dashboards/` | The smallest valid dashboard: one stat widget |
+| [`dashboards/date-filtered-dashboard.json`](../examples/dashboards/date-filtered-dashboard.json) | `src/config/dashboards/` | Layout, a required shared date range, `dateFilterBehavior`, `filterFields`, table export, stat, chart |
+| [`widgets/item-stock-value-by-category.json`](../examples/widgets/item-stock-value-by-category.json) | `src/config/widgets/` | A reusable widget definition, referenced by `widgetId` |
+| [`menu.json`](../examples/menu.json) | merge into `src/config/menu.json` | Grouped dashboard and report entries plus a route |
+
+How they were checked (2026-10-16): each file was run through the repository's own validators and loaders, without errors or warnings. Reports went through `getReportValidationErrors` and `loadDefinition`, the reusable widget through the same with `columnsRequired: false`, dashboards through `validateDashboard`, `loadDashboardConfiguration`, and `resolveDashboardWidgetRequest`, and the menu through `loadNavigation`. They were **not** run against a live backend. The IDs must be unique: the example IDs end in `-example` or `-example-dashboard`, so they don't clash with the checked-in files. To show a copied report or dashboard in the sidebar, add a menu entry for it.
+
+## JSON Query report → runtime request
+
+Source: `examples/reports/json-query-report.json` (trimmed):
 
 ```json
 {
-  "id": "items-json",
-  "title": "Items",
+  "id": "item-example",
+  "title": "Item Report (example)",
   "request": {
     "action": "select",
-    "source": { "table": "ItemMasterTable", "alias": "I" },
-    "fields": [
-      { "field": "I.Item_Code", "alias": "ItemCode" },
-      { "field": "I.Item_Desc", "alias": "Description" },
-      { "field": "I.Item_MRP", "alias": "MRP" }
-    ],
-    "filters": [{ "field": "I.Item_MRP", "operator": ">", "value": 0 }],
-    "filterLogic": "AND",
-    "sort": [{ "field": "ItemCode", "direction": "ASC" }]
+    "database": "loyal-ibms",
+    "source": { "table": "ItemMasterTable" },
+    "fields": ["Item_Code", "Item_Desc", "Item_MRP"]
   },
   "columns": [
-    { "field": "ItemCode", "header": "Item Code" },
-    { "field": "Description", "header": "Description" },
-    { "field": "MRP", "header": "MRP" }
+    { "field": "Item_Code", "header": "Item Code", "dataType": "number", "width": 140 },
+    { "field": "Item_Desc", "header": "Item Description", "width": 320 },
+    { "field": "Item_MRP", "header": "Item MRP", "dataType": "number" }
   ],
+  "sort": [{ "field": "Item_Code", "direction": "ASC" }],
   "filters": [
-    { "field": "I.Item_Desc", "label": "Description", "type": "text", "operator": "contains" }
-  ],
-  "grid": {
-    "pagination": { "enabled": true, "pageSize": 10, "pageSizeOptions": [10, 25, 50, 100] },
-    "rowSelection": "multiple"
-  }
+    { "field": "Item_Desc", "label": "Item Description", "type": "text", "operator": "contains" }
+  ]
 }
 ```
 
-The runtime adds `pagination:{page,pageSize}` and maps `contains` to a prepared `LIKE "%value%"` filter.
+The normalized request produced by `loadDefinition`:
 
-## JSON Query: joins, grouping, aggregation, and HAVING
+```json
+{
+  "action": "select",
+  "database": "loyal-ibms",
+  "source": { "table": "ItemMasterTable" },
+  "fields": ["Item_Code", "Item_Desc", "Item_MRP"],
+  "sort": [{ "field": "Item_Code", "direction": "ASC" }]
+}
+```
+
+At runtime, `ReportViewer` appends the applied filters and adds the paging. With "pen" typed into the description filter:
+
+```json
+{
+  "action": "select",
+  "database": "loyal-ibms",
+  "source": { "table": "ItemMasterTable" },
+  "fields": ["Item_Code", "Item_Desc", "Item_MRP"],
+  "filters": [{ "field": "Item_Desc", "operator": "LIKE", "value": "%pen%" }],
+  "sort": [{ "field": "Item_Code", "direction": "ASC" }],
+  "pagination": { "page": 1, "pageSize": 10 }
+}
+```
+
+## SQL Resource report → runtime request
+
+`examples/reports/sql-resource-report.json` references the backend resource `reports/customer`. That resource exists in the backend, but the checked-in Customer report uses JSON Query mode instead.
+
+```json
+{
+  "id": "customer-sql-example",
+  "title": "Customer Report (SQL Resource example)",
+  "queryDefinition": { "format": "sql", "database": "loyal-ibms", "resource": "reports/customer" },
+  "columns": [
+    { "field": "Cust_Name", "header": "Customer" },
+    { "field": "TotalCustomers", "header": "Total", "dataType": "number" },
+    { "field": "MinimumBill", "header": "Minimum", "dataType": "number" },
+    { "field": "MaximumBill", "header": "Maximum", "dataType": "number" }
+  ],
+  "sort": [{ "field": "Cust_Name", "direction": "ASC" }],
+  "filters": [{ "field": "Cust_Name", "label": "Customer", "type": "text", "operator": "startsWith" }],
+  "filterLogic": "AND"
+}
+```
+
+The derived request (`execution.columns` comes from `columns`):
+
+```json
+{
+  "action": "sql",
+  "database": "loyal-ibms",
+  "resource": "reports/customer",
+  "execution": { "columns": ["Cust_Name", "TotalCustomers", "MinimumBill", "MaximumBill"] },
+  "sort": [{ "field": "Cust_Name", "direction": "ASC" }],
+  "filterLogic": "AND"
+}
+```
+
+`Cust_Name` is a displayed column, so it needs no source mapping. A filter on a field that is **not** displayed gets one, `{ "placement": "source" }`, with no `expression`. The backend derives the source column (see the dashboard example below).
+
+The frontend never sends the file path or SQL text. The backend resolves `reports/customer` to its server-owned SQL, places the runtime filters, and executes it.
+
+## Dashboard → widget requests
+
+From `examples/dashboards/date-filtered-dashboard.json`, before any filter is applied (the output of `resolveDashboardWidgetRequest`):
+
+```json
+{
+  "action": "sql",
+  "database": "loyal-ibms",
+  "resource": "widgets/bill-purchases-month-wise",
+  "execution": {
+    "columns": ["Month", "Purchases"],
+    "filters": { "GIN_Date": { "placement": "source" } }
+  },
+  "sort": [{ "field": "Month", "direction": "DESC" }]
+}
+```
+
+The shared filter is `Bill_Date`; this widget's `filterFields` renames it to `GIN_Date`. A stat or chart widget without `columns` sends only the filter mapping:
+
+```json
+{
+  "action": "sql",
+  "database": "loyal-ibms",
+  "resource": "widgets/bill-total-sales",
+  "execution": { "filters": { "Bill_Date": { "placement": "source" } } }
+}
+```
+
+Because this dashboard uses `"dateFilterBehavior": "required"`, no widget request is sent until **Search** applies both dates. After that, each request also carries `"filters": [{ "field": "Bill_Date", "operator": "BETWEEN", "value": ["2021-04-01", "2021-11-21"] }]` (or `GIN_Date` for the purchases widget). Table widgets also send `pagination`.
+
+## Dashboard SQL Resources in use
+
+| Dashboard | SQL Resource IDs |
+| --- | --- |
+| Item | `widgets/item-dashboard-table`, `widgets/item-dashboard-stats`, `widgets/item-stock-value-by-category` |
+| Bill | `widgets/bill-sales-month-wise`, `widgets/bill-purchases-month-wise`, `widgets/bill-top-10-categories`, `widgets/bill-category-sales-month-wise`, `widgets/bill-total-sales`, `widgets/bill-total-purchases`, and the shared `widgets/sales-top-10-month-wise-category-wise` |
+| Sales | `widgets/sales-month-wise`, `widgets/top-10-categories-sales`, `widgets/sales-top-10-month-wise-category-wise`, `widgets/category-sales-month-wise`, `widgets/sales-day-wise`, `widgets/date-wise-gst-wise-sales`, `widgets/gst-wise-sales`, `widgets/top-50-item-wise-sales`, `widgets/total-sales` |
+| Purchases | `widgets/purchases-month-wise`, `widgets/purchases-day-wise`, `widgets/total-purchases` |
+| Sales Receipts | `widgets/daily-collection-summary`, `widgets/payment-mode-wise-collection`, `widgets/monthly-collection-trend`, `widgets/user-wise-day-wise-collection`, `widgets/top-10-largest-receipts` |
+
+The Bill and Sales dashboards share one TOP-10 month-wise category resource. Bill requests it from the `loyal-ibms` database and Sales from the default database, and each sends its own applied `Bill_Date` range. The previously released ID `widgets/TOP-10-month-Wise-Category-wise` no longer exists. For the physical tables behind each resource, see the [Query source inventory](security/Frontend-Query-Source-Inventory.md).
+
+## JSON Query request fragments
+
+These are wire-format request bodies (what reaches the API), not report files. In a report file, `sort` and `pagination` belong at the top level or in `grid`, not inside `request`. Each fragment passes the frontend's `getJsonQueryRequestValidationErrors`. The table names `Orders`, `Customers`, `Items`, and `Bills` are **illustrative** and don't exist in the application database.
+
+### Joins, grouping, aggregation, and HAVING
 
 ```json
 {
@@ -59,9 +173,9 @@ The runtime adds `pagination:{page,pageSize}` and maps `contains` to a prepared 
 }
 ```
 
-JSON joins are limited to INNER/LEFT/RIGHT and one equality condition. HAVING entries are aggregate comparisons combined with AND.
+JSON joins are limited to INNER, LEFT, and RIGHT, with one equality condition. HAVING entries are aggregate comparisons combined with AND.
 
-## JSON Query: DISTINCT, CASE, arithmetic, and functions
+### DISTINCT, CASE, arithmetic, and functions
 
 ```json
 {
@@ -85,7 +199,7 @@ JSON joins are limited to INNER/LEFT/RIGHT and one equality condition. HAVING en
 }
 ```
 
-## JSON Query: subqueries and CTE
+### Subqueries and CTE
 
 ```json
 {
@@ -120,9 +234,9 @@ JSON joins are limited to INNER/LEFT/RIGHT and one equality condition. HAVING en
 }
 ```
 
-Only IN/NOT IN/EXISTS/NOT EXISTS accept filter subqueries. Nested bodies cannot sort, paginate, or define another CTE.
+Only IN, NOT IN, EXISTS, and NOT EXISTS accept filter subqueries. Nested bodies cannot sort, paginate, or define another CTE.
 
-## Runtime filter configurations
+## Filter definitions → emitted filters
 
 ```json
 [
@@ -147,13 +261,9 @@ Representative emitted filters:
 ]
 ```
 
-The UI uses a configured operator per filter. EXISTS/NOT EXISTS are available only in an authored JSON request because they require a query rather than an end-user value.
-
-All configurable UI operators map as follows:
-
-| UI operator | Backend operator/value |
+| UI operator | Backend operator / value |
 | --- | --- |
-| `equals`, `notEquals` | `=`, `!=` |
+| `equals`, `notEquals` | `=`, `<>` |
 | `contains`, `notContains` | `LIKE`, `NOT LIKE` with `%value%` |
 | `startsWith`, `notStartsWith` | `LIKE`, `NOT LIKE` with `value%` |
 | `endsWith`, `notEndsWith` | `LIKE`, `NOT LIKE` with `%value` |
@@ -162,152 +272,19 @@ All configurable UI operators map as follows:
 | `between`, `notBetween` | `BETWEEN`, `NOT BETWEEN` with two values |
 | `isNull`, `isNotNull` | `IS NULL`, `IS NOT NULL` with no `value` property |
 
-The authored JSON Query contract additionally accepts `<>`, `EXISTS`, and `NOT EXISTS`.
+An authored JSON Query request also accepts `!=`, `EXISTS`, and `NOT EXISTS`. EXISTS forms need a subquery rather than an end-user value, so no UI control produces them.
 
-## SQL Resource example: item
+## Response
 
-Frontend report source:
-
-```json
-{
-  "queryDefinition": {
-    "format": "sql",
-    "resource": "reports/item"
-  },
-  "columns": [
-    { "field": "Item_Code", "header": "Item Code" },
-    { "field": "Item_Desc", "header": "Description" },
-    { "field": "Item_MRP", "header": "MRP", "dataType": "number" }
-  ],
-  "filters": [{ "field": "Item_Desc", "label": "Description", "type": "text" }],
-  "sort": [{ "field": "Item_Code", "direction": "ASC" }]
-}
-```
-
-Runtime request:
-
-```json
-{
-  "action": "sql",
-  "resource": "reports/item",
-  "execution": {
-    "columns": ["Item_Code", "Item_Desc", "Item_MRP"]
-  },
-  "filters": [{ "field": "Item_Desc", "operator": "LIKE", "value": "%pen%" }],
-  "sort": [{ "field": "Item_Code", "direction": "ASC" }],
-  "pagination": { "page": 1, "pageSize": 10 }
-}
-```
-
-Flow: frontend ID `reports/item` → backend discovery/resolution → server-owned resource → SQL Server → standard response with `Item_Code`, `Item_Desc`, and `Item_MRP`. The frontend never constructs or sends the server file path.
-
-The selected resource resolves on the backend to:
-
-```sql
-SELECT
-    Item_Code,
-    Item_Desc,
-    Item_MRP
-FROM ItemMasterTable
-```
-
-An abbreviated response is:
+An abbreviated successful response:
 
 ```json
 {
   "success": true,
   "message": "Query executed successfully.",
-  "data": [{ "Item_Code": "PEN-01", "Item_Desc": "Blue pen", "Item_MRP": 20 }],
+  "data": [{ "Item_Code": 1001, "Item_Desc": "Blue pen", "Item_MRP": 20 }],
   "meta": { "page": 1, "pageSize": 10, "totalRows": 1, "rowsReturned": 1, "executionTime": 4 }
 }
 ```
 
-## SQL Resource example: customer
-
-Frontend report source:
-
-```json
-{
-  "queryDefinition": {
-    "format": "sql",
-    "resource": "reports/customer"
-  },
-  "columns": [
-    { "field": "Cust_Name", "header": "Customer" },
-    { "field": "TotalCustomers", "header": "Total", "dataType": "number" },
-    { "field": "MinimumBill", "header": "Minimum", "dataType": "number" },
-    { "field": "MaximumBill", "header": "Maximum", "dataType": "number" }
-  ],
-  "filters": [
-    { "field": "Cust_Name", "label": "Customer", "type": "text" },
-    { "field": "StDate", "label": "Start date", "type": "daterange" }
-  ],
-  "sort": [{ "field": "Cust_Name", "direction": "ASC" }],
-  "filterLogic": "AND"
-}
-```
-
-Runtime request:
-
-```json
-{
-  "action": "sql",
-  "resource": "reports/customer",
-  "execution": {
-    "columns": ["Cust_Name", "TotalCustomers", "MinimumBill", "MaximumBill"],
-    "filters": {
-      "StDate": { "expression": "StDate", "placement": "source" }
-    }
-  },
-  "filters": [
-    { "field": "Cust_Name", "operator": "LIKE", "value": "A%" },
-    { "field": "StDate", "operator": "BETWEEN", "value": ["2021-04-01", "2022-03-31"] }
-  ],
-  "filterLogic": "AND",
-  "sort": [{ "field": "MaximumBill", "direction": "DESC" }],
-  "pagination": { "page": 1, "pageSize": 10 }
-}
-```
-
-Flow: frontend ID `reports/customer` → normalized columns/filters/sort → derived SQL request envelope → backend discovery/resolution → server-owned Customer resource → grouped standard response. Runtime users supply only filter values.
-
-The backend-owned SQL resource is:
-
-```sql
-SELECT
-    Cust_Name,
-    COUNT(Cust_Name) AS TotalCustomers,
-    MIN(Bill_Amt) AS MinimumBill,
-    MAX(Bill_Amt) AS MaximumBill
-FROM CustomerTable
-GROUP BY Cust_Name
-```
-
-Runtime filters are placed by the backend in the resource's own `WHERE`, before `GROUP BY`; the frontend sends only filter fields and values.
-
-## Actual dashboard SQL Resources
-
-The current dashboards use these discovered IDs:
-
-- Item: `widgets/item-dashboard-table`, `widgets/item-dashboard-stats`, `widgets/item-stock-value-by-category`
-- Bill: `widgets/bill-sales-month-wise`, `widgets/bill-purchases-month-wise`, `widgets/bill-top-10-categories`, `widgets/bill-category-sales-month-wise`, `widgets/bill-total-sales`, `widgets/bill-total-purchases`, and the shared `widgets/sales-top-10-month-wise-category-wise`
-- Sales: `widgets/sales-month-wise`, `widgets/top-10-categories-sales`, `widgets/sales-top-10-month-wise-category-wise`, `widgets/category-sales-month-wise`, `widgets/sales-day-wise`, `widgets/date-wise-gst-wise-sales`, `widgets/gst-wise-sales`, `widgets/top-50-item-wise-sales`, `widgets/total-sales`
-- Purchases: `widgets/purchases-month-wise`, `widgets/purchases-day-wise`, `widgets/total-purchases`
-- Sales Receipts: `widgets/daily-collection-summary`, `widgets/payment-mode-wise-collection`, `widgets/monthly-collection-trend`, `widgets/user-wise-day-wise-collection`, `widgets/top-10-largest-receipts`
-
-The Bill and Sales dashboards share one TOP-10 month-wise category resource: Bill requests it from the `loyal-ibms` database, Sales from the default database, and each sends its own applied `Bill_Date` range. The ID released before this change, `widgets/TOP-10-month-Wise-Category-wise`, is no longer available.
-
-Dashboard JSON contains a logical resource ID and presentation fields. Shared dashboard filters are merged into widget definitions before the request envelope is derived. It never contains the backend file path or SQL text.
-
-## Column visibility
-
-```json
-{
-  "columns": [
-    { "field": "Item_Code", "header": "Item Code", "visible": true },
-    { "field": "InternalNote", "header": "Internal note", "visible": false }
-  ]
-}
-```
-
-Visibility affects only `GenericGrid`; it does not change a JSON projection or SQL Resource query.
+The message text comes from the backend. The frontend checks only that it is a string. The values shown are illustrative.

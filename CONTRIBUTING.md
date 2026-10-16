@@ -6,7 +6,7 @@ Thank you for contributing to the Generic Reporting Framework frontend.
 
 - Keep changes scoped to the frontend repository.
 - For substantial features, discuss the intended behavior before investing in a large implementation.
-- Read the [architecture](docs/ARCHITECTURE.md) and [SQL/JSON responsibility rules](docs/SQL-JSON-SEPARATION.md).
+- Read the [architecture](docs/ARCHITECTURE.md), including its [ownership boundary](docs/ARCHITECTURE.md#ownership-boundary), and the [roadmap](docs/ROADMAP.md) so you don't restart completed work.
 - Never commit credentials, local `.env` files, generated builds, or coverage artifacts.
 
 ## Development Workflow
@@ -14,7 +14,7 @@ Thank you for contributing to the Generic Reporting Framework frontend.
 1. Create a focused branch from the current default branch.
 2. Install locked dependencies with `npm ci`.
 3. Make the smallest cohesive change and add or update meaningful tests.
-4. Update documentation when behavior, configuration, or public authoring rules change.
+4. Update documentation when behavior, configuration, or public authoring rules change, and add a `CHANGELOG.md` entry. If you change a schema, re-validate the files in `examples/`.
 5. Run the complete validation suite.
 
 ```bash

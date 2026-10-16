@@ -1,0 +1,17 @@
+{
+  "id": "minimal-example-dashboard",
+  "title": "Minimal Dashboard (example)",
+  "widgets": [
+    {
+      "id": "total-sales",
+      "type": "stat",
+      "title": "Total Sales",
+      "queryDefinition": {
+        "format": "sql",
+        "resource": "widgets/total-sales"
+      },
+      "valueField": "TotalSales",
+      "format": "currency"
+    }
+  ]
+}

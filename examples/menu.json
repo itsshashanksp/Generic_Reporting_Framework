@@ -1,0 +1,20 @@
+[
+  {
+    "id": "dashboards",
+    "title": "Dashboards",
+    "icon": "dashboard",
+    "children": [
+      { "id": "item_dashboard", "title": "Item Dashboard", "icon": "dashboard", "dashboardId": "item-dashboard" },
+      { "id": "bill_dashboard", "title": "Bill Dashboard", "icon": "dashboard", "dashboardId": "bill-dashboard" }
+    ]
+  },
+  {
+    "id": "reports",
+    "title": "Reports",
+    "icon": "reports",
+    "children": [
+      { "id": "item_report", "title": "Item Report", "icon": "report", "reportId": "item" }
+    ]
+  },
+  { "id": "settings", "title": "Settings", "icon": "settings", "route": "/settings" }
+]

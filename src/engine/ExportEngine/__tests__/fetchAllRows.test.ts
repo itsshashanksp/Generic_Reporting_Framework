@@ -5,16 +5,19 @@ import { ApiClientError } from "../../../api/client";
 import {
     assertWithinExportLimit,
     DEFAULT_EXPORT_MAX_ROWS,
+    ExportIntegrityError,
     ExportLimitError,
     exportRequestPolicy,
     fetchAllRowsForExport,
 } from "../fetchAllRows";
 
+// Every generated row is distinct, as rows of different pages are in a real result.
+let nextRowId = 0;
 function page(rows: number, totalRows: number | null) {
     return {
         success: true,
         message: "ok",
-        data: Array.from({ length: rows }, (_, index) => ({ Id: index })),
+        data: Array.from({ length: rows }, () => ({ Id: nextRowId++ })),
         meta: { page: 1, pageSize: rows, totalRows: totalRows as number, rowsReturned: rows, executionTime: 1 },
     };
 }
@@ -36,7 +39,7 @@ describe("export-all row limit", () => {
     });
 
     it("refuses as soon as rows exceed the limit when no total is reported", async () => {
-        const execute = vi.fn().mockResolvedValue(page(2, null));
+        const execute = vi.fn().mockImplementation(async () => page(2, null));
 
         const error = await fetchAllRowsForExport({ action: "sql" }, { batchSize: 2, maxRows: 5, execute }).catch(caught => caught);
 
@@ -189,5 +192,78 @@ describe("export batch size and the backend page-size maximum", () => {
         const execute = backend(0, 10);
         await expect(fetchAllRowsForExport({ action: "sql" }, { execute })).rejects.toThrow("Invalid request.");
         expect(sizes(execute)).toEqual([1000, 500, 250, 100, 50, 25, 10, 1]);
+    });
+});
+
+describe("export batch integrity", () => {
+    const rowsOf = (length: number, first: number) => Array.from({ length }, (_, index) => ({ Id: first + index }));
+    const batch = (data: Record<string, unknown>[], totalRows: number) => ({
+        success: true,
+        message: "ok",
+        data,
+        meta: { page: 1, pageSize: data.length, totalRows, rowsReturned: data.length, executionTime: 1 },
+    });
+
+    it("refuses a page that repeats the previous page instead of exporting duplicates", async () => {
+        const execute = vi.fn().mockImplementation(async () => batch(rowsOf(5, 0), 10));
+        const error = await fetchAllRowsForExport({ action: "select" }, { batchSize: 5, execute }).catch(caught => caught);
+        expect(error).toBeInstanceOf(ExportIntegrityError);
+        expect(error.message).toBe("The data service returned the same rows for consecutive pages.");
+        expect(execute).toHaveBeenCalledTimes(2);
+    });
+
+    it("accepts consecutive pages whose rows are all identical, as such data legitimately repeats", async () => {
+        const same = () => Array.from({ length: 5 }, () => ({ Category: "Books" }));
+        const execute = vi.fn()
+            .mockResolvedValueOnce(batch(same(), 12))
+            .mockResolvedValueOnce(batch(same(), 12))
+            .mockResolvedValueOnce(batch(same().slice(0, 2), 12));
+        await expect(fetchAllRowsForExport({ action: "select" }, { batchSize: 5, execute })).resolves.toHaveLength(12);
+    });
+
+    it("refuses a page with more rows than requested", async () => {
+        const execute = vi.fn().mockResolvedValueOnce(batch(rowsOf(6, 0), 6));
+        await expect(fetchAllRowsForExport({ action: "select" }, { batchSize: 5, execute })).rejects.toThrow(
+            "The data service returned more rows than were requested for one page."
+        );
+    });
+
+    it("refuses a total that changes between pages", async () => {
+        const execute = vi.fn()
+            .mockResolvedValueOnce(batch(rowsOf(5, 0), 12))
+            .mockResolvedValueOnce(batch(rowsOf(5, 5), 11));
+        await expect(fetchAllRowsForExport({ action: "select" }, { batchSize: 5, execute })).rejects.toThrow(
+            "The matching rows changed while the export was running. Try again."
+        );
+    });
+
+    it("refuses rows beyond the reported total instead of trimming them", async () => {
+        const execute = vi.fn()
+            .mockResolvedValueOnce(batch(rowsOf(5, 0), 7))
+            .mockResolvedValueOnce(batch(rowsOf(5, 5), 7));
+        await expect(fetchAllRowsForExport({ action: "select" }, { batchSize: 5, execute })).rejects.toThrow(
+            "The data service returned more rows than the reported total."
+        );
+    });
+
+    it("requests consecutive pages with the caller's request unchanged", async () => {
+        const execute = vi.fn()
+            .mockResolvedValueOnce(batch(rowsOf(5, 0), 11))
+            .mockResolvedValueOnce(batch(rowsOf(5, 5), 11))
+            .mockResolvedValueOnce(batch(rowsOf(1, 10), 11));
+        const request = { action: "select", filters: [{ field: "A", operator: "=", value: 1 }], sort: [{ field: "Id", direction: "ASC" }] };
+        await fetchAllRowsForExport(request, { batchSize: 5, execute });
+        expect(execute.mock.calls.map(call => call[0])).toEqual([1, 2, 3].map(page => ({ ...request, pagination: { page, pageSize: 5 } })));
+    });
+
+    it("stops a backend that keeps returning full pages without a total at the row limit", async () => {
+        let next = 0;
+        const execute = vi.fn().mockImplementation(async () => {
+            const data = rowsOf(5, next);
+            next += 5;
+            return { ...batch(data, 0), meta: { ...batch(data, 0).meta, totalRows: undefined } };
+        });
+        await expect(fetchAllRowsForExport({ action: "select" }, { batchSize: 5, maxRows: 20, execute })).rejects.toBeInstanceOf(ExportLimitError);
+        expect(execute).toHaveBeenCalledTimes(5);
     });
 });

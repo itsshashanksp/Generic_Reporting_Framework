@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useParams } from "react-router-dom";
 
 import {
@@ -13,6 +13,7 @@ import Loading from "../components/Common/Loading";
 import usePullToRefresh from "../components/Common/usePullToRefresh";
 import { ResponsiveFilterPanel } from "../components/Filters";
 import GenericGrid from "../components/Grid/GenericGrid";
+import ColumnChooserDialog from "../components/Grid/ColumnChooserDialog";
 import ReportTableFrame from "../components/Grid/ReportTableFrame";
 import SavedReports from "../components/SavedReports/SavedReports";
 import { ReportToolbar } from "../components/Toolbar";
@@ -24,7 +25,15 @@ import { getReportPaginationParameters, isSavedReportsEnabled } from "../engine/
 import { getReport, getReportError } from "../engine/ReportEngine/reportLoader";
 import { createRequestCacheKey, getCachedResponse, getOrCreateInFlightRequest, setCachedResponse } from "../engine/RequestCache";
 import { saveSavedReport } from "../engine/SavedReportEngine";
-import { assertWithinExportLimit, ExportFileError, exportExcel, exportRowsCSV } from "../engine/ExportEngine";
+import {
+    arrangeColumns,
+    emptyColumnLayout,
+    isEmptyColumnLayout,
+    loadColumnLayout,
+    saveColumnLayout,
+    type ColumnLayout,
+} from "../engine/ColumnLayoutEngine";
+import { ExportFileError, ExportIntegrityError, exportExcel, exportRowsCSV, fetchAllRowsForExport } from "../engine/ExportEngine";
 import type { ApiResponse } from "../types/api";
 import type { FilterValue } from "../engine/FilterContext/FilterContext";
 import type { SavedReport } from "../types/savedReport";
@@ -66,6 +75,7 @@ export default function ReportViewer() {
     const [gridError, setGridError] = useState("");
     const [filterError, setFilterError] = useState("");
     const [exportStatus, setExportStatus] = useState("");
+    const [isExporting, setIsExporting] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [currentPageSize, setCurrentPageSize] = useState(initialRequestState.pageSize);
     const [currentSorting, setCurrentSorting] = useState<SortDefinition[]>(report?.request.sort ?? []);
@@ -75,6 +85,58 @@ export default function ReportViewer() {
     const activeController = useRef<AbortController | null>(null);
     const exportController = useRef<AbortController | null>(null);
     const rows = result?.success && loadedReportId === report?.id ? result.data ?? [] : [];
+
+    // Personal column layout: per signed-in user and report, like saved views.
+    // Configured grouping replaces the columns, so it cannot be personalized.
+    const canPersonalizeColumns = Boolean(
+        report
+        && savedReportsOwner
+        && report.toolbar.columns !== false
+        && !report.grid.grouping?.enabled
+        && report.columns.filter(column => column.visible !== false).length > 1
+    );
+    const layoutKey = canPersonalizeColumns && report && savedReportsOwner
+        ? `${savedReportsOwner}\u0000${report.id}`
+        : "";
+    const storedColumnLayout = useMemo(() => {
+        if (!layoutKey || !report || !savedReportsOwner) return emptyColumnLayout;
+        return loadColumnLayout(savedReportsOwner, report.id);
+    }, [layoutKey, report, savedReportsOwner]);
+    const [columnLayoutState, setColumnLayoutState] = useState<{ key: string; layout: ColumnLayout } | null>(null);
+    const columnLayout = columnLayoutState?.key === layoutKey ? columnLayoutState.layout : storedColumnLayout;
+    const arrangedColumns = useMemo(
+        () => report && layoutKey ? arrangeColumns(report.columns, columnLayout) : [],
+        [columnLayout, layoutKey, report]
+    );
+    const userHiddenFields = useMemo(
+        () => arrangedColumns.filter(column => column.hiddenByUser).map(column => column.field),
+        [arrangedColumns]
+    );
+    const [isColumnChooserOpen, setIsColumnChooserOpen] = useState(false);
+
+    const updateColumnLayout = (update: (current: ColumnLayout) => ColumnLayout) => {
+        if (!layoutKey || !report || !savedReportsOwner) return;
+        const next = update(columnLayout);
+        setColumnLayoutState({ key: layoutKey, layout: next });
+        saveColumnLayout(savedReportsOwner, report.id, next);
+    };
+    const currentOrder = () => arrangedColumns.map(column => column.field);
+    const toggleColumn = (field: string) => updateColumnLayout(current => {
+        const hidden = current.hidden.includes(field)
+            ? current.hidden.filter(item => item !== field)
+            : [...current.hidden, field];
+        // Never hide the last visible column.
+        const visible = arrangedColumns.filter(column => !hidden.includes(column.field));
+        return visible.length === 0 ? current : { ...current, order: currentOrder(), hidden };
+    });
+    const moveColumn = (field: string, offset: -1 | 1) => updateColumnLayout(current => {
+        const order = currentOrder();
+        const from = order.indexOf(field);
+        const to = from + offset;
+        if (from < 0 || to < 0 || to >= order.length) return current;
+        [order[from], order[to]] = [order[to], order[from]];
+        return { ...current, order };
+    });
 
     const loadReport = useCallback(async (
         activeFilters: Record<string, unknown> = {},
@@ -296,9 +358,12 @@ export default function ReportViewer() {
         const controller = new AbortController();
         exportController.current = controller;
         setExportStatus("Preparing export…");
+        setIsExporting(true);
 
         try {
-            const response = await executeRequest(
+            // Same request as the grid (fields, filters, filter logic, database,
+            // current sort); the helper pages it within the backend maximum.
+            const exportRows = await fetchAllRowsForExport(
                 {
                     ...report.request,
                     pagination: undefined,
@@ -310,24 +375,19 @@ export default function ReportViewer() {
                     ],
                     sort: currentSorting,
                 },
-                { signal: controller.signal }
+                {
+                    signal: controller.signal,
+                    onProgress: (loadedRows, totalRows) => {
+                        if (exportController.current !== controller) return;
+                        setExportStatus(totalRows === null
+                            ? `Preparing export… ${loadedRows.toLocaleString()} rows`
+                            : `Preparing export… ${loadedRows.toLocaleString()} of ${totalRows.toLocaleString()} rows`);
+                    },
+                }
             );
 
-            if (!response.success) {
-                setExportStatus(response.message || "Unable to prepare the export.");
-                return;
-            }
-
-            const exportRows = response.data ?? [];
             if (exportRows.length === 0) {
                 setExportStatus("There are no rows to export.");
-                return;
-            }
-
-            const totalRows = response.meta?.totalRows ?? exportRows.length;
-            assertWithinExportLimit(Math.max(totalRows, exportRows.length));
-            if (totalRows > exportRows.length) {
-                setExportStatus("The data service returned an incomplete export result. Nothing was exported.");
                 return;
             }
 
@@ -352,7 +412,13 @@ export default function ReportViewer() {
             setExportStatus("");
         } catch (error: unknown) {
             if (!isRequestAbort(error)) {
-                setExportStatus(getRequestErrorMessage(error, "Unable to prepare the export."));
+                const message = getRequestErrorMessage(error, "Unable to prepare the export.");
+                setExportStatus(error instanceof ExportIntegrityError ? `${message} Nothing was exported.` : message);
+            }
+        } finally {
+            if (exportController.current === controller) {
+                exportController.current = null;
+                setIsExporting(false);
             }
         }
     };
@@ -410,7 +476,7 @@ export default function ReportViewer() {
                     <>
                         {exportStatus && (
                             <p
-                                className={exportStatus === "Preparing export…" ? "report-status" : "form-error"}
+                                className={isExporting ? "report-status" : "form-error"}
                                 role="status"
                             >
                                 {exportStatus}
@@ -421,10 +487,11 @@ export default function ReportViewer() {
                             exportConfig={report.export}
                             onRefresh={handleRefresh}
                             isRefreshing={isGridLoading}
-                            isExporting={exportStatus === "Preparing export…"}
+                            isExporting={isExporting}
                             onExportAll={handleExportAll}
                             onExportMessage={setExportStatus}
                             onSaveReport={savedReportsOwner ? handleSaveReport : undefined}
+                            onOpenColumns={canPersonalizeColumns ? () => setIsColumnChooserOpen(true) : undefined}
                             rows={rows}
                         />
                     </>
@@ -440,7 +507,7 @@ export default function ReportViewer() {
                     {rows.length > 0 && (
                         <GenericGrid
                             rows={rows}
-                            columns={report.columns}
+                            columns={layoutKey ? arrangedColumns : report.columns}
                             gridConfig={report.grid}
                             initialSort={report.sort}
                             serverPagination={{
@@ -452,6 +519,14 @@ export default function ReportViewer() {
                                 onPageSizeChange: pageSize => void loadReport(appliedFilters, 1, pageSize, currentSorting),
                             }}
                             onSortChange={sorting => void loadReport(appliedFilters, 1, currentPageSize, sorting)}
+                            personalization={layoutKey ? {
+                                hiddenFields: userHiddenFields,
+                                onColumnOrderChange: order => updateColumnLayout(current => ({ ...current, order })),
+                                onColumnWidthsChange: widths => updateColumnLayout(current => ({
+                                    ...current,
+                                    widths: { ...current.widths, ...widths },
+                                })),
+                            } : undefined}
                         />
                     )}
 
@@ -467,6 +542,18 @@ export default function ReportViewer() {
                         </div>
                     )}
             </ReportTableFrame>
+
+            {isColumnChooserOpen && layoutKey && (
+                <ColumnChooserDialog
+                    reportTitle={report.title}
+                    columns={arrangedColumns}
+                    customized={!isEmptyColumnLayout(columnLayout)}
+                    onToggle={toggleColumn}
+                    onMove={moveColumn}
+                    onReset={() => updateColumnLayout(() => emptyColumnLayout)}
+                    onClose={() => setIsColumnChooserOpen(false)}
+                />
+            )}
         </main>
     );
 }

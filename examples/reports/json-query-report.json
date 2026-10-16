@@ -1,0 +1,52 @@
+{
+  "id": "item-example",
+  "title": "Item Report (example)",
+  "description": "JSON Query mode report with filters, a dynamic select filter, paging and exports.",
+  "request": {
+    "action": "select",
+    "database": "loyal-ibms",
+    "source": { "table": "ItemMasterTable" },
+    "fields": ["Item_Code", "Item_Desc", "Item_MRP"]
+  },
+  "columns": [
+    { "field": "Item_Code", "header": "Item Code", "dataType": "number", "width": 140 },
+    { "field": "Item_Desc", "header": "Item Description", "width": 320 },
+    { "field": "Item_MRP", "header": "Item MRP", "dataType": "number" }
+  ],
+  "sort": [{ "field": "Item_Code", "direction": "ASC" }],
+  "filters": [
+    { "field": "Item_Desc", "label": "Item Description", "type": "text", "operator": "contains", "placeholder": "Part of a description" },
+    { "field": "Item_MRP", "label": "MRP", "type": "number", "operator": "between" },
+    {
+      "field": "UserName",
+      "label": "User Name",
+      "type": "select",
+      "dynamicOptions": {
+        "request": {
+          "action": "select",
+          "source": { "table": "ItemMasterTable" },
+          "fields": ["UserName", { "function": "COUNT", "field": "*", "alias": "Frequency" }],
+          "groupBy": ["UserName"],
+          "sort": [{ "field": "Frequency", "direction": "DESC" }],
+          "limit": 1000
+        },
+        "valueField": "UserName",
+        "countField": "Frequency",
+        "searchable": true,
+        "searchPlaceholder": "Search users"
+      }
+    }
+  ],
+  "grid": {
+    "pagination": { "enabled": true, "pageSize": 10, "pageSizeOptions": [10, 25, 50, 100] },
+    "rowSelection": "single"
+  },
+  "toolbar": { "export": true, "refresh": true, "saveReport": true },
+  "export": {
+    "enabled": true,
+    "formats": ["csv", "excel"],
+    "filename": "items",
+    "exportCurrentView": true,
+    "exportAll": true
+  }
+}

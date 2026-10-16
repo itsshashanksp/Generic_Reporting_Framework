@@ -33,6 +33,17 @@ export class ExportLimitError extends Error {
     }
 }
 
+/**
+ * The batches did not add up to one consistent result (missing, extra or
+ * repeated rows), so the rows cannot be exported as complete.
+ */
+export class ExportIntegrityError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "ExportIntegrityError";
+    }
+}
+
 /** Throws when a known row count exceeds the export limit. */
 export function assertWithinExportLimit(rowCount: number, maxRows = DEFAULT_EXPORT_MAX_ROWS): void {
     if (rowCount > maxRows) throw new ExportLimitError(rowCount, maxRows);
@@ -64,8 +75,11 @@ export async function fetchAllRowsForExport(
     const rows: Record<string, unknown>[] = [];
     let page = 1;
     let totalRows: number | null = null;
+    let previousPageKey: string | null = null;
     const smallerBatchSizes = FALLBACK_EXPORT_BATCH_SIZES.filter(size => size < batchSize);
 
+    // Terminates: every batch that does not end the loop adds `batchSize`
+    // rows, and the row limit stops the loop after at most maxRows/batchSize.
     while (totalRows === null || rows.length < totalRows) {
         let response: ApiResponse;
         try {
@@ -87,23 +101,25 @@ export async function fetchAllRowsForExport(
         }
 
         const pageRows = response.data ?? [];
-        totalRows = response.meta?.totalRows ?? totalRows;
+        const pageTotal: number | null = response.meta?.totalRows ?? totalRows;
         // Refuse before downloading further batches when the size is known.
-        if (totalRows !== null) assertWithinExportLimit(totalRows, maxRows);
+        if (pageTotal !== null) assertWithinExportLimit(pageTotal, maxRows);
+        assertConsistentBatch(batchSize, pageRows, pageTotal, totalRows, rows.length);
+        const pageKey = getRepeatablePageKey(pageRows);
+        if (pageKey !== null && pageKey === previousPageKey) {
+            throw new ExportIntegrityError(
+                "The data service returned the same rows for consecutive pages."
+            );
+        }
+        previousPageKey = pageKey;
+        totalRows = pageTotal;
         rows.push(...pageRows);
         if (rows.length > maxRows) throw new ExportLimitError(maxRows, maxRows, false);
         onProgress?.(rows.length, totalRows);
 
-        if (pageRows.length === 0) {
-            if (totalRows !== null && rows.length < totalRows) {
-                throw new Error("The data service returned an incomplete export result.");
-            }
-            break;
-        }
-
         if (pageRows.length < batchSize) {
             if (totalRows !== null && rows.length < totalRows) {
-                throw new Error("The data service returned an incomplete export result.");
+                throw new ExportIntegrityError("The data service returned an incomplete export result.");
             }
             break;
         }
@@ -111,7 +127,42 @@ export async function fetchAllRowsForExport(
         page += 1;
     }
 
-    return totalRows === null ? rows : rows.slice(0, totalRows);
+    return rows;
+}
+
+/**
+ * Pages are fetched by `page`/`pageSize` (no cursor), so a batch is accepted
+ * only when it fits the rows the earlier batches leave: never more rows than
+ * requested or than remain, and the same total. (`meta.page` only echoes the
+ * requested page, so it cannot reveal a repeated page; see the content key.)
+ */
+function assertConsistentBatch(
+    batchSize: number,
+    pageRows: Record<string, unknown>[],
+    pageTotal: number | null,
+    previousTotal: number | null,
+    heldRows: number
+): void {
+    if (pageRows.length > batchSize) {
+        throw new ExportIntegrityError("The data service returned more rows than were requested for one page.");
+    }
+    if (previousTotal !== null && pageTotal !== previousTotal) {
+        throw new ExportIntegrityError("The matching rows changed while the export was running. Try again.");
+    }
+    if (pageTotal !== null && heldRows + pageRows.length > pageTotal) {
+        throw new ExportIntegrityError("The data service returned more rows than the reported total.");
+    }
+}
+
+/**
+ * Identifies a page by its content so a repeated page can be detected. A page
+ * whose rows are all identical says nothing about which page it is (such data
+ * legitimately repeats), so it yields no key.
+ */
+function getRepeatablePageKey(pageRows: Record<string, unknown>[]): string | null {
+    if (pageRows.length < 2) return null;
+    const serialized = pageRows.map(row => JSON.stringify(row));
+    return serialized.every(row => row === serialized[0]) ? null : JSON.stringify(serialized);
 }
 
 /** The backend refused the request only because the page size exceeds its maximum. */

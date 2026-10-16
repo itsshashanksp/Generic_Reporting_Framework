@@ -217,3 +217,17 @@ describe("report request contract alignment", () => {
         ]));
     });
 });
+
+describe("toolbar column chooser flag", () => {
+    const report = { ...presentation, request: { action: "select", source: { table: "Customers" }, fields: ["CustomerName", "TotalAmount"] } };
+
+    it("defaults to enabled and accepts a boolean", () => {
+        expect(loadDefinition(report).toolbar.columns).toBe(true);
+        expect(getReportValidationErrors({ ...report, toolbar: { columns: false } })).toEqual([]);
+        expect(loadDefinition({ ...report, toolbar: { export: true, refresh: true, columns: false } }).toolbar.columns).toBe(false);
+    });
+
+    it("rejects a non-boolean value", () => {
+        expect(getReportValidationErrors({ ...report, toolbar: { columns: "yes" } })).toEqual(["Report toolbar columns must be a boolean."]);
+    });
+});

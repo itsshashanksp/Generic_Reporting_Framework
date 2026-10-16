@@ -5,42 +5,58 @@ See [Getting started](GETTING-STARTED.md) for installation.
 ## Project structure
 
 ```text
-src/
-├── api/          API transport and response validation
-├── components/   grids, filters, toolbars and dashboard widgets
-├── config/       report/dashboard/widget/menu JSON
-├── engine/       definition validation, runtime state, cache and export
-├── pages/        route-level views
-├── router/       application routes
-├── test/         shared test setup
-└── types/        TypeScript contracts
+.
+├── src/
+│   ├── api/          the only fetch caller: credentials, CSRF, response validation, errors
+│   ├── auth/         session context, login/logout and user-management services
+│   ├── setup/        setup-status gate
+│   ├── components/   grid, filters, toolbar, saved reports, dashboard widgets, layout
+│   ├── config/       report/dashboard/menu JSON, version, frontend capabilities
+│   ├── engine/       validation, normalization, runtime state, cache, export
+│   ├── pages/        route-level views (reports, dashboards, login, settings, users)
+│   ├── router/       application routes and guards
+│   ├── styles/       global, component and page CSS
+│   ├── test/         shared Vitest setup
+│   └── types/        TypeScript contracts for configuration and API
+├── tooling/          build-time checks (production API URL) and their tests
+├── examples/         validated example definitions (not bundled)
+├── docs/             documentation
+└── .github/workflows/frontend-ci.yml
 ```
 
-The active loaders discover JSON with Vite glob imports. There is no frontend SQL authoring step.
+The loaders discover JSON with Vite glob imports at build time. There is no SQL authoring step in the frontend.
 
 ## Commands
 
-```bash
-npm run dev
-npm test
-npm run lint
-npm run typecheck
-npm run build
-npm run preview
-```
+| Command | What it runs |
+| --- | --- |
+| `npm run dev` | `vite`, the development server with hot reload |
+| `npm test` | `vitest run`: every `*.test.ts(x)` in jsdom |
+| `npm test -- --watch` | Vitest in watch mode |
+| `npm run lint` | `eslint .` |
+| `npm run typecheck` | `tsc -p tsconfig.app.json && tsc -p tsconfig.node.json` |
+| `npm run build` | `tsc -b && vite build` into `dist/` |
+| `npm run preview` | `vite preview` of `dist/` |
 
-Run tests, lint, standalone typecheck, and build after a documentation-adjacent configuration or runtime change.
+Prettier is installed as a dev dependency, but it has no script or configuration file; formatting is not enforced.
 
 ## Configuration workflows
 
-To add a report, create `src/config/reports/<id>.json`, choose one [query mode](QUERY-MODES.md), declare columns, filters, and optional top-level sort, and add a menu reference if it should be reachable. SQL Resource definitions use only the backend-published relative ID; the loader derives the API execution envelope.
+**Add a report.** Create `src/config/reports/<name>.json` with a unique `id`. Choose one [query mode](QUERY-MODES.md), then declare `columns`, `filters` (use `[]` for none), and an optional top-level `sort`. To make it reachable from the sidebar, add a `reportId` entry to `src/config/menu.json`. Start from [`examples/reports/`](../examples/reports/).
 
-To add a dashboard, create `src/config/dashboards/<id>.json`, select its layout and give each widget exactly one valid source. Inline widgets are supported. To reuse a non-report widget definition through `widgetId`, create JSON under `src/config/widgets`. To reuse a report, prefer `reportId`.
+**Add a dashboard.** Create `src/config/dashboards/<name>.json`. Choose the layout, and give each widget exactly one source. Inline `queryDefinition`/`request` is the usual choice; prefer `reportId` when you want to reuse a report. Then add a `dashboardId` menu entry. Start from [`examples/dashboards/`](../examples/dashboards/).
 
-When changing a schema, update its TypeScript contracts, validator, loader/defaults, focused tests, example configuration, and this documentation together. Remember that accepted schema and wired UI behavior can differ; document both.
+**Add a reusable widget.** Create `src/config/widgets/<name>.json` and reference it with `widgetId`.
+
+After any configuration change, run `npm test`. The configuration tests load the checked-in definitions, so a mistake in a file shows up there, and on the page as a configuration error. Remember that the JSON is bundled: deployed sites change only after a rebuild.
+
+**Change a schema.** Update the TypeScript contract (`src/types/`), the validator, the loader/defaults, the focused tests, the example files, and the documentation together. Accepted schema and wired-up UI behavior can differ; document both.
 
 ## Safety boundaries
 
-Do not commit local `.env` files, credentials, `dist`, or coverage. Backend SQL resources are referenced only by discovered logical ID from this frontend. Keep request translation within the backend grammar; do not introduce authored execution mappings, SQL parsing, generation, file lookup, paths, placeholders, or raw SQL request fields.
+- Never commit `.env` files (other than `.env.example` and `.env.production`), credentials, `dist/`, or `coverage/`.
+- Refer to backend SQL Resources only by their discovered logical ID. Do not add authored execution mappings, SQL parsing or generation, file lookup, paths, placeholders, or raw SQL request fields.
+- Route all network access through `src/api/client.ts`, so credentials, CSRF, and response validation stay in one place.
+- To add a write action, both the client CSRF list and `frontendCapabilities.write` must change. That is roadmap item 37; it needs its design first.
 
 [Configuration reference](CONFIGURATION.md) · [Testing](TESTING.md) · [Contributing](../CONTRIBUTING.md)

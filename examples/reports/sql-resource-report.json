@@ -1,0 +1,21 @@
+{
+  "id": "customer-sql-example",
+  "title": "Customer Report (SQL Resource example)",
+  "description": "SQL Resource mode: the SQL lives in the backend resource reports/customer; this file holds only its ID and presentation.",
+  "queryDefinition": {
+    "format": "sql",
+    "database": "loyal-ibms",
+    "resource": "reports/customer"
+  },
+  "columns": [
+    { "field": "Cust_Name", "header": "Customer" },
+    { "field": "TotalCustomers", "header": "Total", "dataType": "number" },
+    { "field": "MinimumBill", "header": "Minimum", "dataType": "number" },
+    { "field": "MaximumBill", "header": "Maximum", "dataType": "number" }
+  ],
+  "sort": [{ "field": "Cust_Name", "direction": "ASC" }],
+  "filters": [
+    { "field": "Cust_Name", "label": "Customer", "type": "text", "operator": "startsWith" }
+  ],
+  "filterLogic": "AND"
+}

@@ -286,7 +286,7 @@ function validateGrouping(value: unknown, errors: string[]) {
 function validateToolbar(value: unknown, errors: string[]) {
     if (value === undefined) return;
     if (!isRecord(value)) return errors.push("Report toolbar must be an object.");
-    const keys = ["export", "refresh", "saveReport"];
+    const keys = ["export", "refresh", "saveReport", "columns"];
     rejectUnknown(value, keys, "Report toolbar", errors);
     keys.forEach(key => optionalBoolean(value[key], `Report toolbar ${key}`, errors));
 }

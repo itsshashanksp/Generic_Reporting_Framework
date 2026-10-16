@@ -278,3 +278,70 @@ describe("GenericGrid shared configuration", () => {
         expect(record.querySelector(".mobile-report-record__details")?.textContent).toContain("Total42");
     });
 });
+
+describe("GenericGrid personal column layout", () => {
+    const threeColumns = [
+        ...columns,
+        { field: "Price", header: "Item Price", visible: true, sortable: true, width: 120 },
+    ];
+    const renderPersonalized = (hiddenFields: string[] = []) => {
+        const onColumnOrderChange = vi.fn();
+        const onColumnWidthsChange = vi.fn();
+        render(
+            <GridProvider>
+                <GenericGrid
+                    rows={[{ Code: "A", Description: "Alpha", Price: 5 }]}
+                    columns={threeColumns}
+                    gridConfig={gridConfig}
+                    personalization={{ hiddenFields, onColumnOrderChange, onColumnWidthsChange }}
+                />
+            </GridProvider>
+        );
+        return { props: agGridProps.mock.calls.at(-1)?.[0], onColumnOrderChange, onColumnWidthsChange };
+    };
+
+    beforeEach(() => agGridProps.mockClear());
+
+    it("controls width and visibility and lets the layout own column order", () => {
+        const { props } = renderPersonalized(["Description"]);
+        expect(props.columnDefs.map((column: { field: string; width: number; hide: boolean }) => [column.field, column.width, column.hide]))
+            .toEqual([["Code", 150, false], ["Description", 240, true], ["Price", 120, false]]);
+        expect(props.columnDefs.some((column: { initialWidth?: number }) => column.initialWidth !== undefined)).toBe(false);
+        expect(props.maintainColumnOrder).toBe(false);
+    });
+
+    it("leaves hidden columns out of the mobile cards and mobile sort", () => {
+        renderPersonalized(["Description"]);
+        expect(screen.queryByText("Item Description")).toBeNull();
+        expect(screen.getAllByText("Item Price").length).toBeGreaterThan(0);
+    });
+
+    it("reports finished user drags and resizes only", () => {
+        const { props, onColumnOrderChange, onColumnWidthsChange } = renderPersonalized();
+        const api = { getColumnState: () => [{ colId: "Price" }, { colId: "Code" }, { colId: "Description" }] };
+        const column = { getColId: () => "Code", getActualWidth: () => 211.6 };
+        const neighbour = { getColId: () => "Price", getActualWidth: () => 98.2 };
+
+        props.onColumnMoved({ finished: false, source: "uiColumnMoved", api });
+        props.onColumnMoved({ finished: true, source: "gridOptionsChanged", api });
+        props.onColumnMoved({ finished: true, source: "api", api });
+        expect(onColumnOrderChange).not.toHaveBeenCalled();
+        props.onColumnMoved({ finished: true, source: "uiColumnMoved", api });
+        expect(onColumnOrderChange).toHaveBeenCalledWith(["Price", "Code", "Description"]);
+
+        props.onColumnResized({ finished: false, source: "uiColumnResized", columns: [column], column });
+        props.onColumnResized({ finished: true, source: "autosizeColumns", columns: [column], column });
+        expect(onColumnWidthsChange).not.toHaveBeenCalled();
+        props.onColumnResized({ finished: true, source: "uiColumnResized", columns: [column, neighbour], column });
+        expect(onColumnWidthsChange).toHaveBeenCalledTimes(1);
+        expect(onColumnWidthsChange).toHaveBeenCalledWith({ Code: 212, Price: 98 });
+    });
+
+    it("keeps the existing behavior without a personal layout", () => {
+        render(<GridProvider><GenericGrid rows={[{ Code: "A", Description: "Alpha" }]} columns={columns} gridConfig={gridConfig} /></GridProvider>);
+        const props = agGridProps.mock.calls.at(-1)?.[0];
+        expect(props.maintainColumnOrder).toBe(true);
+        expect(props.columnDefs.every((column: { hide?: boolean; width?: number }) => column.hide === undefined && column.width === undefined)).toBe(true);
+        props.onColumnMoved({ finished: true, source: "uiColumnMoved", api: { getColumnState: () => [] } });
+    });
+});

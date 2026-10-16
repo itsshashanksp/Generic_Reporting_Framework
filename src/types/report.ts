@@ -28,6 +28,8 @@ export interface ToolbarConfig {
     export: boolean;
     refresh: boolean;
     saveReport?: boolean;
+    /** Column chooser (show/hide, order, reset); default true. */
+    columns?: boolean;
 }
 
 export interface GridConfig {

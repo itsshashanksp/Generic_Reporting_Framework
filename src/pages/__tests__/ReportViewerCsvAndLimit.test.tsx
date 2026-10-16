@@ -39,6 +39,19 @@ function response(rows: Record<string, unknown>[], totalRows = rows.length) {
     };
 }
 
+/** Serves `available` distinct rows by page, as the backend pages a report request. */
+function pagedServer(available: number) {
+    return async (request: { pagination?: { page: number; pageSize: number } }) => {
+        const { page, pageSize } = request.pagination ?? { page: 1, pageSize: available };
+        const first = (page - 1) * pageSize;
+        const count = Math.max(0, Math.min(pageSize, available - first));
+        return {
+            ...response(Array.from({ length: count }, (_, index) => ({ Item_Code: `I${first + index}` })), available),
+            meta: { page, pageSize, totalRows: available, rowsReturned: count, executionTime: 1 },
+        };
+    };
+}
+
 let downloads: string[];
 function mockBrowserDownloads({ fail = false } = {}) {
     downloads = [];
@@ -157,17 +170,18 @@ describe("ReportViewer CSV export and export-all limits", () => {
         expect(downloads).toEqual([]);
     });
 
-    it("exports exactly 100,000 rows", async () => {
+    it("exports exactly 100,000 rows across 1,000-row pages", async () => {
         mockBrowserDownloads();
         await renderItemReport();
-        const rows = Array.from({ length: 100_000 }, (_, index) => ({ Item_Code: `I${index}` }));
-        executeRequestMock.mockResolvedValue(response(rows));
+        const exportServer = pagedServer(100_000);
+        executeRequestMock.mockClear().mockImplementation(exportServer);
 
         chooseExport("All rows — CSV");
 
         await waitFor(() => expect(downloads).toEqual(["item-report.csv"]), { timeout: 10_000 });
         await waitFor(() => expect(screen.queryByRole("status")).toBeNull());
-    });
+        expect(executeRequestMock).toHaveBeenCalledTimes(100);
+    }, 15_000);
 
     it("rejects a response of 100,001 rows and saves nothing", async () => {
         mockBrowserDownloads();

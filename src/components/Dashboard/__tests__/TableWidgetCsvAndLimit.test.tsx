@@ -16,11 +16,11 @@ vi.mock("../../Grid/GenericGrid", () => ({
     default: () => <div data-testid="table-grid" />,
 }));
 
-function response(rows: number, totalRows = rows) {
+function response(rows: number, totalRows = rows, firstRow = 0) {
     return {
         success: true,
         message: "ok",
-        data: Array.from({ length: rows }, (_, index) => ({ Month: `2021-0${index + 1}`, Sales: index })),
+        data: Array.from({ length: rows }, (_, index) => ({ Month: `2021-0${firstRow + index + 1}`, Sales: firstRow + index })),
         meta: { page: 1, pageSize: 10, totalRows, rowsReturned: rows, executionTime: 1 },
     };
 }
@@ -114,7 +114,8 @@ describe("TableWidget CSV export and export-all limits", () => {
         executeRequestMock.mockClear().mockImplementation(async (request: { pagination?: { page: number; pageSize: number } }) => {
             const pageNumber = request.pagination?.page ?? 1;
             const pageSize = request.pagination?.pageSize ?? 10;
-            return response(Math.max(0, Math.min(pageSize, 100_000 - (pageNumber - 1) * pageSize)), 100_000);
+            const firstRow = (pageNumber - 1) * pageSize;
+            return response(Math.max(0, Math.min(pageSize, 100_000 - firstRow)), 100_000, firstRow);
         });
 
         chooseExport("All rows — CSV");

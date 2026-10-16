@@ -16,7 +16,7 @@ Only implemented frontend behavior appears in this inventory. Backend capabiliti
 | Interactive grouping | Not supported | No group builder or expandable client-generated groups |
 | Pagination | Supported | Server paging, page size 10, deterministic SQL Resource ordering |
 | Column visibility | Supported | Configuration-driven visibility |
-| Column ordering/sizing | Partially supported | Runtime grid interaction, not persisted |
+| Column ordering/sizing/visibility | Supported (reports) | Column chooser, drag and resize, reset; saved per user and report in browser storage. Not on dashboards |
 | Export | Supported | CSV/Excel current view and configured all-row flows |
 | Saved reports | Partially supported | Browser-local filter/sort/page views only |
 | Dashboards | Supported | Responsive JSON-authored layouts and shared filters |
@@ -27,7 +27,11 @@ Only implemented frontend behavior appears in this inventory. Backend capabiliti
 | Caching | Supported | In-memory TTL cache and in-flight deduplication |
 | Error handling | Supported | Validated envelopes, retry UI, status/code/details retention |
 | Frontend SQL parser/converter | Removed | Obsolete after server-owned resource discovery |
-| Email/scheduling/auth/roles/audit/favorites/drill-down/designers | Planned or deferred | See roadmap; not represented as implemented |
+| Authentication and sessions | Supported | Backend cookie session, setup gate, protected routes, cross-tab sync ([Authentication](AUTHENTICATION.md)) |
+| Roles | Partially supported | `frontendAccess` gate and the `application-administrator` role. `data-operator` is not assignable while there are no write features |
+| Frontend user management | Supported | Admin-only create/edit/enable/disable/delete/password; Super Admin promotes and demotes |
+| Logical database selection | Supported | Optional `database` in both query modes; no selection UI |
+| Email/scheduling/audit/favorites/drill-down/designers | Planned or deferred | See roadmap; not represented as implemented |
 
 ## Query
 
@@ -38,7 +42,7 @@ Only implemented frontend behavior appears in this inventory. Backend capabiliti
 
 ## Filtering
 
-- Configured text, number, select, multiselect, boolean, date, date-range, and null-check controls.
+- Configured text, number, select, multiselect, boolean, date, date-range, and null-check controls. Select and multiselect take static `options` or request-driven `dynamicOptions`.
 - Friendly operators covering comparisons, LIKE/NOT LIKE contains/start/end variants, IN/NOT IN, BETWEEN/NOT BETWEEN, and IS NULL/IS NOT NULL.
 - Typed select/boolean values, numeric conversion, required-field validation, and one-sided inclusive date-range filtering.
 - Static JSON requests may use IN/NOT IN subqueries and EXISTS/NOT EXISTS.
@@ -84,11 +88,12 @@ Only implemented frontend behavior appears in this inventory. Backend capabiliti
 - Raw SQL, SQL files, SQL parsing/generation/manipulation, resource registration, database paths, credentials, placeholders, or authored execution mappings.
 - Interactive nested filter groups, operator selection, global multi-field search, or AG Grid column-filter requests.
 - Interactive grouping, client aggregation, expandable group nodes, or grouping personalization.
-- Column chooser, runtime show/hide/reset, or persisted column layouts.
+- Column personalization on dashboards, account-synced column layouts, or restoring `visible: false` columns.
 - PDF/print/email export, chart export, or scheduled delivery.
 - Report create/edit/delete/upsert actions. The backend Write API exists, but the frontend has no mutation schema, forms, or handlers.
 - UNION/UNION ALL report configuration, routines, metadata browser, transactions, or bulk writes.
-- Authentication, authorization, roles, tenants, favorites, drill-down, audit UI, report designer, or dashboard builder.
+- Frontend-side authorization (the backend authorizes every request), tenants, a `data-operator` UI, favorites, drill-down, audit UI, report designer, or dashboard builder.
+- Hosting under a URL sub-path, or runtime (post-build) API URL configuration.
 - Saved dashboard views, synchronized saved reports, or saved-report rename/update.
 
 See [Backend capability matrix](BACKEND-CAPABILITY-MATRIX.md) for mode-by-mode details and [Roadmap](ROADMAP.md) for planned work.
