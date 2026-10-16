@@ -27,7 +27,6 @@ Out of scope: dashboards and widgets; SQL Resource writes; bulk or multi-row edi
 | Refresh | Toolbar button; pull-to-refresh on mobile | `toolbar.refresh` | Grid loading state |
 | Export (current view / all rows, CSV / Excel) | `ExportMenu` (desktop); "More" sheet (mobile) | `toolbar.export` + `export.enabled`/`formats`/`exportAll`/`exportCurrentView` | Status line `role="status"`, progress for all rows |
 | Save Report (local view) | Toolbar button / "More" | `toolbar.saveReport` + signed-in user | Saved-views list |
-| Columns (show/hide, order, reset) | Toolbar button / "More" | `toolbar.columns` + signed-in user, no configured grouping (added after this design was drafted) | Changes apply immediately; layout kept per user |
 | Row selection | Grid checkbox / mobile card tap | `grid.rowSelection` (`single` default, `multiple`) | Highlight only. **No consumer**: the selection stays inside `GenericGrid` |
 
 ### Gaps that 37 must close

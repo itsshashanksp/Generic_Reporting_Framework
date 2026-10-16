@@ -11,6 +11,10 @@
     "fields": ["Item_Code", "Item_Desc", "Item_MRP"]
   },
 
+  "databaseSelection": {
+    "databases": ["loyal-ibms", "loyal-ibms2"]
+  },
+
   "columns": [
     {
       "field": "Item_Code",

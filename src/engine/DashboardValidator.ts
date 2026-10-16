@@ -71,7 +71,7 @@ export function validateDashboard(
 
     rejectUnknownProperties(
         dashboard,
-        ["id", "title", "description", "layout", "autoRefresh", "filters", "dateFilterBehavior", "widgets"],
+        ["id", "title", "description", "layout", "autoRefresh", "filters", "dateFilterBehavior", "databaseSelection", "widgets"],
         "Dashboard",
         errors
     );
@@ -115,6 +115,8 @@ export function validateDashboard(
         dashboard.filters,
         errors
     );
+
+    validateDashboardDatabaseSelection(dashboard.databaseSelection, errors);
 
     if (!Array.isArray(dashboard.widgets)) {
         errors.push(
@@ -1080,4 +1082,25 @@ function isRecord(
         value !== null &&
         !Array.isArray(value)
     );
+}
+
+/**
+ * Opt-in runtime database switching for a dashboard, the same shape as for
+ * reports. The backend registry decides the initial selection; widgets whose
+ * request names no database inherit it.
+ */
+function validateDashboardDatabaseSelection(value: unknown, errors: string[]) {
+    if (value === undefined) return;
+    if (!isRecord(value)) {
+        errors.push("Dashboard databaseSelection must be an object.");
+        return;
+    }
+    rejectUnknownProperties(value, ["databases"], "Dashboard databaseSelection", errors);
+    const databases = value.databases;
+    if (!Array.isArray(databases) || databases.length < 2) {
+        errors.push("Dashboard databaseSelection databases must list at least two logical database ids.");
+        return;
+    }
+    databases.forEach((id, index) => validateDatabaseId(id, `Dashboard databaseSelection database at index ${index}`, errors));
+    if (new Set(databases).size !== databases.length) errors.push("Dashboard databaseSelection databases must be unique.");
 }

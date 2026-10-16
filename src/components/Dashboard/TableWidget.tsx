@@ -308,7 +308,10 @@ export default function TableWidget({
         retryKey,
     ]);
 
-    useEffect(() => () => exportController?.abort(), [exportController]);
+    // A running export also stops when the widget's database changes (a
+    // dashboard database switch), so it never saves the previous database.
+    const requestDatabase = (request as { database?: string }).database;
+    useEffect(() => () => exportController?.abort(), [exportController, requestDatabase]);
 
     const resultMatchesView = resultViewKey === viewKey;
     const canShowCachedResponse = !resultMatchesView && cachedResponse !== null;

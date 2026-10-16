@@ -10,6 +10,7 @@ import {
 } from "../../engine/ExportEngine";
 import type { ToolbarConfig } from "../../types/report";
 import { isSavedReportsEnabled } from "../../engine/ReportDefinitionEngine";
+import DatabaseSelect, { type DatabaseSelectProps } from "./DatabaseSelect";
 
 interface ReportToolbarProps {
 
@@ -33,9 +34,9 @@ interface ReportToolbarProps {
     onExportMessage?: (message: string) => void;
 
     onSaveReport?: () => void;
-    /** Opens the column chooser; omitted when the report cannot be personalized. */
-    onOpenColumns?: () => void;
     onRefresh?: () => void;
+    /** Runtime database switch; omitted for reports without `databaseSelection`. */
+    databaseSelector?: DatabaseSelectProps;
     isRefreshing?: boolean;
     isExporting?: boolean;
 }
@@ -48,8 +49,8 @@ export default function ReportToolbar({
     onExportAll,
     onExportMessage,
     onSaveReport,
-    onOpenColumns,
     onRefresh,
+    databaseSelector,
     isRefreshing = false,
     isExporting = false,
 }: ReportToolbarProps) {
@@ -126,11 +127,6 @@ export default function ReportToolbar({
 
     const mobileOptions: ExportMenuOption[] = [];
     mobileOptions.push(...exportOptions);
-    if (onOpenColumns) mobileOptions.push({
-        id: "columns",
-        label: "Columns",
-        onSelect: onOpenColumns,
-    });
     if (isSavedReportsEnabled(config) && onSaveReport) mobileOptions.push({
         id: "save-report",
         label: "Save Report",
@@ -145,6 +141,8 @@ export default function ReportToolbar({
             aria-label="Report actions"
         >
 
+            {databaseSelector && <DatabaseSelect {...databaseSelector} />}
+
             <div className="report-toolbar__actions report-toolbar__actions--desktop">
 
                 {config.refresh && (
@@ -158,14 +156,6 @@ export default function ReportToolbar({
 
 
                 <ExportMenu options={exportOptions} disabled={isRefreshing} busy={isExporting} />
-
-                {onOpenColumns && (
-                    <ToolbarButton
-                        label="Columns"
-                        onClick={onOpenColumns}
-                        title="Show, hide and reorder columns"
-                    />
-                )}
 
 
                 {isSavedReportsEnabled(config) && onSaveReport && (

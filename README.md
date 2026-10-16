@@ -7,12 +7,12 @@ The frontend never reads, generates, or executes SQL. SQL text, resource discove
 ## Capabilities
 
 - Reports and dashboards defined entirely in JSON under `src/config/`, validated on load (unknown properties are rejected).
-- Two query modes: **JSON Query** (`request`) and backend **SQL Resource** (`queryDefinition`), each with optional logical database selection.
+- Two query modes: **JSON Query** (`request`) and backend **SQL Resource** (`queryDefinition`), each with optional logical database selection. Reports and dashboards can also offer a runtime **Database** dropdown.
 - Configured filters (text, number, select/multiselect with static or dynamic options, boolean, date, date range, null checks), applied with **Search**.
 - Server-side sorting and pagination; AG Grid Community grid with resizing and reordering; mobile card layout.
 - Dashboard widgets: `report`, `stat`, `table`, `chart` (bar/line/pie). Dashboards add shared filters, date-filter behavior, per-widget field mapping, and manual or interval refresh.
 - CSV and Excel export of the current view or all rows (capped at 100,000 rows; CSV formulas neutralized).
-- Browser-local saved report views and personal column layouts (show/hide, order, width), kept per signed-in user.
+- Browser-local saved report views, kept per signed-in user.
 - Sign-in against the backend session, protected routes, and admin-only Frontend User Management.
 - In-memory response cache (5-minute TTL) with in-flight request deduplication.
 
@@ -100,7 +100,7 @@ Validated starting points are in [`examples/`](examples/).
 
 - The app must be hosted at the site root. Assets are root-absolute, and the router has no base path.
 - `VITE_API_URL` is fixed at build time, so each API origin needs its own build.
-- There are no write/CRUD actions, drill-down, or scheduling. See [Supported features](docs/SUPPORTED.md).
+- There are no write/CRUD actions, column personalization, drill-down, or scheduling. See [Supported features](docs/SUPPORTED.md).
 - The production bundle is one ~1.8 MB JavaScript chunk, and Vite warns about its size.
 
 ## Contributing and license

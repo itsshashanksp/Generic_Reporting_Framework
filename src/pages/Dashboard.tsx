@@ -2,6 +2,7 @@ import { ResponsiveFilterPanel } from "../components/Filters";
 import {
     getDashboard,
     getPartialDateRanges,
+    inheritDashboardDatabase,
     resolveDashboardWidgetDefinition,
     resolveDashboardWidgetColumns,
     resolveDashboardWidgetRequest,
@@ -10,6 +11,8 @@ import {
 import ReportWidget from "../components/Dashboard/ReportWidget";
 import StatWidget from "../components/Dashboard/StatWidget";
 import ChartWidget from "../components/Dashboard/ChartWidget";
+import DatabaseSelect from "../components/Toolbar/DatabaseSelect";
+import { useDatabaseSelection } from "../components/Toolbar/useDatabaseSelection";
 
 import { useFilters } from "../engine/FilterContext";
 import { isRequiredFilterIncomplete } from "../engine/FilterEngine";
@@ -135,6 +138,13 @@ function DashboardContent({
         appliedFilters,
     } = useDashboard();
 
+    // Same selection logic as reports: the backend registry decides the
+    // default. Until a database is resolved no widget is mounted, so none
+    // can silently query the backend default.
+    const databaseSelection = useDatabaseSelection(dashboard.id, dashboard.databaseSelection?.databases);
+    const selectedDatabase = databaseSelection.database;
+    const databaseBlocked = databaseSelection.status !== "off" && databaseSelection.status !== "ready";
+
     // Widgets mount (and so request, refresh and export) only once the applied
     // filters complete every required filter, e.g. both dates of a range.
     const missingAppliedFilters = (dashboard.filters ?? []).filter(
@@ -207,15 +217,24 @@ function DashboardContent({
                     <h1>{dashboard.title}</h1>
                     {dashboard.description && <p>{dashboard.description}</p>}
                 </div>
-                <button
-                    type="button"
-                    className="app-button app-button--primary"
-                    onClick={refreshDashboard}
-                    disabled={isRefreshing || missingAppliedFilters.length > 0}
-                    title="Refresh dashboard data"
-                >
-                    {isRefreshing ? "Refreshing…" : "Refresh"}
-                </button>
+                <div className="dashboard-header__actions">
+                    {dashboard.databaseSelection && (
+                        <DatabaseSelect
+                            value={selectedDatabase}
+                            options={databaseSelection.options}
+                            onChange={databaseSelection.select}
+                        />
+                    )}
+                    <button
+                        type="button"
+                        className="app-button app-button--primary"
+                        onClick={refreshDashboard}
+                        disabled={isRefreshing || missingAppliedFilters.length > 0 || databaseBlocked}
+                        title="Refresh dashboard data"
+                    >
+                        {isRefreshing ? "Refreshing…" : "Refresh"}
+                    </button>
+                </div>
             </header>
 
             {dashboard.filters &&
@@ -235,7 +254,19 @@ function DashboardContent({
                 </p>
             )}
 
-            {missingAppliedFilters.length > 0 ? (
+            {databaseBlocked ? (
+                databaseSelection.status === "loading" ? (
+                    <div className="dashboard-empty" role="status">Loading databases…</div>
+                ) : (
+                    <div className="dashboard-empty" role="status">
+                        {databaseSelection.status === "listing-failed"
+                            ? `The database list could not be loaded: ${databaseSelection.error} Choose a database above to continue.`
+                            : "None of this dashboard's databases is registered, enabled and available."}
+                        {" "}
+                        <button type="button" className="app-button" onClick={databaseSelection.retry}>Try again</button>
+                    </div>
+                )
+            ) : missingAppliedFilters.length > 0 ? (
                 <div
                     className="dashboard-empty"
                     role="status"
@@ -272,10 +303,16 @@ function DashboardContent({
                     {visibleWidgets.map(
                         widget => {
 
-                            const widgetDefinition =
+                            const resolvedDefinition =
                                 resolveDashboardWidgetDefinition(widget, dashboard.filters ?? []);
-                            const widgetRequest = widgetDefinition?.request
+                            const resolvedRequest = resolvedDefinition?.request
                                 ?? resolveDashboardWidgetRequest(widget, dashboard.filters ?? []);
+                            // Widgets without their own database follow the selector.
+                            const widgetRequest = resolvedRequest
+                                && inheritDashboardDatabase(resolvedRequest, selectedDatabase);
+                            const widgetDefinition = resolvedDefinition && widgetRequest
+                                ? { ...resolvedDefinition, request: widgetRequest }
+                                : resolvedDefinition;
                             const widgetColumns = widgetDefinition?.columns
                                 ?? resolveDashboardWidgetColumns(widget, dashboard.filters ?? []);
 

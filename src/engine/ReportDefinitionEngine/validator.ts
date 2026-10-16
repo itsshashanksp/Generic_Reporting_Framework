@@ -1,7 +1,7 @@
 import type { FilterType } from "../../types/filter";
 import { allowedOperators } from "../FilterEngine/validator";
 
-const REPORT_KEYS = ["id", "title", "description", "queryDefinition", "request", "columns", "filters", "sort", "filterLogic", "grid", "toolbar", "export"];
+const REPORT_KEYS = ["id", "title", "description", "queryDefinition", "request", "columns", "filters", "sort", "filterLogic", "grid", "toolbar", "export", "databaseSelection"];
 const REQUEST_KEYS = ["action", "database", "source", "fields", "filters", "joins", "groupBy", "having", "sort", "pagination", "distinct", "limit", "filterLogic", "with"];
 const REQUEST_FIELD_KEYS = ["field", "fields", "function", "alias", "sort", "case", "expression", "buckets", "offset", "default", "separator", "datatype", "style", "value", "values", "index", "datepart", "number", "start", "end", "year", "month", "day", "hour", "minute", "second", "millisecond", "precision", "power", "part", "length", "search", "replace", "pattern", "format", "condition", "true", "false"];
 const COLUMN_KEYS = ["field", "header", "visible", "sortable", "width", "dataType"];
@@ -68,7 +68,31 @@ export function getReportValidationErrors(
     validateGrid(report.grid, errors);
     validateToolbar(report.toolbar, errors);
     validateExport(report.export, "Report export", errors);
+    validateDatabaseSelection(report, errors);
     return errors;
+}
+
+/**
+ * Opt-in runtime database switching. The report names the logical databases
+ * that hold its tables or SQL Resource. The backend registry decides the
+ * initial selection; a configured database, if any, must be one of them.
+ */
+function validateDatabaseSelection(report: Record<string, unknown>, errors: string[]) {
+    const value = report.databaseSelection;
+    if (value === undefined) return;
+    if (!isRecord(value)) return errors.push("Report databaseSelection must be an object.");
+    rejectUnknown(value, ["databases"], "Report databaseSelection", errors);
+    const databases = value.databases;
+    if (!Array.isArray(databases) || databases.length < 2) {
+        return errors.push("Report databaseSelection databases must list at least two logical database ids.");
+    }
+    databases.forEach((id, index) => validateDatabaseId(id, `Report databaseSelection database at index ${index}`, errors));
+    if (new Set(databases).size !== databases.length) errors.push("Report databaseSelection databases must be unique.");
+    const source = isRecord(report.queryDefinition) ? report.queryDefinition : isRecord(report.request) ? report.request : null;
+    const configured = source?.database;
+    if (configured !== undefined && !databases.includes(configured)) {
+        errors.push(`Report databaseSelection databases must include the configured database "${String(configured)}".`);
+    }
 }
 
 function validateSqlPresentationCompatibility(report: Record<string, unknown>, errors: string[]) {
@@ -286,7 +310,7 @@ function validateGrouping(value: unknown, errors: string[]) {
 function validateToolbar(value: unknown, errors: string[]) {
     if (value === undefined) return;
     if (!isRecord(value)) return errors.push("Report toolbar must be an object.");
-    const keys = ["export", "refresh", "saveReport", "columns"];
+    const keys = ["export", "refresh", "saveReport"];
     rejectUnknown(value, keys, "Report toolbar", errors);
     keys.forEach(key => optionalBoolean(value[key], `Report toolbar ${key}`, errors));
 }

@@ -8,7 +8,9 @@
 | --- | --- | --- |
 | [`reports/json-query-report.json`](../examples/reports/json-query-report.json) | `src/config/reports/` | JSON Query mode, text/number/dynamic-select filters, paging, toolbar, CSV/Excel export |
 | [`reports/sql-resource-report.json`](../examples/reports/sql-resource-report.json) | `src/config/reports/` | SQL Resource mode with `database`, `sort`, `filterLogic` |
+| [`reports/database-selector-report.json`](../examples/reports/database-selector-report.json) | `src/config/reports/` | Runtime database switching between `database1` and `database2` (illustrative IDs; use your registry's IDs) |
 | [`dashboards/minimal-dashboard.json`](../examples/dashboards/minimal-dashboard.json) | `src/config/dashboards/` | The smallest valid dashboard: one stat widget |
+| [`dashboards/database-selector-dashboard.json`](../examples/dashboards/database-selector-dashboard.json) | `src/config/dashboards/` | Dashboard database switch: two widgets inherit it, one keeps `loyal-ibms` (illustrative IDs) |
 | [`dashboards/date-filtered-dashboard.json`](../examples/dashboards/date-filtered-dashboard.json) | `src/config/dashboards/` | Layout, a required shared date range, `dateFilterBehavior`, `filterFields`, table export, stat, chart |
 | [`widgets/item-stock-value-by-category.json`](../examples/widgets/item-stock-value-by-category.json) | `src/config/widgets/` | A reusable widget definition, referenced by `widgetId` |
 | [`menu.json`](../examples/menu.json) | merge into `src/config/menu.json` | Grouped dashboard and report entries plus a route |

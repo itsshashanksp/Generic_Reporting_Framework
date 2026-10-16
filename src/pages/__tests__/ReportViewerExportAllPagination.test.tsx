@@ -15,7 +15,8 @@ const { executeRequestMock, exportRowsCSVMock, exportExcelMock } = vi.hoisted(()
 
 vi.mock("../../api/request", async importOriginal => ({
     ...await importOriginal<typeof import("../../api/request")>(),
-    executeRequest: executeRequestMock,
+    // Checked-in reports/dashboards may enable databaseSelection, which first lists databases.
+    executeRequest: (await import("../../test/databaseRegistry")).withTestDatabaseRegistry(executeRequestMock),
 }));
 
 // The real paging helper runs; only the file writers are replaced so the
@@ -133,7 +134,9 @@ describe("ReportViewer paginated export of all rows (R3)", () => {
         executeRequestMock.mockReset().mockImplementation(backend(12_345));
         await renderItemReport();
 
-        const gridRequests = executeRequestMock.mock.calls.map(call => call[0] as PagedRequest).filter(request => !request.groupBy);
+        // Report data requests only (not filter options or a database listing).
+        const gridRequests = executeRequestMock.mock.calls.map(call => call[0] as PagedRequest)
+            .filter(request => request.action === "select" && !request.groupBy);
         expect(gridRequests).toHaveLength(1);
         expect(gridRequests[0].pagination).toEqual({ page: 1, pageSize: 10 });
     });

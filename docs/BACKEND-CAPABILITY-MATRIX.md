@@ -41,7 +41,7 @@ This inventory was verified against the backend documentation and the public val
 | Metadata actions | Backend actions exist | Documented boundary | Not exposed by current UI |
 | INSERT/UPDATE/DELETE/UPSERT | Backend registered Write API exists | Documented separately from reads | Not exposed; no mutation controls or `actions` schema in frontend |
 | Column visibility/order/width | Presentation config and grid | Retained | Does not rewrite query or SQL |
-| Column chooser/personalization | None | None | Not supported. *(updated 2026-10-16)* Now available on report pages, frontend-only; see [Feature behavior](FEATURES.md#columns-and-personalization) |
+| Column chooser/personalization | None | None | Not supported |
 | Search | “Search” applied filters; unused global context existed | Dead global context removed | No global search operation; Search means apply configured filters |
 | Export | CSV/Excel current/all | Retained | Frontend feature; report all-row and dashboard batched behavior differ |
 | Saved reports | Local filters/sort/page plus unused grouping snapshot | Unused grouping snapshot removed | Local save/load/delete only |

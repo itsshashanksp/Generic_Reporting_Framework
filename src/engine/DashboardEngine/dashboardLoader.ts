@@ -1,3 +1,4 @@
+import { requestInheritsDatabase } from "./databaseInheritance";
 import type { DashboardDefinition } from "../../types/dashboard";
 
 import {
@@ -97,6 +98,25 @@ export function loadDashboardConfiguration(
                 dashboardConfiguration,
             validation,
         };
+    }
+
+    // A database selector must control at least one widget: one whose resolved
+    // request (inline, reportId or widgetId) names no database of its own.
+    const definition = dashboardConfiguration as DashboardDefinition;
+    if (definition.databaseSelection && !definition.widgets.some(widget =>
+        widget.visible !== false
+        && requestInheritsDatabase(resolveDashboardWidgetRequest(widget, definition.filters ?? []))
+    )) {
+        const inheritanceValidation = {
+            ...validation,
+            valid: false,
+            errors: [
+                ...validation.errors,
+                "Dashboard databaseSelection needs at least one visible widget whose request names no database; widgets with their own database never follow the selection.",
+            ],
+        };
+        console.error(`Invalid dashboard configuration: ${dashboardId}`, inheritanceValidation.errors);
+        return { status: "invalid", dashboard: dashboardConfiguration, validation: inheritanceValidation };
     }
 
     if (

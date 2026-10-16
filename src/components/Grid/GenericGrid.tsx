@@ -36,17 +36,6 @@ interface Props {
         onPageSizeChange: (pageSize: number) => void;
     };
     onSortChange?: (sort: Array<{ field: string; direction: "ASC" | "DESC" }>) => void;
-    /**
-     * Personal column layout (reports only). When set, `columns` are already
-     * in the user's order and widths, these fields are hidden, and the
-     * user's drags and resizes are reported back.
-     */
-    personalization?: {
-        hiddenFields: string[];
-        onColumnOrderChange: (fields: string[]) => void;
-        /** All widths a single resize changed, so none of them is lost. */
-        onColumnWidthsChange: (widths: Record<string, number>) => void;
-    };
 }
 
 function formatGridValue(value: unknown, dataType?: ColumnDefinition["dataType"]): string {
@@ -62,7 +51,6 @@ export default function GenericGrid({
     initialSort = [],
     serverPagination,
     onSortChange,
-    personalization,
 }: Props) {
 
     const { setApi } = useGrid();
@@ -82,9 +70,7 @@ export default function GenericGrid({
 
     useEffect(() => () => setApi(null), [setApi]);
 
-    const hiddenFields = personalization?.hiddenFields;
     const columnDefs = useMemo(() => {
-        const personalized = hiddenFields !== undefined;
         const getInitialSortState = (field: string) => {
             const sortIndex = initialSort.findIndex(sort => sort.field === field);
             if (sortIndex < 0) return {};
@@ -152,11 +138,7 @@ export default function GenericGrid({
                     headerName: column.header,
                     sortable: column.sortable,
                     filter: false,
-                    // A personal layout controls width and visibility, so a
-                    // reset applies; otherwise the grid keeps user resizes.
-                    ...(personalized
-                        ? { width: column.width, hide: hiddenFields.includes(column.field) }
-                        : { initialWidth: column.width }),
+                    initialWidth: column.width,
                     minWidth: getContentMinWidth(
                         rows,
                         column.field,
@@ -170,9 +152,9 @@ export default function GenericGrid({
                     comparator: (left: unknown, right: unknown) => compareGridValues(left, right, column.dataType),
                     ...getInitialSortState(column.field),
                 }));
-    }, [columns, gridConfig.grouping, hiddenFields, initialSort, rows]);
+    }, [columns, gridConfig.grouping, initialSort, rows]);
 
-    const mobileColumns = columnDefs.filter(column => !("hide" in column && column.hide)).map(column => ({
+    const mobileColumns = columnDefs.map(column => ({
         field: column.field,
         headerName: column.headerName,
         sortable: column.sortable !== false,
@@ -275,26 +257,8 @@ export default function GenericGrid({
 
                 {...defaultGridOptions}
 
-                // A personal layout owns column order (drags are saved into
-                // it), so chooser moves and resets must reorder the grid.
-                maintainColumnOrder={personalization ? false : defaultGridOptions.maintainColumnOrder}
-
                 onGridReady={(params) => {
                     setApi(params.api);
-                }}
-
-                onColumnMoved={event => {
-                    if (!personalization || !event.finished || (event.source !== "uiColumnMoved" && event.source !== "uiColumnDragged")) return;
-                    personalization.onColumnOrderChange(event.api.getColumnState().map(column => column.colId));
-                }}
-
-                onColumnResized={event => {
-                    if (!personalization || !event.finished || event.source !== "uiColumnResized") return;
-                    const resized = event.columns ?? (event.column ? [event.column] : []);
-                    if (resized.length === 0) return;
-                    personalization.onColumnWidthsChange(Object.fromEntries(
-                        resized.map(column => [column.getColId(), Math.round(column.getActualWidth())])
-                    ));
                 }}
 
                 onSelectionChanged={event => {

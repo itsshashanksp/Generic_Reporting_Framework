@@ -9,8 +9,9 @@ import ReportViewer from "../ReportViewer";
 
 const { executeRequestMock } = vi.hoisted(() => ({ executeRequestMock: vi.fn() }));
 
-vi.mock("../../api/request", () => ({
-    executeRequest: executeRequestMock,
+vi.mock("../../api/request", async () => ({
+    // Checked-in reports/dashboards may enable databaseSelection, which first lists databases.
+    executeRequest: (await import("../../test/databaseRegistry")).withTestDatabaseRegistry(executeRequestMock),
     getRequestErrorMessage: (error: unknown) => error instanceof Error ? error.message : "Request failed",
     isRequestAbort: () => false,
 }));

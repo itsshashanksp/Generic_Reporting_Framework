@@ -16,7 +16,7 @@ Only implemented frontend behavior appears in this inventory. Backend capabiliti
 | Interactive grouping | Not supported | No group builder or expandable client-generated groups |
 | Pagination | Supported | Server paging, page size 10, deterministic SQL Resource ordering |
 | Column visibility | Supported | Configuration-driven visibility |
-| Column ordering/sizing/visibility | Supported (reports) | Column chooser, drag and resize, reset; saved per user and report in browser storage. Not on dashboards |
+| Column ordering/sizing | Partially supported | Runtime grid interaction, not persisted |
 | Export | Supported | CSV/Excel current view and configured all-row flows |
 | Saved reports | Partially supported | Browser-local filter/sort/page views only |
 | Dashboards | Supported | Responsive JSON-authored layouts and shared filters |
@@ -30,7 +30,7 @@ Only implemented frontend behavior appears in this inventory. Backend capabiliti
 | Authentication and sessions | Supported | Backend cookie session, setup gate, protected routes, cross-tab sync ([Authentication](AUTHENTICATION.md)) |
 | Roles | Partially supported | `frontendAccess` gate and the `application-administrator` role. `data-operator` is not assignable while there are no write features |
 | Frontend user management | Supported | Admin-only create/edit/enable/disable/delete/password; Super Admin promotes and demotes |
-| Logical database selection | Supported | Optional `database` in both query modes; no selection UI |
+| Logical database selection | Supported | Optional `database` in both query modes. Reports and dashboards with `databaseSelection` get a runtime **Database** dropdown. On dashboards it switches only widgets without their own database |
 | Email/scheduling/audit/favorites/drill-down/designers | Planned or deferred | See roadmap; not represented as implemented |
 
 ## Query
@@ -88,7 +88,7 @@ Only implemented frontend behavior appears in this inventory. Backend capabiliti
 - Raw SQL, SQL files, SQL parsing/generation/manipulation, resource registration, database paths, credentials, placeholders, or authored execution mappings.
 - Interactive nested filter groups, operator selection, global multi-field search, or AG Grid column-filter requests.
 - Interactive grouping, client aggregation, expandable group nodes, or grouping personalization.
-- Column personalization on dashboards, account-synced column layouts, or restoring `visible: false` columns.
+- Column chooser, runtime show/hide/reset, or persisted column layouts.
 - PDF/print/email export, chart export, or scheduled delivery.
 - Report create/edit/delete/upsert actions. The backend Write API exists, but the frontend has no mutation schema, forms, or handlers.
 - UNION/UNION ALL report configuration, routines, metadata browser, transactions, or bulk writes.

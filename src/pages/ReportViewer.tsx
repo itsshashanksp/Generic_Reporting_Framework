@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useParams } from "react-router-dom";
 
 import {
@@ -13,10 +13,10 @@ import Loading from "../components/Common/Loading";
 import usePullToRefresh from "../components/Common/usePullToRefresh";
 import { ResponsiveFilterPanel } from "../components/Filters";
 import GenericGrid from "../components/Grid/GenericGrid";
-import ColumnChooserDialog from "../components/Grid/ColumnChooserDialog";
 import ReportTableFrame from "../components/Grid/ReportTableFrame";
 import SavedReports from "../components/SavedReports/SavedReports";
 import { ReportToolbar } from "../components/Toolbar";
+import { useDatabaseSelection } from "../components/Toolbar/useDatabaseSelection";
 import { useFilters } from "../engine/FilterContext";
 import { buildFilters } from "../engine/FilterQueryBuilder";
 import { isEmptyFilterValue } from "../engine/FilterEngine";
@@ -25,14 +25,6 @@ import { getReportPaginationParameters, isSavedReportsEnabled } from "../engine/
 import { getReport, getReportError } from "../engine/ReportEngine/reportLoader";
 import { createRequestCacheKey, getCachedResponse, getOrCreateInFlightRequest, setCachedResponse } from "../engine/RequestCache";
 import { saveSavedReport } from "../engine/SavedReportEngine";
-import {
-    arrangeColumns,
-    emptyColumnLayout,
-    isEmptyColumnLayout,
-    loadColumnLayout,
-    saveColumnLayout,
-    type ColumnLayout,
-} from "../engine/ColumnLayoutEngine";
 import { ExportFileError, ExportIntegrityError, exportExcel, exportRowsCSV, fetchAllRowsForExport } from "../engine/ExportEngine";
 import type { ApiResponse } from "../types/api";
 import type { FilterValue } from "../engine/FilterContext/FilterContext";
@@ -48,14 +40,25 @@ export default function ReportViewer() {
     const { api } = useGrid();
     const report = getReport(reportId || "") ?? null;
     const reportConfigurationError = getReportError(reportId || "");
+    // Runtime database (reports with databaseSelection): resolved from the
+    // backend registry, never from request.database. Every report request
+    // (load, page, sort, filters, refresh, export) reads databaseRef; "" means
+    // not resolved yet, and then nothing is requested.
+    const databaseSelection = useDatabaseSelection(report?.id ?? "", report?.databaseSelection?.databases);
+    const selectedDatabase = databaseSelection.database;
+    const databaseBlocked = databaseSelection.status !== "off" && databaseSelection.status !== "ready";
     const [initialRequestState] = useState(() => {
         if (!report) {
             return { response: null, pageSize: 10 };
         }
+        // A switchable report shows a cached result only for its resolved database.
+        if (report.databaseSelection && !selectedDatabase) {
+            return { response: null, pageSize: report.grid.pagination.pageSize };
+        }
 
         const pageSize = report.grid.pagination.pageSize;
         const requestPayload = {
-            ...report.request,
+            ...withRuntimeDatabase(report.request, report.databaseSelection ? selectedDatabase : ""),
             filters: Array.isArray(report.request.filters) ? report.request.filters : [],
             sort: report.request.sort ?? [],
             ...getReportPaginationParameters(report.grid.pagination, 1, pageSize),
@@ -81,62 +84,11 @@ export default function ReportViewer() {
     const [currentSorting, setCurrentSorting] = useState<SortDefinition[]>(report?.request.sort ?? []);
     const [appliedFilters, setAppliedFilters] = useState<Record<string, FilterValue>>({});
     const [savedReportsRevision, setSavedReportsRevision] = useState(0);
+    const databaseRef = useRef(report?.databaseSelection ? "" : report?.request.database ?? "");
     const requestSequence = useRef(0);
     const activeController = useRef<AbortController | null>(null);
     const exportController = useRef<AbortController | null>(null);
     const rows = result?.success && loadedReportId === report?.id ? result.data ?? [] : [];
-
-    // Personal column layout: per signed-in user and report, like saved views.
-    // Configured grouping replaces the columns, so it cannot be personalized.
-    const canPersonalizeColumns = Boolean(
-        report
-        && savedReportsOwner
-        && report.toolbar.columns !== false
-        && !report.grid.grouping?.enabled
-        && report.columns.filter(column => column.visible !== false).length > 1
-    );
-    const layoutKey = canPersonalizeColumns && report && savedReportsOwner
-        ? `${savedReportsOwner}\u0000${report.id}`
-        : "";
-    const storedColumnLayout = useMemo(() => {
-        if (!layoutKey || !report || !savedReportsOwner) return emptyColumnLayout;
-        return loadColumnLayout(savedReportsOwner, report.id);
-    }, [layoutKey, report, savedReportsOwner]);
-    const [columnLayoutState, setColumnLayoutState] = useState<{ key: string; layout: ColumnLayout } | null>(null);
-    const columnLayout = columnLayoutState?.key === layoutKey ? columnLayoutState.layout : storedColumnLayout;
-    const arrangedColumns = useMemo(
-        () => report && layoutKey ? arrangeColumns(report.columns, columnLayout) : [],
-        [columnLayout, layoutKey, report]
-    );
-    const userHiddenFields = useMemo(
-        () => arrangedColumns.filter(column => column.hiddenByUser).map(column => column.field),
-        [arrangedColumns]
-    );
-    const [isColumnChooserOpen, setIsColumnChooserOpen] = useState(false);
-
-    const updateColumnLayout = (update: (current: ColumnLayout) => ColumnLayout) => {
-        if (!layoutKey || !report || !savedReportsOwner) return;
-        const next = update(columnLayout);
-        setColumnLayoutState({ key: layoutKey, layout: next });
-        saveColumnLayout(savedReportsOwner, report.id, next);
-    };
-    const currentOrder = () => arrangedColumns.map(column => column.field);
-    const toggleColumn = (field: string) => updateColumnLayout(current => {
-        const hidden = current.hidden.includes(field)
-            ? current.hidden.filter(item => item !== field)
-            : [...current.hidden, field];
-        // Never hide the last visible column.
-        const visible = arrangedColumns.filter(column => !hidden.includes(column.field));
-        return visible.length === 0 ? current : { ...current, order: currentOrder(), hidden };
-    });
-    const moveColumn = (field: string, offset: -1 | 1) => updateColumnLayout(current => {
-        const order = currentOrder();
-        const from = order.indexOf(field);
-        const to = from + offset;
-        if (from < 0 || to < 0 || to >= order.length) return current;
-        [order[from], order[to]] = [order[to], order[from]];
-        return { ...current, order };
-    });
 
     const loadReport = useCallback(async (
         activeFilters: Record<string, unknown> = {},
@@ -148,6 +100,10 @@ export default function ReportViewer() {
         if (!report) {
             return;
         }
+        // Never fall back to the backend default by omitting the database.
+        if (report.databaseSelection && !databaseRef.current) {
+            return;
+        }
 
         activeController.current?.abort();
         const sequence = ++requestSequence.current;
@@ -157,7 +113,7 @@ export default function ReportViewer() {
             activePageSize
         );
         const requestPayload = {
-            ...report.request,
+            ...withRuntimeDatabase(report.request, databaseRef.current),
             filters: [
                 ...(Array.isArray(report.request.filters) ? report.request.filters : []),
                 ...buildFilters(activeFilters, report.filters ?? [], report.request.action === "sql"),
@@ -230,10 +186,14 @@ export default function ReportViewer() {
             return;
         }
 
+        // A switchable report loads once its database is resolved (below).
+        databaseRef.current = report.databaseSelection ? "" : report.request.database ?? "";
         const timer = window.setTimeout(() => {
             clearFilters();
             setAppliedFilters({});
-            void loadReport({}, 1, report.grid.pagination.pageSize, report.request.sort ?? []);
+            if (!report.databaseSelection) {
+                void loadReport({}, 1, report.grid.pagination.pageSize, report.request.sort ?? []);
+            }
         }, 0);
 
         return () => {
@@ -242,6 +202,16 @@ export default function ReportViewer() {
             exportController.current?.abort();
         };
     }, [report, clearFilters, loadReport]);
+
+    // First load of a switchable report, as soon as its database is resolved.
+    useEffect(() => {
+        if (!report?.databaseSelection || !selectedDatabase || databaseRef.current) return;
+        databaseRef.current = selectedDatabase;
+        const timer = window.setTimeout(() => {
+            void loadReport({}, 1, report.grid.pagination.pageSize, report.request.sort ?? []);
+        }, 0);
+        return () => window.clearTimeout(timer);
+    }, [report, selectedDatabase, loadReport]);
 
     const validateRequiredFilters = () => {
         const missing = report?.filters.filter(
@@ -281,6 +251,20 @@ export default function ReportViewer() {
         setCurrentPage(1);
         setAppliedFilters({});
         void loadReport({}, 1, undefined, getGridSorting());
+    };
+
+    const handleDatabaseChange = (database: string) => {
+        if (!report || !databaseSelection.options.some(option => option.id === database && !option.disabled)) return;
+        const firstChoice = !databaseRef.current;
+        databaseRef.current = database;
+        databaseSelection.select(database);
+        if (firstChoice) {
+            void loadReport({}, 1, report.grid.pagination.pageSize, report.request.sort ?? []);
+            return;
+        }
+        // Same filters and sort against the other database, from page 1. A
+        // request still running for the previous database is aborted.
+        void loadReport(appliedFilters, 1, currentPageSize, currentSorting);
     };
 
     const handleRefresh = useCallback(() => {
@@ -350,7 +334,7 @@ export default function ReportViewer() {
     };
 
     const handleExportAll = async (format: "csv" | "excel") => {
-        if (!report) {
+        if (!report || (report.databaseSelection && !databaseRef.current)) {
             return;
         }
 
@@ -365,7 +349,7 @@ export default function ReportViewer() {
             // current sort); the helper pages it within the backend maximum.
             const exportRows = await fetchAllRowsForExport(
                 {
-                    ...report.request,
+                    ...withRuntimeDatabase(report.request, databaseRef.current),
                     pagination: undefined,
                     filters: [
                         ...(Array.isArray(report.request.filters)
@@ -486,17 +470,29 @@ export default function ReportViewer() {
                             config={report.toolbar}
                             exportConfig={report.export}
                             onRefresh={handleRefresh}
+                            databaseSelector={report.databaseSelection ? {
+                                value: selectedDatabase,
+                                options: databaseSelection.options,
+                                disabled: isExporting,
+                                onChange: handleDatabaseChange,
+                            } : undefined}
                             isRefreshing={isGridLoading}
                             isExporting={isExporting}
                             onExportAll={handleExportAll}
                             onExportMessage={setExportStatus}
                             onSaveReport={savedReportsOwner ? handleSaveReport : undefined}
-                            onOpenColumns={canPersonalizeColumns ? () => setIsColumnChooserOpen(true) : undefined}
                             rows={rows}
                         />
                     </>
                 )}
             >
+                    {databaseBlocked ? (
+                        databaseSelection.status === "loading"
+                            ? <div className="report-table-frame__loading"><Loading label="Loading databases…" compact /></div>
+                            : databaseSelection.status === "listing-failed"
+                                ? <ErrorState title="Database list unavailable" message={`${databaseSelection.error} Choose a database above to continue.`} onRetry={databaseSelection.retry} />
+                                : <ErrorState title="No database available" message="None of this report's databases is registered, enabled and available." onRetry={databaseSelection.retry} />
+                    ) : (<>
                     {gridError && rows.length > 0 && (
                         <div className="report-inline-error" role="alert">
                             <span>{gridError}</span>
@@ -507,7 +503,7 @@ export default function ReportViewer() {
                     {rows.length > 0 && (
                         <GenericGrid
                             rows={rows}
-                            columns={layoutKey ? arrangedColumns : report.columns}
+                            columns={report.columns}
                             gridConfig={report.grid}
                             initialSort={report.sort}
                             serverPagination={{
@@ -519,14 +515,6 @@ export default function ReportViewer() {
                                 onPageSizeChange: pageSize => void loadReport(appliedFilters, 1, pageSize, currentSorting),
                             }}
                             onSortChange={sorting => void loadReport(appliedFilters, 1, currentPageSize, sorting)}
-                            personalization={layoutKey ? {
-                                hiddenFields: userHiddenFields,
-                                onColumnOrderChange: order => updateColumnLayout(current => ({ ...current, order })),
-                                onColumnWidthsChange: widths => updateColumnLayout(current => ({
-                                    ...current,
-                                    widths: { ...current.widths, ...widths },
-                                })),
-                            } : undefined}
                         />
                     )}
 
@@ -541,19 +529,14 @@ export default function ReportViewer() {
                             <Loading label={rows.length ? "Refreshing report data…" : "Loading report data…"} compact />
                         </div>
                     )}
+                    </>)}
             </ReportTableFrame>
-
-            {isColumnChooserOpen && layoutKey && (
-                <ColumnChooserDialog
-                    reportTitle={report.title}
-                    columns={arrangedColumns}
-                    customized={!isEmptyColumnLayout(columnLayout)}
-                    onToggle={toggleColumn}
-                    onMove={moveColumn}
-                    onReset={() => updateColumnLayout(() => emptyColumnLayout)}
-                    onClose={() => setIsColumnChooserOpen(false)}
-                />
-            )}
         </main>
     );
+}
+
+/** The request with the selected logical database; no database stays omitted. */
+function withRuntimeDatabase<T extends { database?: string }>(request: T, database: string): T {
+    if (!database || request.database === database) return request;
+    return { ...request, database };
 }

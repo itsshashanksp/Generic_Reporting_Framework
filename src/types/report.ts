@@ -28,8 +28,6 @@ export interface ToolbarConfig {
     export: boolean;
     refresh: boolean;
     saveReport?: boolean;
-    /** Column chooser (show/hide, order, reset); default true. */
-    columns?: boolean;
 }
 
 export interface GridConfig {
@@ -61,6 +59,16 @@ export interface ReportPresentationDefinition {
     sort?: SortDefinition[];
 
     filterLogic?: "AND" | "OR";
+
+    /**
+     * Lets users rerun the report against another logical database. The
+     * listed ids must all hold the report's tables or SQL Resource. The
+     * backend registry default (or the first available listed id) is the
+     * initial selection; `request.database`, if set, must be listed.
+     */
+    databaseSelection?: {
+        databases: string[];
+    };
 }
 
 export type ReportConfiguration = ReportPresentationDefinition & (

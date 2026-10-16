@@ -110,7 +110,9 @@ When `database` is omitted, the request carries no `database` property and the
 backend uses its default database. Nested SELECT bodies (filter subqueries and
 CTE branches) do not accept `database`. Request cache keys include the
 database, so identical queries against different databases never share a
-cached response. There is no database selection UI.
+cached response.
+
+Reports and dashboards can also let users switch databases at runtime with `databaseSelection`. See [Feature behavior](FEATURES.md#database-selector) and [Dashboards](DASHBOARDS.md#database-selector).
 
 ## Runtime merge rules
 

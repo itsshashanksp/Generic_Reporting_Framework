@@ -57,6 +57,7 @@ Validated by `getReportValidationErrors` in `engine/ReportDefinitionEngine/valid
 | `grid` | no | object | Paging, row selection, grouping display |
 | `toolbar` | no | object | Toolbar switches |
 | `export` | no | object | Export formats and scope |
+| `databaseSelection` | no | `{ databases: string[] }` | Lets users switch the report's database at runtime ([details](#runtime-database-selection)) |
 
 Defaults when omitted: toolbar `export`, `refresh`, and `saveReport` are all `true`; `grid.pagination` is `{ enabled: true, pageSize: 10, pageSizeOptions: [10, 25, 50, 100] }`; `grid.rowSelection` is `"single"`; each column is `visible: true`, `sortable: true`, `width: 150`.
 
@@ -150,9 +151,24 @@ Duplicate values are collapsed. Results are cached under the `dynamic-filter-opt
 
 The pagination values are positive integers. `rowSelection` is `single` or `multiple`; no workflow currently uses the selected rows. The aggregate functions are `COUNT`, `SUM`, `AVG`, `MIN`, and `MAX`; `alias` and `header` are optional. **Grouping is display-only**: it replaces the displayed column set, but the response must already contain the grouped output. Put the grouping itself in the JSON `groupBy` or in the SQL Resource.
 
+### Runtime database selection
+
+```json
+{
+  "request": { "action": "select", "database": "database1", "source": { "table": "ItemMasterTable" }, "fields": ["Item_Code", "Item_Desc"] },
+  "databaseSelection": { "databases": ["database1", "database2"] }
+}
+```
+
+- `databases`: at least two unique logical database IDs (the same pattern as `database`). List only databases that actually contain the report's tables or SQL Resource. The backend's listing cannot tell which databases hold a report's data.
+- The backend registry decides the initial database ([rule](FEATURES.md#database-selector)), so `request.database` / `queryDefinition.database` is optional. If one is set, it must be in the list, but it does not choose the initial database. There is no `default` property; reports and dashboards use the same shape.
+- Omit `databaseSelection` to keep the report on its configured database, as before. Reusable widget files accept the key but ignore it, and dashboard widgets reject it. Dashboards have their own dashboard-level form ([Dashboards](DASHBOARDS.md#database-selector)).
+- Validation messages: `Report databaseSelection databases must list at least two logical database ids.`, `… must be unique.`, `… must include the configured database "<id>".`, and `Report databaseSelection contains unknown property "default".`
+- Example: [`examples/reports/database-selector-report.json`](../examples/reports/database-selector-report.json). Runtime behavior: [Feature behavior](FEATURES.md#database-selector).
+
 ### Toolbar and export
 
-- `toolbar`: the boolean keys `export`, `refresh`, `saveReport`, and `columns` (the column chooser; see [Feature behavior](FEATURES.md#columns-and-personalization)), all `true` by default. On dashboard widgets, `columns` is accepted but has no effect.
+- `toolbar`: the boolean keys `export`, `refresh`, and `saveReport`, all `true` by default.
 - `export`: requires `enabled` and `formats` (a non-empty subset of `"csv"` and `"excel"`). Optional keys are `filename` (without an extension), `exportCurrentView` (shown unless it is `false`), and `exportAll` (shown only when it is `true`).
 - Export controls appear only when both `toolbar.export` and `export.enabled` are true. Behavior and limits: [Feature behavior](FEATURES.md#exports).
 
@@ -168,6 +184,7 @@ Validated by `validateDashboard` in `engine/DashboardValidator.ts`. Allowed top-
 | `autoRefresh` | no | `{ enabled?: boolean, interval?: positive integer (ms) }`; `interval` is required when `enabled` is `true` |
 | `filters` | no | the same filter definitions as reports; default `[]`. They are shared by every widget |
 | `dateFilterBehavior` | no | `"required"` or `"optional"`; needs a shared `daterange` filter ([details](DASHBOARDS.md#date-filter-behavior)) |
+| `databaseSelection` | no | `{ databases: string[] }` (the same as reports): a runtime database switch for widgets that name no database of their own ([details](DASHBOARDS.md#database-selector)) |
 | `widgets` | yes | array. An empty array is allowed but produces a warning |
 
 ### Widgets

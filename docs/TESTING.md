@@ -13,7 +13,7 @@ npm run build
 
 Use `npm test -- --watch` while developing, or `npm test -- <path-or-name>` to run a subset. `npm run typecheck` checks both the application project (`tsconfig.app.json`) and the Node/tooling project (`tsconfig.node.json`). The root `tsconfig.json` only lists project references, so a bare `tsc --noEmit` checks no files. `tooling/typecheckConfig.test.ts` enforces this, and also checks that the README, CONTRIBUTING, and these guides document `npm run typecheck`.
 
-Last local run (2026-10-16, `15200c5` plus the uncommitted R3 and column-personalization changes): 53 test files and 513 tests passed; lint, typecheck, and build passed. The build warns that the chunk exceeds 500 kB.
+Last local run (2026-10-16, `de6df7d` plus the uncommitted database-selector changes, with column personalization removed): 54 test files and 543 tests passed; lint, typecheck, and build passed. The build warns that the chunk exceeds 500 kB.
 
 ## What is covered
 
@@ -35,7 +35,7 @@ The example files in `examples/` are not covered by the suite. They were checked
 
 ## Browser checks
 
-Automated tests do not cover these; check them in a browser: responsive layout, native AG Grid drag and resize, chart presentation, downloaded files, and integration with a real backend (sign-in, CSRF, data).
+Automated tests do not cover these; check them in a browser: responsive layout, native AG Grid drag and resize, chart presentation, downloaded files, and integration with a real backend (sign-in, CSRF, data). The runtime database selector has a written procedure: [Live validation: database selector](validation/DATABASE-SELECTOR-LIVE-TEST.md).
 
 ## CI
 

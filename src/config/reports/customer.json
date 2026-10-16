@@ -29,6 +29,10 @@
     "groupBy": ["Cust_Name"]
   },
 
+  "databaseSelection": {
+    "databases": ["loyal-ibms", "loyal-ibms2"]
+  },
+
   "columns": [
     {
       "field": "Cust_Name",

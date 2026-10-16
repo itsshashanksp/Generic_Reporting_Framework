@@ -218,16 +218,34 @@ describe("report request contract alignment", () => {
     });
 });
 
-describe("toolbar column chooser flag", () => {
-    const report = { ...presentation, request: { action: "select", source: { table: "Customers" }, fields: ["CustomerName", "TotalAmount"] } };
+describe("runtime database selection", () => {
+    const json = { ...presentation, request: { action: "select", database: "abc", source: { table: "Customers" }, fields: ["CustomerName", "TotalAmount"] } };
+    const sql = { ...presentation, queryDefinition: { format: "sql", resource: "reports/customer", database: "abc" } };
 
-    it("defaults to enabled and accepts a boolean", () => {
-        expect(loadDefinition(report).toolbar.columns).toBe(true);
-        expect(getReportValidationErrors({ ...report, toolbar: { columns: false } })).toEqual([]);
-        expect(loadDefinition({ ...report, toolbar: { export: true, refresh: true, columns: false } }).toolbar.columns).toBe(false);
+    it.each([["JSON Query", json], ["SQL Resource", sql]])("accepts a %s report whose configured database is listed", (_mode, report) => {
+        expect(getReportValidationErrors({ ...report, databaseSelection: { databases: ["abc", "abc2"] } })).toEqual([]);
+        expect(loadDefinition({ ...report, databaseSelection: { databases: ["abc", "abc2"] } }).request.database).toBe("abc");
     });
 
-    it("rejects a non-boolean value", () => {
-        expect(getReportValidationErrors({ ...report, toolbar: { columns: "yes" } })).toEqual(["Report toolbar columns must be a boolean."]);
+    it.each([
+        [{ databases: ["abc"] }, "Report databaseSelection databases must list at least two logical database ids."],
+        [{ databases: ["abc", "abc"] }, "Report databaseSelection databases must be unique."],
+        [{ databases: ["abc2", "abc3"] }, 'Report databaseSelection databases must include the configured database "abc".'],
+        [{ databases: ["abc", "Abc 2"] }, 'Report databaseSelection database at index 1 must be a logical database id (lowercase letters, digits, "_" or "-", starting with a letter).'],
+        [{ databases: ["abc", "abc2"], labels: {} }, 'Report databaseSelection contains unknown property "labels".'],
+        [["abc", "abc2"], "Report databaseSelection must be an object."],
+    ])("rejects %j", (databaseSelection, message) => {
+        expect(getReportValidationErrors({ ...json, databaseSelection })).toEqual([message]);
+    });
+
+    it("does not need a configured database, because the backend registry decides the initial one", () => {
+        const request = { ...json.request, database: undefined };
+        expect(getReportValidationErrors({ ...json, request, databaseSelection: { databases: ["abc", "abc2"] } })).toEqual([]);
+    });
+
+    it("rejects a default property, as for dashboards", () => {
+        expect(getReportValidationErrors({ ...json, databaseSelection: { default: "abc", databases: ["abc", "abc2"] } })).toEqual([
+            'Report databaseSelection contains unknown property "default".',
+        ]);
     });
 });

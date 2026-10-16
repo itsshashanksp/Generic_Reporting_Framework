@@ -19,8 +19,8 @@ An item is completed only when runtime behavior, validation, tests, accessibilit
 ## What to do next
 
 1. **Next actionable frontend item: 39 Chart engine, starting with a scope decision (S1).** It is the earliest planned item that is neither completed nor waiting on another system. It cannot be built yet, though: its remaining scope ("multi-series configuration, formatting, accessibility, interactions, and chart export") has no acceptance criteria, so S1 must define them first. Every item before it is completed or blocked (see the tables below).
-2. **Waiting on owners (no frontend work possible):** 37 needs the Gate 0 decisions in its [decision register](design/REPORT-ACTIONS.md#7-decision-register-gate-0); 47 needs E1; the R3 and column-personalization checks need V1 and V2.
-3. **Do not reopen** R3, column personalization, or 47's implementation.
+2. **Waiting on owners (no frontend work possible):** 37 needs the Gate 0 decisions in its [decision register](design/REPORT-ACTIONS.md#7-decision-register-gate-0); 47 needs E1; the R3 and database-selector checks need V1 and V3.
+3. **Do not reopen** R3 or 47's implementation. Column personalization was removed and is deferred (see below).
 
 ## Current and next work
 
@@ -43,7 +43,7 @@ These items are not frontend implementation tasks. Do not investigate them again
 | D2 (37) | A decision on write authority. Backend `data.write` covers every table the database login can write to, and there is no per-table write scope. See [design §6](design/REPORT-ACTIONS.md#6-dependencies-and-risks) | Enabling 37 for any frontend user | Backend/security owner |
 | D1/D3 (37) | Backend `FrontendCapabilityPolicy::WRITE` (currently `false`), and a database login/profile with write rights limited to the intended tables | Step 5 of 37 | Backend and database owners |
 | V1 (R3) | Live-backend check of report "Export all": a report with more than 10,000 matching rows exports completely, in 1,000-row pages, against a running backend | Calling R3 verified beyond mocked tests | Unassigned; needs a test backend environment (can share E1's) |
-| V2 (column personalization) | Browser check that AG Grid header drag and edge resize are saved, and that reload restores them | Calling column personalization verified beyond mocked tests | Unassigned; any developer with a browser |
+| V3 (database selector) | Live check (reports and dashboards; procedure in [validation/DATABASE-SELECTOR-LIVE-TEST.md](validation/DATABASE-SELECTOR-LIVE-TEST.md)) with two registered databases that hold the same report tables: switching shows each database's rows, the `metadata.databases` listing narrows the options, and an access scope that does not grant a database returns `403` | Calling the database selector verified beyond mocked tests | Unassigned; needs a test backend with two registered databases. Production use also needs access scopes that grant each listed database, plus `listDatabases` for the narrowed list (backend configuration owner) |
 | S1 (39) | Scope for the chart engine: which charts need multi-series, which formatting and interactions, whether chart export is wanted, and acceptance criteria for each | Starting 39 | Product owner (Unassigned) |
 | E3 | Confirmation that no API-key integration still calls the retired resource ID `widgets/TOP-10-month-Wise-Category-wise` (inventory R5) | Releasing `15200c5` on its own | API owner. Until it is confirmed, deploy the frontend and backend together |
 
@@ -65,6 +65,7 @@ These items are not frontend implementation tasks. Do not investigate them again
 | --- | --- | --- | --- |
 | 41 | Drill down | **Pending (paused)** | The workspace project context records drill-down as paused while SQL Resource execution is stabilized. There is no drill-down code in `src/` |
 | 38 | Email report | **Pending (deferred, last)** | Kept until the scheduling (42) and delivery APIs are defined |
+| — | Column personalization | **Pending (deferred)** | Column chooser, show/hide/reset, and persisted width/order/visibility. It was implemented in `de6df7d` and removed before any release on 2026-10-16, at the owner's request. It may be implemented again later; that commit holds the previous implementation and tests |
 
 ## Completed
 
@@ -82,8 +83,9 @@ These items are not frontend implementation tasks. Do not investigate them again
 | 43 (part) | Authentication, setup gate, and frontend user management | Completed (the 43 remainder is listed above) | `86435d7`, `8c5cdb0`, `df88f7d`, `c2dbb76`, `2299151`, `505ab3c`, `9fa7005`, `1c982c1`, `3d1bb8a`, `3ee339c`, `b6b208e`, `028e596`, `6544d94`, `859aeed`; `src/auth/__tests__`, `src/setup/__tests__`, `src/pages/__tests__/UserManagement.test.tsx` |
 | — | Production hardening: CSV formula neutralization, production API-URL build check, real `typecheck` script, AG Grid Community only, `xlsx` replaced by `write-excel-file`, per-user saved views, cross-tab session sync, 100,000-row export cap | Completed | `72dd668`, `983ee7d`; `tooling/*.test.ts`, `src/engine/ExportEngine/__tests__`, `src/auth/__tests__/crossTabSession.test.tsx` |
 | — | Dashboard export-all within the backend `maxPageSize` | Completed | `73a0a75`; `src/engine/ExportEngine/__tests__/fetchAllRows.test.ts` |
-| R3 | Paginated report "Export all" | Completed for implementation and automated tests (uncommitted, 2026-10-16); live-backend check V1 outstanding | `ReportViewer` "Export all" pages through the shared `fetchAllRowsForExport` (1,000-row pages, page-size fallback, 100,000-row cap, progress). It refuses repeated pages, pages that overrun the total, and totals that change mid-export, instead of exporting duplicates or gaps. Tests: `src/pages/__tests__/ReportViewerExportAllPagination.test.tsx` and the "export batch integrity" cases in `fetchAllRows.test.ts`. Not yet run against a live backend |
-| — | Column personalization (report pages) | Completed for implementation and automated tests (uncommitted, 2026-10-16); browser check V2 outstanding | **Columns** dialog (show/hide, move up/down, reset), saved header drag/resize, per-user and per-report browser storage, toolbar flag `columns`. Replaces the removed `toolbar.settings` placeholder (`04573fb`). Source: `src/engine/ColumnLayoutEngine/`, `src/components/Grid/ColumnChooserDialog.tsx`, `GenericGrid` `personalization` prop. Tests: `ColumnLayoutEngine/__tests__/layout.test.ts`, `src/pages/__tests__/ReportViewerColumnChooser.test.tsx`, "personal column layout" in `GenericGrid.test.tsx`, toolbar flag in `validator.test.ts`. Dashboards are not personalized |
+| R3 | Paginated report "Export all" | Completed for implementation and automated tests (`de6df7d`, 2026-10-16); live-backend check V1 outstanding | `ReportViewer` "Export all" pages through the shared `fetchAllRowsForExport` (1,000-row pages, page-size fallback, 100,000-row cap, progress). It refuses repeated pages, pages that overrun the total, and totals that change mid-export, instead of exporting duplicates or gaps. Tests: `src/pages/__tests__/ReportViewerExportAllPagination.test.tsx` and the "export batch integrity" cases in `fetchAllRows.test.ts`. Not yet run against a live backend |
+| — | Runtime database selector (reports) | Completed for implementation and automated tests (uncommitted, 2026-10-16); live check V3 outstanding | Opt-in report property `databaseSelection`; **Database** dropdown beside Refresh; options and initial database from `metadata.databases` (registry default, else the first listed available ID; nothing requested while unresolved); the selected database is used by every report request, including All-rows export; per-database cache entries. Source: `src/components/Toolbar/useDatabaseSelection.ts`, `DatabaseSelect.tsx`, `ReportToolbar.tsx`, `ReportViewer.tsx`, report validator. Tests: `src/pages/__tests__/ReportViewerDatabaseSelector.test.tsx`, "runtime database selection" in `validator.test.ts`. Enabled on the Item and Customer reports (`loyal-ibms`, `loyal-ibms2`; uncommitted) |
+| — | Runtime database selector (dashboards) | Completed for implementation and automated tests (uncommitted, 2026-10-16); live check V3 outstanding | Opt-in dashboard property `databaseSelection: { databases }` (same as reports); initial database from the backend registry default, with a documented fallback; widgets without their own `database` inherit the selection and widgets with one keep it; shared `DatabaseSelect` and `useDatabaseSelection`; running table export cancelled on a switch. Source: `src/pages/Dashboard.tsx`, `DashboardEngine/databaseInheritance.ts`, `DashboardValidator.ts`, `dashboardLoader.ts`. Tests: `src/pages/__tests__/DashboardDatabaseSelector.test.tsx`, `src/engine/DashboardEngine/__tests__/databaseSelection.test.ts`. Enabled on the Item Dashboard (`loyal-ibms`, `loyal-ibms2`; uncommitted) |
 
 ## Removed, superseded, or not supported
 
@@ -104,7 +106,11 @@ These items are not frontend implementation tasks. Do not investigate them again
 | 5 | 2026-10-16 documentation consolidation | Reconciled with the auth, security, and export work (`86435d7`…`15200c5`) that the roadmap had never recorded; 43 moved from *Deferred* to *Partially completed*; 47 moved to *Needs verification*, with its external steps split out into E1–E3; R3 added |
 | 6 | 2026-10-16 | R3 completed; the next actionable task is the 37 design |
 | 7 | 2026-10-16 | 37 design drafted; 37's scope, deliverables, dependencies (D1–D3), and acceptance criteria clarified |
-| 8 | this revision | Column personalization completed; statuses made consistent (37, 42, 44 → Blocked; 45 awaiting decision); verification items V1 and V2 and scope decision S1 added; 39 is next |
+| 8 | 2026-10-16 | Column personalization completed; statuses made consistent (37, 42, 44 → Blocked; 45 awaiting decision); verification items V1 and V2 and scope decision S1 added; 39 is next |
+| 9 | 2026-10-16 | Runtime database selector added (completed; V3 outstanding); R3 and column personalization reference `de6df7d` |
+| 10 | 2026-10-16 | Database selector extended to dashboards (completed; V3 now covers both) |
+| 11 | 2026-10-16 | Report and dashboard selection unified: no `default`, backend registry decides the initial database; V3 procedure updated |
+| 12 | this revision | Column personalization removed before release (now deferred); V2 dropped |
 
 Use the current numbers when you refer to items. If an older document cites "42 Role-based UI", it means today's 43.
 

@@ -22,18 +22,7 @@ Report widgets render through the same grid and compact mobile pager. Desktop re
 
 ## Columns and personalization
 
-`sortable` controls whether a header can sort. `visible:false` means the column is never created; users cannot show it.
-
-On report pages, a signed-in user can personalize the configured columns:
-
-- **Columns** (toolbar button, or the mobile "More" sheet) opens a dialog. It can show or hide each column, move it up or down, and **Reset columns** to the configured layout. At least one column always stays visible.
-- Dragging a header to reorder it, or a header edge to resize it, is saved too.
-- The layout is stored per signed-in user and report under the local-storage key `generic-report-column-layout:user:<user>:report:<reportId>`. It is not synced to the account, and it is separate from saved views (a saved view does not restore columns). When the configuration changes, removed fields are ignored and new fields appear at the end. Corrupt entries and storage errors fall back to the configured layout.
-- A hidden column stays in the grid as hidden, so a sort on it is kept.
-- **Exports**: current-view **CSV** follows the layout (only shown columns, in the shown order). Current-view **Excel** and **All rows** exports contain every field of the response rows, as before.
-- There is no chooser when `toolbar.columns` is `false`, when the report uses configured `grid.grouping`, when it has fewer than two configured columns, or when no user is signed in. Dashboards (table and report widgets) are not personalized.
-
-Automated tests cover the dialog, storage, and the grid's handling of AG Grid's drag and resize events (with AG Grid itself mocked). Real drag and resize in a browser has not been checked.
+Configured visible columns can be resized and reordered in AG Grid. `sortable` controls whether a header can sort. `visible:false` prevents column creation. The current UI has no column chooser, show/hide action, reset action, or persisted column width/order/visibility. The former disabled Settings placeholder and schema flag were removed.
 
 ## Grouping
 
@@ -57,6 +46,29 @@ Safety limits (`src/engine/ExportEngine`):
 - CSV cells that begin with a spreadsheet formula trigger (`=`, `+`, `-`, `@`, including full-width forms and leading control characters) are prefixed with `'`, which stops them from running as formulas. Numeric values stay unchanged.
 - Excel files are written with `write-excel-file`. A failure to create the file is shown as a message instead of being lost silently.
 
+## Database selector
+
+A report that sets `databaseSelection` (see [Configuration](CONFIGURATION.md#runtime-database-selection)) shows a **Database** dropdown at the start of the report toolbar, beside **Refresh**; on phones it sits beside **More**.
+
+Reports and dashboards share the same selection logic (`src/components/Toolbar/useDatabaseSelection.ts`). The backend registry, read with `metadata.databases`, decides the initial database:
+
+1. **Options:** the configured `databases` that the registry lists as **enabled**, in configured order, labelled with registry names. Databases whose availability gate is closed are shown as "(unavailable)" and can't be chosen. Unregistered and disabled IDs are left out.
+2. **Initial selection:** the registry's **default** database, when it is in the list and available.
+3. **Fallback:** otherwise, the **first** listed ID that is registered, enabled, and available.
+4. **None usable:** "No database available" is shown, and **nothing is requested**.
+5. **Listing fails** (for example `403` when an enforced access scope lacks `listDatabases`): "Database list unavailable" is shown, with **Try again**. The configured IDs are offered unverified, but nothing is chosen and **nothing is requested** until the user picks one.
+
+Until a database is resolved, no report or widget request is sent, so nothing can silently fall back to the backend default by omitting `database`. A report's `request.database` does **not** set the initial selection. The listing contains only logical IDs and names, never connection details, and it is cached for 5 minutes, so registry changes show after a page reload.
+
+- **Reopening:** opening the report again, or another report, resolves the database again. The selection is not saved, and saved views do not record it.
+- **Switching** reruns the report on the chosen database, from page 1, with the same applied filters, filter logic, and sort. Refresh, paging, sorting, saved-view loading, and **All rows** export then all use the chosen database. A request still running for the previous database is aborted, and its late result is ignored. The selector is disabled while an export runs.
+- **Caching:** the cache key includes the database, so rows from one database are never shown for another. Switching back to a database can be answered from its own cached entry.
+- **Errors:** a failing database (for example `DATABASE_UNAVAILABLE`, or `403` when an access scope does not grant it) shows the backend's error in the grid area. The selector stays usable, so the user can switch back.
+- **Not switched:** a filter's `dynamicOptions` request keeps the database it configures.
+- **Dashboards** have a dashboard-level equivalent that switches only widgets without their own database; see [Dashboards](DASHBOARDS.md#database-selector).
+
+All of this is covered by mocked tests. It has not been run against a live backend with two registered databases.
+
 ## Saved reports
 
 When `toolbar.saveReport` is enabled (the default), the report toolbar can save, load, and delete browser-local views. A saved view records applied filters, sorting, and current page/page size. Loading restores those fields. It does not restore columns or grouping. Each UI save creates a new timestamped record—there is no rename/update workflow.
@@ -70,7 +82,7 @@ The request cache is an in-memory map of successful completed responses:
 - TTL: five minutes.
 - Capacity: 100 completed entries; the least recently accessed is evicted after overflow.
 - Key: scope plus the full recursively stabilized request. Object key order and `undefined` properties do not matter; array order does.
-- Scopes: `report:<reportId>`, `dashboard:<dashboardId>:<widgetId>`, and `dynamic-filter-options` (shared by every filter with the same options request).
+- Scopes: `report:<reportId>`, `dashboard:<dashboardId>:<widgetId>`, `dynamic-filter-options` (shared by every filter with the same options request), and `metadata-databases` (the database listing behind the report and dashboard database selectors).
 - Exact simultaneous requests share one underlying call. Each consumer may abort; the underlying call aborts only when no consumers remain.
 - Dashboard widget effects abort their consumer and invalidate its request sequence during cleanup. Navigation therefore discards late results even if the transport or server cannot stop work already in progress; intentional aborts do not render errors.
 - Refresh and retry bypass completed entries but may still join identical in-flight work.

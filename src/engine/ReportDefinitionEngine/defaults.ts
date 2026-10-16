@@ -10,8 +10,6 @@ export const defaultReportDefinition: Partial<ReportDefinition> = {
 
         saveReport: true,
 
-        columns: true,
-
     },
 
 grid: {

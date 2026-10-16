@@ -161,3 +161,16 @@
         padding: 24px 14px;
     }
 }
+
+.dashboard-header__actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+@media (max-width: 768px) {
+    .dashboard-header__actions {
+        align-self: flex-start;
+    }
+}

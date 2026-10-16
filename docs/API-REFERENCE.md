@@ -13,6 +13,7 @@ The frontend sends JSON by `POST` to `VITE_API_URL` with `Content-Type: applicat
 | `auth.session` | `src/auth/authService.ts` | no | One session row ([shape](AUTHENTICATION.md#session-payload)) |
 | `auth.login` (`username`, `password`) | Login page | yes | One session row |
 | `auth.logout` | Sign out | yes | One session row (`authenticated: false`) |
+| `metadata.databases` | Database selector (only for reports and dashboards with `databaseSelection`) | no | Registry rows; the frontend reads `id`, `name`, `enabled`, and `available`. With enforced access scopes, this needs `listDatabases` |
 | `auth.frontendUsers.list` | User Management | no | Managed-user rows |
 | `auth.frontendUsers.create`, `.update`, `.enable`, `.disable`, `.delete`, `.changePassword`, `.assignRole` | User Management | yes | One managed-user row |
 

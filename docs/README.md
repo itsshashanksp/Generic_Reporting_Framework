@@ -23,6 +23,7 @@ These documents describe the current frontend implementation. If you are new, re
 | [Testing](TESTING.md) | Test strategy, coverage areas, CI |
 | [Deployment and hosting](DEPLOYMENT.md) | Build, hosting requirements, server examples, post-deploy checks, rollback |
 | [Troubleshooting](TROUBLESHOOTING.md) | Error messages and their fixes |
+| [Live validation: database selector](validation/DATABASE-SELECTOR-LIVE-TEST.md) | Manual two-database test procedure (roadmap V3; outstanding) |
 
 ## Contracts and status
 

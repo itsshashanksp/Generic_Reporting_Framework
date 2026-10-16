@@ -11,7 +11,8 @@ const { executeRequestMock } = vi.hoisted(() => ({ executeRequestMock: vi.fn() }
 
 vi.mock("../../api/request", async importOriginal => ({
     ...await importOriginal<typeof import("../../api/request")>(),
-    executeRequest: executeRequestMock,
+    // Checked-in reports/dashboards may enable databaseSelection, which first lists databases.
+    executeRequest: (await import("../../test/databaseRegistry")).withTestDatabaseRegistry(executeRequestMock),
 }));
 
 vi.mock("../../components/Grid/GenericGrid", () => ({
