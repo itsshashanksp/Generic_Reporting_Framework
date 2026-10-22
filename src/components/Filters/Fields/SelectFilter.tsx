@@ -12,6 +12,7 @@ interface Props {
     options?: FilterOption[];
     dynamicOptions?: DynamicFilterOptions;
     required?: boolean;
+    database?: string;
 }
 
 export default function SelectFilter({
@@ -20,6 +21,7 @@ export default function SelectFilter({
     options = [],
     dynamicOptions,
     required = false,
+    database,
 }: Props) {
 
     const { filters, setFilter } =
@@ -27,7 +29,7 @@ export default function SelectFilter({
     const selectId = useId();
     const searchId = useId();
     const [search, setSearch] = useState("");
-    const dynamic = useDynamicFilterOptions(dynamicOptions);
+    const dynamic = useDynamicFilterOptions(dynamicOptions, database);
     const availableOptions = dynamicOptions ? dynamic.options : options;
     const displayedOptions = useMemo(() => {
         const term = search.trim().toLocaleLowerCase();

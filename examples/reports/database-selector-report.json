@@ -1,16 +1,13 @@
 {
   "id": "item-database-selector-example",
   "title": "Item Report (database selector example)",
-  "description": "Users can rerun this report on either listed logical database. Both must contain ItemMasterTable.",
+  "description": "Users can rerun this report on an authorized backend-listed database that contains ItemMasterTable.",
   "request": {
     "action": "select",
-    "database": "database1",
     "source": { "table": "ItemMasterTable" },
     "fields": ["Item_Code", "Item_Desc", "Item_MRP"]
   },
-  "databaseSelection": {
-    "databases": ["database1", "database2"]
-  },
+  "databaseSelection": true,
   "columns": [
     { "field": "Item_Code", "header": "Item Code", "dataType": "number" },
     { "field": "Item_Desc", "header": "Item Description" },

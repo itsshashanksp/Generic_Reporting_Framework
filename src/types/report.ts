@@ -61,14 +61,10 @@ export interface ReportPresentationDefinition {
     filterLogic?: "AND" | "OR";
 
     /**
-     * Lets users rerun the report against another logical database. The
-     * listed ids must all hold the report's tables or SQL Resource. The
-     * backend registry default (or the first available listed id) is the
-     * initial selection; `request.database`, if set, must be listed.
+     * Enables backend-owned runtime database discovery and switching. The
+     * registry default (or first available result) is selected initially.
      */
-    databaseSelection?: {
-        databases: string[];
-    };
+    databaseSelection?: true;
 }
 
 export type ReportConfiguration = ReportPresentationDefinition & (

@@ -57,7 +57,7 @@ Validated by `getReportValidationErrors` in `engine/ReportDefinitionEngine/valid
 | `grid` | no | object | Paging, row selection, grouping display |
 | `toolbar` | no | object | Toolbar switches |
 | `export` | no | object | Export formats and scope |
-| `databaseSelection` | no | `{ databases: string[] }` | Lets users switch the report's database at runtime ([details](#runtime-database-selection)) |
+| `databaseSelection` | no | `true` | Uses the authorized backend database list for runtime switching ([details](#runtime-database-selection)) |
 
 Defaults when omitted: toolbar `export`, `refresh`, and `saveReport` are all `true`; `grid.pagination` is `{ enabled: true, pageSize: 10, pageSizeOptions: [10, 25, 50, 100] }`; `grid.rowSelection` is `"single"`; each column is `visible: true`, `sortable: true`, `width: 150`.
 
@@ -155,15 +155,15 @@ The pagination values are positive integers. `rowSelection` is `single` or `mult
 
 ```json
 {
-  "request": { "action": "select", "database": "database1", "source": { "table": "ItemMasterTable" }, "fields": ["Item_Code", "Item_Desc"] },
-  "databaseSelection": { "databases": ["database1", "database2"] }
+  "request": { "action": "select", "source": { "table": "ItemMasterTable" }, "fields": ["Item_Code", "Item_Desc"] },
+  "databaseSelection": true
 }
 ```
 
-- `databases`: at least two unique logical database IDs (the same pattern as `database`). List only databases that actually contain the report's tables or SQL Resource. The backend's listing cannot tell which databases hold a report's data.
-- The backend registry decides the initial database ([rule](FEATURES.md#database-selector)), so `request.database` / `queryDefinition.database` is optional. If one is set, it must be in the list, but it does not choose the initial database. There is no `default` property; reports and dashboards use the same shape.
+- `true` opts in. IDs and display names are never registered in frontend configuration; `metadata.databases` is the only option source.
+- The backend registry decides the initial database ([rule](FEATURES.md#database-selector)). A switchable report normally omits `request.database` / `queryDefinition.database`, because the selected backend ID is supplied at runtime.
 - Omit `databaseSelection` to keep the report on its configured database, as before. Reusable widget files accept the key but ignore it, and dashboard widgets reject it. Dashboards have their own dashboard-level form ([Dashboards](DASHBOARDS.md#database-selector)).
-- Validation messages: `Report databaseSelection databases must list at least two logical database ids.`, `… must be unique.`, `… must include the configured database "<id>".`, and `Report databaseSelection contains unknown property "default".`
+- Any value other than `true`, including the former `{ databases: [...] }` shape, is rejected.
 - Example: [`examples/reports/database-selector-report.json`](../examples/reports/database-selector-report.json). Runtime behavior: [Feature behavior](FEATURES.md#database-selector).
 
 ### Toolbar and export
@@ -184,7 +184,7 @@ Validated by `validateDashboard` in `engine/DashboardValidator.ts`. Allowed top-
 | `autoRefresh` | no | `{ enabled?: boolean, interval?: positive integer (ms) }`; `interval` is required when `enabled` is `true` |
 | `filters` | no | the same filter definitions as reports; default `[]`. They are shared by every widget |
 | `dateFilterBehavior` | no | `"required"` or `"optional"`; needs a shared `daterange` filter ([details](DASHBOARDS.md#date-filter-behavior)) |
-| `databaseSelection` | no | `{ databases: string[] }` (the same as reports): a runtime database switch for widgets that name no database of their own ([details](DASHBOARDS.md#database-selector)) |
+| `databaseSelection` | no | `true`: an authorized backend-driven database switch for widgets that name no database of their own ([details](DASHBOARDS.md#database-selector)) |
 | `widgets` | yes | array. An empty array is allowed but produces a warning |
 
 ### Widgets

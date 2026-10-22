@@ -4,10 +4,12 @@ import FilterField from "./FilterField";
 
 interface Props {
     filters: FilterDefinition[];
+    database?: string;
 }
 
 export default function FilterRenderer({
     filters,
+    database,
 }: Props) {
 
     return (
@@ -21,6 +23,7 @@ export default function FilterRenderer({
                 <FilterField
                     key={filter.field}
                     filter={filter}
+                    database={database}
                 />
 
                 ))}

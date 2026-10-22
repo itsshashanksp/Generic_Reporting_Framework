@@ -16,39 +16,30 @@ const dashboard = (databaseSelection: unknown, widgets: unknown[] = [inheriting]
 });
 
 describe("dashboard databaseSelection validation", () => {
-    it("accepts at least two databases, with the same shape as reports", () => {
-        expect(validateDashboard(dashboard({ databases: ["abc", "abc2"] })).errors).toEqual([]);
-        expect(loadDashboardConfiguration(dashboard({ databases: ["abc", "abc2"] })).status).toBe("valid");
+    it("accepts backend-owned discovery", () => {
+        expect(validateDashboard(dashboard(true)).errors).toEqual([]);
+        expect(loadDashboardConfiguration(dashboard(true)).status).toBe("valid");
     });
 
-    it.each([
-        [["abc", "abc2"], "Dashboard databaseSelection must be an object."],
-        [{ databases: ["abc"] }, "Dashboard databaseSelection databases must list at least two logical database ids."],
-        [{ databases: ["abc", "abc"] }, "Dashboard databaseSelection databases must be unique."],
-        [{ databases: ["abc", "ABC 2"] }, 'Dashboard databaseSelection database at index 1 must be a logical database id (lowercase letters, digits, "_" or "-", starting with a letter).'],
-        // The backend registry decides the initial database; there is no `default`.
-        [{ default: "abc", databases: ["abc", "abc2"] }, 'Dashboard databaseSelection contains unknown property "default".'],
-        [{ databases: ["abc", "abc2"], labels: {} }, 'Dashboard databaseSelection contains unknown property "labels".'],
-    ])("rejects %j", (databaseSelection, message) => {
-        expect(validateDashboard(dashboard(databaseSelection)).errors).toEqual([message]);
+    it.each([false, {}, { databases: ["abc", "abc2"] }, ["abc", "abc2"]])("rejects frontend-owned database options: %j", databaseSelection => {
+        expect(validateDashboard(dashboard(databaseSelection)).errors).toEqual(["Dashboard databaseSelection must be true."]);
     });
 
     it("rejects a selector that no widget would follow", () => {
-        const result = loadDashboardConfiguration(dashboard({ databases: ["abc", "abc2"] }, [pinned]));
+        const result = loadDashboardConfiguration(dashboard(true, [pinned]));
         expect(result.status).toBe("invalid");
         expect(result.validation.errors).toEqual([
             "Dashboard databaseSelection needs at least one visible widget whose request names no database; widgets with their own database never follow the selection.",
         ]);
     });
 
-    it("counts a report-backed widget that names no database as inheriting only when the report has none", () => {
-        // The checked-in Item report names loyal-ibms, so it does not inherit.
+    it("counts a report-backed widget that names no database as inheriting", () => {
         const reportWidget = { id: "report", type: "report", title: "Items", reportId: "item" };
-        expect(loadDashboardConfiguration(dashboard({ databases: ["abc", "abc2"] }, [reportWidget])).status).toBe("invalid");
+        expect(loadDashboardConfiguration(dashboard(true, [reportWidget])).status).toBe("valid");
     });
 
     it("rejects databaseSelection on a widget", () => {
-        const errors = validateDashboard(dashboard(undefined, [{ ...inheriting, databaseSelection: { databases: ["abc", "abc2"] } }])).errors;
+        const errors = validateDashboard(dashboard(undefined, [{ ...inheriting, databaseSelection: true }])).errors;
         expect(errors.some(error => error.includes('unknown property "databaseSelection"'))).toBe(true);
     });
 });

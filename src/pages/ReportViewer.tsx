@@ -44,7 +44,7 @@ export default function ReportViewer() {
     // backend registry, never from request.database. Every report request
     // (load, page, sort, filters, refresh, export) reads databaseRef; "" means
     // not resolved yet, and then nothing is requested.
-    const databaseSelection = useDatabaseSelection(report?.id ?? "", report?.databaseSelection?.databases);
+    const databaseSelection = useDatabaseSelection(report?.id ?? "", report?.databaseSelection === true);
     const selectedDatabase = databaseSelection.database;
     const databaseBlocked = databaseSelection.status !== "off" && databaseSelection.status !== "ready";
     const [initialRequestState] = useState(() => {
@@ -258,6 +258,11 @@ export default function ReportViewer() {
         const firstChoice = !databaseRef.current;
         databaseRef.current = database;
         databaseSelection.select(database);
+        // Never present rows from the previous database as current while the
+        // new context is loading (or if that request later fails).
+        setResult(null);
+        setLoadedReportId("");
+        setGridError("");
         if (firstChoice) {
             void loadReport({}, 1, report.grid.pagination.pageSize, report.request.sort ?? []);
             return;
@@ -435,6 +440,7 @@ export default function ReportViewer() {
             {report.filters.length > 0 && (
                 <ResponsiveFilterPanel
                     filters={report.filters}
+                    database={report.databaseSelection ? selectedDatabase : undefined}
                     className="report-section"
                     error={filterError}
                     disabled={isGridLoading}
@@ -490,8 +496,8 @@ export default function ReportViewer() {
                         databaseSelection.status === "loading"
                             ? <div className="report-table-frame__loading"><Loading label="Loading databases…" compact /></div>
                             : databaseSelection.status === "listing-failed"
-                                ? <ErrorState title="Database list unavailable" message={`${databaseSelection.error} Choose a database above to continue.`} onRetry={databaseSelection.retry} />
-                                : <ErrorState title="No database available" message="None of this report's databases is registered, enabled and available." onRetry={databaseSelection.retry} />
+                                ? <ErrorState title="Database list unavailable" message={databaseSelection.error} onRetry={databaseSelection.retry} />
+                                : <ErrorState title="No database available" message="No authorized, enabled and available database was returned." onRetry={databaseSelection.retry} />
                     ) : (<>
                     {gridError && rows.length > 0 && (
                         <div className="report-inline-error" role="alert">

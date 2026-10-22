@@ -22,13 +22,11 @@ export interface DashboardDefinition {
     dateFilterBehavior?: DashboardDateFilterBehavior;
 
     /**
-     * Runtime database switching, the same shape as reports. The backend
-     * registry default is the initial selection; widgets whose request names
-     * no `database` follow the selection, and widgets with their own keep it.
+     * Backend-owned runtime database discovery and switching. The registry
+     * default is the initial selection; widgets whose request names no
+     * `database` follow the selection, and widgets with their own keep it.
      */
-    databaseSelection?: {
-        databases: string[];
-    };
+    databaseSelection?: true;
 
     layout?: {
         columns?: number;

@@ -32,9 +32,9 @@ export type DatabaseSelectionStatus =
     | "loading"
     /** `database` is set and may be requested. */
     | "ready"
-    /** The listing failed; the user must choose explicitly before anything is requested. */
+    /** Discovery failed or was denied; no database may be requested. */
     | "listing-failed"
-    /** No permitted database is registered, enabled and available. */
+    /** No authorized database is enabled and available. */
     | "empty";
 
 export interface DatabaseSelection {
@@ -60,22 +60,17 @@ type Listing =
  * Shared report/dashboard database selection. The backend registry
  * (`metadata.databases`) is the source of truth for the default:
  *
- * 1. Options: the permitted ids the registry lists as enabled, in configured
- *    order; unavailable ones are shown but cannot be chosen.
- * 2. Initial selection: the registry default when it is permitted and
- *    available; otherwise the first permitted, available id in configured
- *    order; otherwise none ("empty").
- * 3. If the listing fails, nothing is chosen automatically: the permitted ids
- *    are offered unverified and nothing is requested until the user picks one.
+ * 1. Options: every authorized registry row that is enabled; unavailable rows
+ *    are shown but cannot be chosen.
+ * 2. Initial selection: the authorized registry default when available;
+ *    otherwise the first authorized, enabled and available row; otherwise none.
+ * 3. A failed or denied listing has no fallback options and sends no data
+ *    request. Frontend configuration is never treated as authorization.
  *
  * `scopeKey` (the report or dashboard id) resets the user's choice.
  */
-export function useDatabaseSelection(scopeKey: string, permitted: string[] | undefined): DatabaseSelection {
-    const enabled = Boolean(permitted?.length);
-    const [listing, setListing] = useState<Listing>(() => {
-        const cached = getCachedResponse(LISTING_CACHE_KEY);
-        return cached ? { status: "loaded", databases: parseListing(cached) } : { status: "loading" };
-    });
+export function useDatabaseSelection(scopeKey: string, enabled: boolean): DatabaseSelection {
+    const [listing, setListing] = useState<Listing>(initialListing);
     const [attempt, setAttempt] = useState(0);
     const [choice, setChoice] = useState<{ scopeKey: string; database: string } | null>(null);
 
@@ -87,8 +82,9 @@ export function useDatabaseSelection(scopeKey: string, permitted: string[] | und
             signal => executeRequest(LISTING_REQUEST, { signal }),
             controller.signal
         ).then(response => {
+            const databases = parseListing(response);
             setCachedResponse(LISTING_CACHE_KEY, response);
-            setListing({ status: "loaded", databases: parseListing(response) });
+            setListing({ status: "loaded", databases });
         }).catch((error: unknown) => {
             if (!isRequestAbort(error)) {
                 setListing({ status: "failed", error: getRequestErrorMessage(error, "The database list could not be loaded.") });
@@ -98,16 +94,9 @@ export function useDatabaseSelection(scopeKey: string, permitted: string[] | und
     }, [enabled, listing.status, attempt]);
 
     const resolved = useMemo(() => {
-        if (!enabled || !permitted) return { options: [] as DatabaseOption[], usable: [] as string[], fallback: "" };
-        if (listing.status === "failed") {
-            return { options: permitted.map(id => ({ id, label: id, disabled: false })), usable: permitted, fallback: "" };
-        }
+        if (!enabled || listing.status === "failed") return { options: [] as DatabaseOption[], usable: [] as string[], fallback: "" };
         if (listing.status !== "loaded") return { options: [], usable: [], fallback: "" };
-        const registry = new Map(listing.databases.map(database => [database.id, database]));
-        const registered = permitted.flatMap(id => {
-            const entry = registry.get(id);
-            return entry?.enabled ? [entry] : [];
-        });
+        const registered = listing.databases.filter(database => database.enabled);
         const usable = registered.filter(entry => entry.available).map(entry => entry.id);
         const backendDefault = listing.databases.find(database => database.default)?.id;
         return {
@@ -119,7 +108,7 @@ export function useDatabaseSelection(scopeKey: string, permitted: string[] | und
             usable,
             fallback: backendDefault && usable.includes(backendDefault) ? backendDefault : usable[0] ?? "",
         };
-    }, [enabled, listing, permitted]);
+    }, [enabled, listing]);
 
     const chosen = choice?.scopeKey === scopeKey && resolved.usable.includes(choice.database) ? choice.database : "";
     const database = chosen || resolved.fallback;
@@ -150,15 +139,36 @@ export function useDatabaseSelection(scopeKey: string, permitted: string[] | und
 }
 
 function parseListing(response: ApiResponse): RegisteredDatabase[] {
-    return response.data.flatMap(row => typeof row.id === "string"
-        && typeof row.enabled === "boolean"
-        && typeof row.available === "boolean"
-        ? [{
+    const ids = new Set<string>();
+    let defaults = 0;
+    return response.data.map(row => {
+        if (typeof row.id !== "string" || !/^[a-z][a-z0-9_-]{0,63}$/.test(row.id)
+            || ids.has(row.id)
+            || typeof row.name !== "string" || row.name.trim() === ""
+            || typeof row.default !== "boolean"
+            || typeof row.enabled !== "boolean"
+            || typeof row.available !== "boolean") {
+            throw new Error("The database list response was invalid.");
+        }
+        ids.add(row.id);
+        if (row.default) defaults++;
+        if (defaults > 1) throw new Error("The database list response was invalid.");
+        return {
             id: row.id,
-            name: typeof row.name === "string" ? row.name : row.id,
-            default: row.default === true,
+            name: row.name,
+            default: row.default,
             enabled: row.enabled,
             available: row.available,
-        }]
-        : []);
+        };
+    });
+}
+
+function initialListing(): Listing {
+    const cached = getCachedResponse(LISTING_CACHE_KEY);
+    if (!cached) return { status: "loading" };
+    try {
+        return { status: "loaded", databases: parseListing(cached) };
+    } catch {
+        return { status: "loading" };
+    }
 }

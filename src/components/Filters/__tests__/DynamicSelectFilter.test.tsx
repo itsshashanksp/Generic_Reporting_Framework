@@ -81,4 +81,44 @@ describe("dynamic select filters", () => {
         await screen.findByRole("option", { name: "A (1)" });
         expect(executeRequestMock).toHaveBeenCalledTimes(1);
     });
+
+    it("follows a resolved database context and waits while it is unresolved", async () => {
+        executeRequestMock.mockResolvedValue({ success: true, message: "ok", data: [{ Category: "A", Frequency: 1 }] });
+        const view = render(
+            <FilterProvider><SelectFilter field="Category" label="Category" dynamicOptions={dynamicOptions} database="" /></FilterProvider>
+        );
+        expect(executeRequestMock).not.toHaveBeenCalled();
+
+        view.rerender(
+            <FilterProvider><SelectFilter field="Category" label="Category" dynamicOptions={dynamicOptions} database="abc" /></FilterProvider>
+        );
+        await screen.findByRole("option", { name: "A (1)" });
+        expect(executeRequestMock).toHaveBeenCalledWith(
+            { ...dynamicOptions.request, database: "abc" },
+            expect.objectContaining({ signal: expect.any(AbortSignal) })
+        );
+
+        executeRequestMock.mockResolvedValue({ success: true, message: "ok", data: [{ Category: "B", Frequency: 2 }] });
+        view.rerender(
+            <FilterProvider><SelectFilter field="Category" label="Category" dynamicOptions={dynamicOptions} database="abc2" /></FilterProvider>
+        );
+        await screen.findByRole("option", { name: "B (2)" });
+        expect(executeRequestMock).toHaveBeenLastCalledWith(
+            { ...dynamicOptions.request, database: "abc2" },
+            expect.objectContaining({ signal: expect.any(AbortSignal) })
+        );
+    });
+
+    it("preserves an explicitly pinned dynamic-options database", async () => {
+        executeRequestMock.mockResolvedValue({ success: true, message: "ok", data: [] });
+        const pinned = { ...dynamicOptions, request: { ...dynamicOptions.request, database: "fixed" } };
+        render(
+            <FilterProvider><SelectFilter field="Category" label="Category" dynamicOptions={pinned} database="abc" /></FilterProvider>
+        );
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalled());
+        expect(executeRequestMock).toHaveBeenCalledWith(
+            pinned.request,
+            expect.objectContaining({ signal: expect.any(AbortSignal) })
+        );
+    });
 });

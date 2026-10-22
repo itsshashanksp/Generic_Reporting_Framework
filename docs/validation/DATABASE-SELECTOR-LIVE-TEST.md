@@ -18,15 +18,14 @@ Feature behavior under test: [Feature behavior — Database selector](../FEATURE
 
 ## 2. Test report
 
-**Ready-made option:** in the working tree, the Item (`/report/item`) and Customer (`/report/customer`) reports both set `databaseSelection` to `["loyal-ibms", "loyal-ibms2"]`, with `loyal-ibms` configured. Use DB-A = `loyal-ibms` and DB-B = `loyal-ibms2`, but only if the backend owner confirms that `loyal-ibms2` contains `ItemMasterTable` and `CustomerTable` with the same columns. The Customer report is grouped (one row per customer), so for B3 filter on a customer name that exists in only one database. No checked-in report is left without `databaseSelection`, so §3.A6 needs a local report copy without it.
+**Ready-made option:** the Item (`/report/item`) and Customer (`/report/customer`) reports set `databaseSelection: true`. Every enabled database returned by `metadata.databases` is offered, so use a test backend where DB-A and DB-B both contain the required tables and columns. The Customer report is grouped (one row per customer), so for B3 filter on a customer name that exists in only one database. A report that explicitly targets one database should omit `databaseSelection`.
 
 **Otherwise, a local test file (do not commit):**
 
 Create `src/config/reports/zz-database-selector-test.json` from [`examples/reports/database-selector-report.json`](../../examples/reports/database-selector-report.json):
 
 - set `id` to `zz-database-selector-test`;
-- set `request.database` to **DB-A**;
-- set `databaseSelection.databases` to `["DB-A", "DB-B"]`, using the real IDs;
+- remove `request.database` and set `databaseSelection` to `true`;
 - for §3.E, also add the `UserName` filter with `dynamicOptions` from `src/config/reports/item.json`.
 
 Open it at `/report/zz-database-selector-test`. No menu entry is needed. Run `npm test` once: it must still pass, because the configuration tests load every report file. Delete the file afterwards.
@@ -40,9 +39,9 @@ Before each case, reload the page. That empties the in-memory request cache, inc
 | # | Steps | Expected | Result |
 | --- | --- | --- | --- |
 | A1 | Open the test report (DB-A is the registry default) | `metadata.databases` is sent once, before any data request. Then **Database** shows DB-A, and the first `select` request has `"database": "DB-A"` | |
-| A1b | Make DB-B the registry default (Admin Console, test backend), then reload | DB-B is selected first, even though the report's `request.database` is DB-A | |
-| A1c | Make a database that is **not** in `databaseSelection.databases` the registry default, then reload | The first listed, available ID (DB-A) is selected | |
-| A2 | Open the dropdown | Exactly the report's IDs that the registry lists as enabled, labelled with registry names. No other registry database appears | |
+| A1b | Make DB-B the registry default (Admin Console, test backend), then reload | DB-B is selected first | |
+| A1c | Make another authorized database the registry default, then reload | That database is selected and appears with its backend display name | |
+| A2 | Open the dropdown | Every enabled row returned by `metadata.databases`, labelled with its backend name; no frontend-defined IDs | |
 | A3 | Choose DB-B | A new `select` with `"database": "DB-B"` and `pagination.page: 1`. The rows change to DB-B's data | |
 | A4 | Choose DB-A again within 5 minutes | **No** new request (served from DB-A's cache entry). DB-A's rows are shown | |
 | A5 | Open another report, then come back | The test report starts on DB-A again | |
@@ -89,7 +88,7 @@ See §4 for why this matters.
 | # | Scope setup (enforce mode) | Steps | Expected | Result |
 | --- | --- | --- | --- | --- |
 | F1 | The `frontend` scope grants `select` and the test table in DB-A and DB-B, **with** `listDatabases: true` | Reload, open the dropdown | The narrowed list with registry names (as A2) | |
-| F2 | As F1, but **without** `listDatabases` | Reload, open the dropdown | `metadata.databases` returns `403 AUTHORIZATION_DENIED`. "Database list unavailable" is shown, and **no data request** is sent. The dropdown shows "Choose a database" with DB-A and DB-B as raw IDs; choosing one loads the report | |
+| F2 | As F1, but **without** `listDatabases` | Reload, open the dropdown | `metadata.databases` returns `403 AUTHORIZATION_DENIED`. "Database list unavailable" is shown, no database IDs are offered, and **no data request** is sent | |
 | F3 | Grant DB-A only | Switch to DB-B | `403 AUTHORIZATION_DENIED` is shown in the grid; switching back to DB-A works | |
 
 ### G. Registry states (test backend; reload after each change)
@@ -98,7 +97,7 @@ See §4 for why this matters.
 | --- | --- | --- | --- |
 | G1 | Disable DB-B in the registry | DB-B is **not** offered. The dropdown is disabled with the tooltip "No other database is available" | |
 | G2 | DB-B enabled but **Disconnected** | DB-B is shown as "… (unavailable)" and cannot be chosen, so the dropdown is disabled | |
-| G3 | Add an unregistered ID (for example `zz-missing`) to `databaseSelection.databases` and rebuild | The unregistered ID is not offered | |
+| G3 | Remove a previously selected database from the backend registry, then reload | It is not offered or requested; the current authorized default/first available database is selected safely | |
 | G4 | Disable or Disconnect **DB-A** while it is the registry default | DB-B is selected (fallback). With DB-A disabled it is not offered; with DB-A disconnected it shows as "(unavailable)" | |
 | G5 | Make both DB-A and DB-B unusable (disabled or disconnected) | "No database available" is shown; **no data request** is sent; Refresh is disabled on dashboards | |
 

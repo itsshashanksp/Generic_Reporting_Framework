@@ -89,16 +89,16 @@ A dashboard can let users switch the database its widgets read from:
 
 ```json
 {
-  "databaseSelection": { "databases": ["abc", "abc2"] }
+  "databaseSelection": true
 }
 ```
 
 - **Inheritance rule:** a widget whose resolved request names **no** `database` follows the selection. A widget that names its own `database` (inline, or through its `reportId` or `widgetId` definition) **always keeps it**. The selection never overrides it.
-- The shape is the same as for reports: `databases` holds at least two unique logical IDs. The initial selection, the fallback, and the empty and listing-failure states follow the shared rule in [Feature behavior](FEATURES.md#database-selector). Until a database is resolved **no widget is mounted**, pinned widgets included, and Refresh is disabled. A `default` property is rejected. The dashboard is invalid unless at least one visible widget inherits: "Dashboard databaseSelection needs at least one visible widget whose request names no database; …".
-- **Opting in an existing dashboard:** remove the per-widget `database` from the widgets that should follow. The Item Dashboard does this (working tree): `databases: ["loyal-ibms", "loyal-ibms2"]`, with no widget database of its own, so it starts on the registry default. Bill still pins `loyal-ibms` on every widget. Sales, Purchases, and Receipts name none, so their widgets would inherit right away.
-- The **Database** dropdown sits beside **Refresh**. Its options come from the same registry narrowing as reports (see [Feature behavior](FEATURES.md#database-selector)).
+- `true` enables the selector. IDs and labels come only from the authorized backend listing. The initial selection, fallback, empty state, and fail-closed listing state follow [Feature behavior](FEATURES.md#database-selector). Until a database is resolved **no widget is mounted**, pinned widgets included, and Refresh is disabled. The dashboard is invalid unless at least one visible widget inherits: "Dashboard databaseSelection needs at least one visible widget whose request names no database; …".
+- **Opting in an existing dashboard:** remove the per-widget `database` from the widgets that should follow. The Item Dashboard does this and starts on the registry default. Bill still pins `loyal-ibms` on every widget. Sales, Purchases, and Receipts name none, so their widgets would inherit right away.
+- The **Database** dropdown sits beside **Refresh**. Its options are the enabled rows from `metadata.databases` (see [Feature behavior](FEATURES.md#database-selector)).
 - **Switching:** every inheriting widget reruns on the chosen database, keeping the applied filters. Table widgets return to page 1. Refresh, auto-refresh, table paging, sorting, and **All rows** export then use the chosen database. A running table export is cancelled when the database changes, so it never saves the previous database's rows. Late results from before a switch are ignored, and cache entries are per database.
-- The selection is resolved again when the dashboard is opened again. Shared filters with `dynamicOptions` keep their configured database.
+- The selection is resolved again when the dashboard is opened again. Shared `dynamicOptions` requests inherit it unless they explicitly pin their own database.
 
 Example: [`examples/dashboards/database-selector-dashboard.json`](../examples/dashboards/database-selector-dashboard.json). Covered by mocked tests (`src/pages/__tests__/DashboardDatabaseSelector.test.tsx`); not yet run against a live backend.
 

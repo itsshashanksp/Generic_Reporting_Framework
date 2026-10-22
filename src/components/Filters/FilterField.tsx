@@ -14,10 +14,12 @@ import BooleanFilter from "./Fields/BooleanFilter";
 
 interface Props {
     filter: FilterDefinition;
+    database?: string;
 }
 
 export default function FilterField({
     filter,
+    database,
 }: Props) {
 
         if (
@@ -69,6 +71,7 @@ export default function FilterField({
                     label={filter.label}
                     options={filter.options}
                     dynamicOptions={filter.dynamicOptions}
+                    database={database}
                     required={filter.required}
                 />
             );
@@ -81,6 +84,7 @@ export default function FilterField({
                    label={filter.label}
                    options={filter.options}
                    dynamicOptions={filter.dynamicOptions}
+                   database={database}
                    required={filter.required}
                />
            );

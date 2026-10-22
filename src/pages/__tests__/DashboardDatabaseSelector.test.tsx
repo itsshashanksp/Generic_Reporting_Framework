@@ -50,7 +50,7 @@ vi.mock("../../engine/DashboardEngine", async importOriginal => {
     const fixture = {
         id: "database-test",
         title: "Database test",
-        databaseSelection: { databases: ["abc", "abc2"] },
+        databaseSelection: true,
         filters: [{ field: "Category", label: "Category", type: "text" }],
         widgets: [
             {
@@ -132,13 +132,13 @@ describe("Dashboard database selector", () => {
 
     afterEach(() => vi.restoreAllMocks());
 
-    it("starts on the backend default and offers only the dashboard's registered databases", async () => {
+    it("starts on the backend default and offers every backend-listed database", async () => {
         executeRequestMock.mockReset().mockImplementation(backend({ registry: [...REGISTRY, { ...REGISTRY[0], id: "other", name: "Other", default: false }] }));
         await renderDashboard();
         await screen.findByText("abc-month");
 
         expect(select().value).toBe("abc");
-        await waitFor(() => expect([...select().options].map(option => option.textContent)).toEqual(["ABC", "ABC 2"]));
+        await waitFor(() => expect([...select().options].map(option => option.textContent)).toEqual(["ABC", "ABC 2", "Other"]));
         expect(lastFor("widgets/total-sales").database).toBe("abc");
         expect(lastFor("widgets/sales-month-wise").database).toBe("abc");
         expect(lastFor("widgets/item-stock-value-by-category").database).toBe("loyal-ibms");
@@ -230,6 +230,19 @@ describe("Dashboard database selector", () => {
         expect(screen.queryByText("abc2-month")).toBeNull();
     });
 
+    it("unmounts rows from the previous database as soon as the context changes", async () => {
+        executeRequestMock.mockReset().mockImplementation(backend({
+            override: request => request.database === "abc2" ? new Promise(() => undefined) : undefined,
+        }));
+        await renderDashboard();
+        await screen.findByText("abc-month");
+
+        fireEvent.change(select(), { target: { value: "abc2" } });
+        await waitFor(() => expect(lastFor("widgets/sales-month-wise").database).toBe("abc2"));
+
+        expect(screen.queryByText("abc-month")).toBeNull();
+    });
+
     it("stops a running table export when the database changes", async () => {
         let exportSignal: AbortSignal | undefined;
         executeRequestMock.mockReset().mockImplementation(async (request: Sent, options?: { signal?: AbortSignal }) => {
@@ -253,8 +266,8 @@ describe("Dashboard database selector", () => {
     });
 
     it.each([
-        ["the backend default is the other permitted database", REGISTRY.map(entry => ({ ...entry, default: entry.id === "abc2" })), "abc2"],
-        ["the backend default is not permitted", [...REGISTRY.map(entry => ({ ...entry, default: false })), { ...REGISTRY[0], id: "other", default: true }], "abc"],
+        ["the backend default is another authorized database", REGISTRY.map(entry => ({ ...entry, default: entry.id === "abc2" })), "abc2"],
+        ["the backend default is another authorized database", [...REGISTRY.map(entry => ({ ...entry, default: false })), { ...REGISTRY[0], id: "other", default: true }], "other"],
         ["the backend default is unavailable", [{ ...REGISTRY[0], available: false }, REGISTRY[1]], "abc2"],
     ])("selects by the registry when %s", async (_label, registry, expected) => {
         executeRequestMock.mockReset().mockImplementation(backend({ registry }));
@@ -275,28 +288,24 @@ describe("Dashboard database selector", () => {
         expect(select().disabled).toBe(true);
     });
 
-    it("mounts no widget and sends no data request when no permitted database is usable", async () => {
+    it("mounts no widget and sends no data request when no authorized database is usable", async () => {
         executeRequestMock.mockReset().mockImplementation(backend({ registry: [] }));
         await renderDashboard();
 
-        expect(await screen.findByText(/None of this dashboard's databases is registered, enabled and available\./)).toBeTruthy();
+        expect(await screen.findByText(/No authorized, enabled and available database was returned\./)).toBeTruthy();
         expect(sent().filter(request => request.action === "sql")).toEqual([]);
         expect((screen.getByRole("button", { name: "Refresh" }) as HTMLButtonElement).disabled).toBe(true);
     });
 
-    it("waits for an explicit choice when the listing fails, including for pinned widgets", async () => {
+    it("fails closed when discovery is denied, including for pinned widgets", async () => {
         executeRequestMock.mockReset().mockImplementation(async (request: Sent) => {
             if (request.action === "metadata.databases") throw new ApiClientError("Access denied.", 403, { code: "AUTHORIZATION_DENIED", details: [] });
             return backend()(request);
         });
         await renderDashboard();
 
-        expect(await screen.findByText(/The database list could not be loaded: Access denied\. Choose a database above to continue\./)).toBeTruthy();
+        expect(await screen.findByText(/The database list could not be loaded: Access denied\./)).toBeTruthy();
         expect(sent().filter(request => request.action === "sql")).toEqual([]);
-
-        await switchTo("abc2");
-        expect(lastFor("widgets/total-sales").database).toBe("abc2");
-        expect(lastFor("widgets/item-stock-value-by-category").database).toBe("loyal-ibms");
     });
 
     it("leaves dashboards without databaseSelection unchanged", async () => {

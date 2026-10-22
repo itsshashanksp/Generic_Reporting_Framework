@@ -11,6 +11,8 @@ interface ResponsiveFilterPanelProps {
     disabled?: boolean;
     applyLabel?: string;
     clearLabel?: string;
+    /** Undefined: no selector. Empty: selector unresolved. */
+    database?: string;
     onApply: () => boolean | void;
     onClear: () => void;
 }
@@ -22,6 +24,7 @@ export default function ResponsiveFilterPanel({
     disabled = false,
     applyLabel = "Search",
     clearLabel = "Clear filters",
+    database,
     onApply,
     onClear,
 }: ResponsiveFilterPanelProps) {
@@ -91,7 +94,7 @@ export default function ResponsiveFilterPanel({
                     </button>
                 </div>
 
-                <FilterRenderer filters={filters} />
+                <FilterRenderer filters={filters} database={database} />
                 {error && <p className="form-error" role="alert">{error}</p>}
 
                 <div className="responsive-filter-panel__actions">

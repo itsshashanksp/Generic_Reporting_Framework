@@ -141,7 +141,7 @@ function DashboardContent({
     // Same selection logic as reports: the backend registry decides the
     // default. Until a database is resolved no widget is mounted, so none
     // can silently query the backend default.
-    const databaseSelection = useDatabaseSelection(dashboard.id, dashboard.databaseSelection?.databases);
+    const databaseSelection = useDatabaseSelection(dashboard.id, dashboard.databaseSelection === true);
     const selectedDatabase = databaseSelection.database;
     const databaseBlocked = databaseSelection.status !== "off" && databaseSelection.status !== "ready";
 
@@ -241,6 +241,7 @@ function DashboardContent({
                 dashboard.filters.length > 0 && (
                     <ResponsiveFilterPanel
                         filters={dashboard.filters}
+                        database={dashboard.databaseSelection ? selectedDatabase : undefined}
                         className="dashboard-filters"
                         error={filterError}
                         onApply={handleSearch}
@@ -260,8 +261,8 @@ function DashboardContent({
                 ) : (
                     <div className="dashboard-empty" role="status">
                         {databaseSelection.status === "listing-failed"
-                            ? `The database list could not be loaded: ${databaseSelection.error} Choose a database above to continue.`
-                            : "None of this dashboard's databases is registered, enabled and available."}
+                            ? `The database list could not be loaded: ${databaseSelection.error}`
+                            : "No authorized, enabled and available database was returned."}
                         {" "}
                         <button type="button" className="app-button" onClick={databaseSelection.retry}>Try again</button>
                     </div>
@@ -315,6 +316,10 @@ function DashboardContent({
                                 : resolvedDefinition;
                             const widgetColumns = widgetDefinition?.columns
                                 ?? resolveDashboardWidgetColumns(widget, dashboard.filters ?? []);
+                            // Remount only when this widget's effective database
+                            // changes, clearing old rows while the new context
+                            // loads. Pinned widgets keep the same key.
+                            const widgetContextKey = `${widget.id}:${widgetRequest?.database ?? ""}`;
 
                             /*
                              * Keep widget width
@@ -380,7 +385,7 @@ function DashboardContent({
 
                             return (
                                 <div
-                                    key={widget.id}
+                                    key={widgetContextKey}
                                     className={`dashboard-widget${widget.type === "table" || widget.type === "report" ? " dashboard-widget--table" : ""}`}
                                     style={{
                                         /*

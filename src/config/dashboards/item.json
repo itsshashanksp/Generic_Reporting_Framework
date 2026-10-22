@@ -3,9 +3,7 @@
   "title": "Item Dashboard",
   "description": "Item reporting dashboard.",
 
-  "databaseSelection": {
-    "databases": ["loyal-ibms", "loyal-ibms2"]
-  },
+  "databaseSelection": true,
 
   "layout": {
     "columns": 12,

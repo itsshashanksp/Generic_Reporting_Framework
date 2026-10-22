@@ -4,16 +4,13 @@
   "description": "Displays all items.",
   "request": {
     "action": "select",
-    "database": "loyal-ibms",
     "source": {
       "table": "ItemMasterTable"
     },
     "fields": ["Item_Code", "Item_Desc", "Item_MRP"]
   },
 
-  "databaseSelection": {
-    "databases": ["loyal-ibms", "loyal-ibms2"]
-  },
+  "databaseSelection": true,
 
   "columns": [
     {

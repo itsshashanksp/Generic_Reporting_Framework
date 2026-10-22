@@ -4,7 +4,6 @@
   "description": "Displays all customers.",
   "request": {
     "action": "select",
-    "database": "loyal-ibms",
     "source": {
       "table": "CustomerTable"
     },
@@ -29,9 +28,7 @@
     "groupBy": ["Cust_Name"]
   },
 
-  "databaseSelection": {
-    "databases": ["loyal-ibms", "loyal-ibms2"]
-  },
+  "databaseSelection": true,
 
   "columns": [
     {

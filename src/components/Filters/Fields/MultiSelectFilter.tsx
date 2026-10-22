@@ -11,6 +11,7 @@ interface Props {
     options?: FilterOption[];
     dynamicOptions?: DynamicFilterOptions;
     required?: boolean;
+    database?: string;
 }
 
 export default function MultiSelectFilter({
@@ -19,6 +20,7 @@ export default function MultiSelectFilter({
     options = [],
     dynamicOptions,
     required = false,
+    database,
 }: Props) {
 
     const {
@@ -32,7 +34,7 @@ export default function MultiSelectFilter({
             : [];
     const selectId = useId();
     const [search, setSearch] = useState("");
-    const dynamic = useDynamicFilterOptions(dynamicOptions);
+    const dynamic = useDynamicFilterOptions(dynamicOptions, database);
     const availableOptions = dynamicOptions ? dynamic.options : options;
     const displayedOptions = useMemo(() => {
         const term = search.trim().toLocaleLowerCase();

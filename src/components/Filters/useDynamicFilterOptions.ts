@@ -11,12 +11,18 @@ import type { DynamicFilterOptions, FilterOption } from "../../types/filter";
 
 type ScalarOption = string | number | boolean;
 
-export function useDynamicFilterOptions(configuration?: DynamicFilterOptions) {
+export function useDynamicFilterOptions(configuration?: DynamicFilterOptions, database?: string) {
+    const request = useMemo(() => {
+        if (!configuration || database === "") return null;
+        return database !== undefined && configuration.request.database === undefined
+            ? { ...configuration.request, database }
+            : configuration.request;
+    }, [configuration, database]);
     const cacheKey = useMemo(
-        () => configuration
-            ? createRequestCacheKey("dynamic-filter-options", configuration.request)
+        () => request
+            ? createRequestCacheKey("dynamic-filter-options", request)
             : "",
-        [configuration]
+        [request]
     );
     const [state, setState] = useState<{
         key: string;
@@ -24,7 +30,7 @@ export function useDynamicFilterOptions(configuration?: DynamicFilterOptions) {
         loading: boolean;
         error: string;
     }>({ key: "", options: [], loading: false, error: "" });
-    const cachedResponse = configuration ? getCachedResponse(cacheKey) : null;
+    const cachedResponse = request ? getCachedResponse(cacheKey) : null;
     const cachedOptions = useMemo(
         () => cachedResponse && configuration
             ? mapOptions(cachedResponse.data, configuration)
@@ -33,13 +39,13 @@ export function useDynamicFilterOptions(configuration?: DynamicFilterOptions) {
     );
 
     useEffect(() => {
-        if (!configuration) return;
+        if (!configuration || !request) return;
         if (cachedResponse) return;
 
         const controller = new AbortController();
         void getOrCreateInFlightRequest(
             cacheKey,
-            signal => executeRequest(configuration.request, { signal }),
+            signal => executeRequest(request, { signal }),
             controller.signal
         ).then(response => {
             setCachedResponse(cacheKey, response);
@@ -50,7 +56,7 @@ export function useDynamicFilterOptions(configuration?: DynamicFilterOptions) {
         });
 
         return () => controller.abort();
-    }, [cacheKey, cachedResponse, configuration]);
+    }, [cacheKey, cachedResponse, configuration, request]);
 
     if (cachedOptions) {
         return { options: cachedOptions, loading: false, error: "" };
@@ -58,7 +64,7 @@ export function useDynamicFilterOptions(configuration?: DynamicFilterOptions) {
 
     return state.key === cacheKey
         ? state
-        : { options: [], loading: Boolean(configuration), error: "" };
+        : { options: [], loading: Boolean(configuration && request), error: "" };
 }
 
 function mapOptions(

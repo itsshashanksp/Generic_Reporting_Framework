@@ -222,30 +222,17 @@ describe("runtime database selection", () => {
     const json = { ...presentation, request: { action: "select", database: "abc", source: { table: "Customers" }, fields: ["CustomerName", "TotalAmount"] } };
     const sql = { ...presentation, queryDefinition: { format: "sql", resource: "reports/customer", database: "abc" } };
 
-    it.each([["JSON Query", json], ["SQL Resource", sql]])("accepts a %s report whose configured database is listed", (_mode, report) => {
-        expect(getReportValidationErrors({ ...report, databaseSelection: { databases: ["abc", "abc2"] } })).toEqual([]);
-        expect(loadDefinition({ ...report, databaseSelection: { databases: ["abc", "abc2"] } }).request.database).toBe("abc");
+    it.each([["JSON Query", json], ["SQL Resource", sql]])("accepts backend-owned discovery for a %s report", (_mode, report) => {
+        expect(getReportValidationErrors({ ...report, databaseSelection: true })).toEqual([]);
+        expect(loadDefinition({ ...report, databaseSelection: true }).request.database).toBe("abc");
     });
 
-    it.each([
-        [{ databases: ["abc"] }, "Report databaseSelection databases must list at least two logical database ids."],
-        [{ databases: ["abc", "abc"] }, "Report databaseSelection databases must be unique."],
-        [{ databases: ["abc2", "abc3"] }, 'Report databaseSelection databases must include the configured database "abc".'],
-        [{ databases: ["abc", "Abc 2"] }, 'Report databaseSelection database at index 1 must be a logical database id (lowercase letters, digits, "_" or "-", starting with a letter).'],
-        [{ databases: ["abc", "abc2"], labels: {} }, 'Report databaseSelection contains unknown property "labels".'],
-        [["abc", "abc2"], "Report databaseSelection must be an object."],
-    ])("rejects %j", (databaseSelection, message) => {
-        expect(getReportValidationErrors({ ...json, databaseSelection })).toEqual([message]);
+    it.each([false, {}, { databases: ["abc", "abc2"] }, ["abc", "abc2"]])("rejects frontend-owned database options: %j", databaseSelection => {
+        expect(getReportValidationErrors({ ...json, databaseSelection })).toEqual(["Report databaseSelection must be true."]);
     });
 
     it("does not need a configured database, because the backend registry decides the initial one", () => {
         const request = { ...json.request, database: undefined };
-        expect(getReportValidationErrors({ ...json, request, databaseSelection: { databases: ["abc", "abc2"] } })).toEqual([]);
-    });
-
-    it("rejects a default property, as for dashboards", () => {
-        expect(getReportValidationErrors({ ...json, databaseSelection: { default: "abc", databases: ["abc", "abc2"] } })).toEqual([
-            'Report databaseSelection contains unknown property "default".',
-        ]);
+        expect(getReportValidationErrors({ ...json, request, databaseSelection: true })).toEqual([]);
     });
 });

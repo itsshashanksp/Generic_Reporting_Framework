@@ -2,9 +2,7 @@
   "id": "sales-database-selector-example",
   "title": "Sales Dashboard (database selector example)",
   "description": "Widgets without their own database follow the Database dropdown; the stock chart stays on loyal-ibms.",
-  "databaseSelection": {
-    "databases": ["abc", "abc2"]
-  },
+  "databaseSelection": true,
   "widgets": [
     {
       "id": "total-sales",

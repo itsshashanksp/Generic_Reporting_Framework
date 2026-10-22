@@ -41,19 +41,18 @@ vi.mock("../../engine/ExportEngine", async importOriginal => ({
     exportRowsCSV: exportRowsCSVMock,
 }));
 
-// The checked-in Item report, configured for "abc" and switchable to "abc2",
-// loaded through the real validator and loader.
+// The checked-in Item report with backend-owned database discovery, loaded
+// through the real validator and loader.
 vi.mock("../../engine/ReportEngine/reportLoader", async importOriginal => {
     const actual = await importOriginal<typeof import("../../engine/ReportEngine/reportLoader")>();
     const switchable = loadDefinition({
         ...itemReport,
-        request: { ...itemReport.request, database: "abc" },
-        databaseSelection: { databases: ["abc", "abc2"] },
+        databaseSelection: true,
     });
     // The same report without database switching, whatever the checked-in file enables.
     const { databaseSelection: _ignored, ...plainItem } = itemReport as typeof itemReport & { databaseSelection?: unknown };
     void _ignored;
-    const plain = loadDefinition(plainItem);
+    const plain = loadDefinition({ ...plainItem, request: { ...plainItem.request, database: "loyal-ibms" } });
     return {
         ...actual,
         getReport: (id: string) => id === "item" ? (selectableReport.enabled ? switchable : plain) : actual.getReport(id),
@@ -104,7 +103,7 @@ const lastDataRequest = () => dataRequests().at(-1)!;
 const lastGrid = () => gridProps.mock.calls.at(-1)![0];
 
 async function renderReport(expectedRow: string | null = "abc item") {
-    render(
+    const view = render(
         <MemoryRouter initialEntries={["/reports/item"]}>
             <GridProvider>
                 <FilterProvider>
@@ -116,6 +115,7 @@ async function renderReport(expectedRow: string | null = "abc item") {
         </MemoryRouter>
     );
     if (expectedRow) await screen.findByText(expectedRow);
+    return view;
 }
 
 const databaseSelect = () => screen.getByLabelText("Database") as HTMLSelectElement;
@@ -136,13 +136,15 @@ describe("ReportViewer database selector", () => {
 
     afterEach(() => vi.restoreAllMocks());
 
-    it("starts on the backend default and offers only the report's databases that the registry lists", async () => {
+    it("starts on the backend default and maps every authorized ID to its display name", async () => {
         executeRequestMock.mockReset().mockImplementation(backend());
         await renderReport();
 
         expect(lastDataRequest().database).toBe("abc");
         expect(databaseSelect().value).toBe("abc");
-        await waitFor(() => expect(optionLabels()).toEqual([["abc", "ABC", false], ["abc2", "ABC 2", false]]));
+        await waitFor(() => expect(optionLabels()).toEqual([
+            ["abc", "ABC", false], ["abc2", "ABC 2", false], ["other", "Other", false],
+        ]));
         expect(executeRequestMock.mock.calls.filter(call => call[0].action === "metadata.databases")).toHaveLength(1);
     });
 
@@ -219,6 +221,18 @@ describe("ReportViewer database selector", () => {
         expect(screen.queryByText("abc2 item")).toBeNull();
     });
 
+    it("clears rows from the previous database as soon as the context changes", async () => {
+        executeRequestMock.mockReset().mockImplementation(backend({
+            override: request => request.database === "abc2" ? new Promise(() => undefined) : undefined,
+        }));
+        await renderReport();
+
+        fireEvent.change(databaseSelect(), { target: { value: "abc2" } });
+        await waitFor(() => expect(lastDataRequest().database).toBe("abc2"));
+
+        expect(screen.queryByText("abc item")).toBeNull();
+    });
+
     it("shows the backend error for a failing database and can switch back", async () => {
         executeRequestMock.mockReset().mockImplementation(backend({
             override: request => request.database === "abc2"
@@ -236,9 +250,8 @@ describe("ReportViewer database selector", () => {
     });
 
     it.each([
-        // The report configures request.database "abc"; the registry decides.
-        ["the backend default is permitted and available", REGISTRY.map(entry => ({ ...entry, default: entry.id === "abc2" })), "abc2"],
-        ["the backend default is not permitted", REGISTRY.map(entry => ({ ...entry, default: entry.id === "other" })), "abc"],
+        ["the backend default is authorized and available", REGISTRY.map(entry => ({ ...entry, default: entry.id === "abc2" })), "abc2"],
+        ["the backend default is another authorized database", REGISTRY.map(entry => ({ ...entry, default: entry.id === "other" })), "other"],
         ["the backend default is unavailable", [{ ...REGISTRY[0], available: false }, REGISTRY[1]], "abc2"],
         ["the backend default is disabled", [{ ...REGISTRY[0], enabled: false }, REGISTRY[1]], "abc2"],
         ["no entry is marked default", REGISTRY.map(entry => ({ ...entry, default: false })), "abc"],
@@ -254,7 +267,7 @@ describe("ReportViewer database selector", () => {
         // Nothing else can be chosen, so the dropdown is disabled.
         ["a listed database is unavailable", [REGISTRY[0], { ...REGISTRY[1], available: false }], [["abc", "ABC", false], ["abc2", "ABC 2 (unavailable)", true]], true],
         ["the other database is not registered", [REGISTRY[0]], [["abc", "ABC", false]], true],
-    ])("offers only registered, enabled databases when %s", async (_label, registry, expected, selectDisabled) => {
+    ])("offers only backend-listed, enabled databases when %s", async (_label, registry, expected, selectDisabled) => {
         executeRequestMock.mockReset().mockImplementation(backend({ registry }));
         await renderReport();
 
@@ -263,8 +276,10 @@ describe("ReportViewer database selector", () => {
         expect(lastDataRequest().database).toBe("abc");
     });
 
-    it("requests nothing when no permitted database is registered, enabled and available", async () => {
-        executeRequestMock.mockReset().mockImplementation(backend({ registry: [{ ...REGISTRY[0], available: false }, REGISTRY[2]] }));
+    it("requests nothing when no authorized database is enabled and available", async () => {
+        executeRequestMock.mockReset().mockImplementation(backend({ registry: [
+            { ...REGISTRY[0], available: false }, { ...REGISTRY[2], enabled: false },
+        ] }));
         await renderReport(null);
 
         expect(await screen.findByText("No database available")).toBeTruthy();
@@ -273,17 +288,41 @@ describe("ReportViewer database selector", () => {
         expect(dataRequests()).toEqual([]);
     });
 
-    it("requests nothing until the user chooses when the listing fails, then uses the choice", async () => {
+    it("fails closed with no configured fallback when database discovery is unauthorized", async () => {
         executeRequestMock.mockReset().mockImplementation(backend({ registry: new ApiClientError("Access denied.", 403, { code: "AUTHORIZATION_DENIED", details: [] }) }));
         await renderReport(null);
 
         expect(await screen.findByText("Database list unavailable")).toBeTruthy();
-        expect(screen.getByText("Access denied. Choose a database above to continue.")).toBeTruthy();
-        expect(optionLabels()).toEqual([["", "Choose a database", true], ["abc", "abc", false], ["abc2", "abc2", false]]);
+        expect(screen.getByText("Access denied.")).toBeTruthy();
+        expect(optionLabels()).toEqual([["", "Choose a database", true]]);
         expect(dataRequests()).toEqual([]);
+    });
 
-        await switchTo("abc2");
-        expect(dataRequests().map(request => request.database)).toEqual(["abc2"]);
+    it("fails closed when database metadata is malformed", async () => {
+        executeRequestMock.mockReset().mockImplementation(backend({ registry: [
+            { id: "abc", default: true, enabled: true, available: true },
+        ] }));
+        await renderReport(null);
+
+        expect(await screen.findByText("The database list response was invalid.")).toBeTruthy();
+        expect(optionLabels()).toEqual([["", "Choose a database", true]]);
+        expect(dataRequests()).toEqual([]);
+    });
+
+    it("does not retain database metadata after identity cache invalidation", async () => {
+        executeRequestMock.mockReset().mockImplementation(backend({ registry: [REGISTRY[0]] }));
+        const firstIdentity = await renderReport();
+        expect(optionLabels()).toEqual([["abc", "ABC", false]]);
+        firstIdentity.unmount();
+
+        // AuthContext invokes this on logout, login, session expiry, and
+        // identity changes. The next identity must discover its own list.
+        clearRequestCache();
+        executeRequestMock.mockReset().mockImplementation(backend({ registry: [{ ...REGISTRY[2], default: true }] }));
+        await renderReport("other item");
+
+        expect(optionLabels()).toEqual([["other", "Other", false]]);
+        expect(dataRequests().map(request => request.database)).toEqual(["other"]);
     });
 
     it("retries a failed listing and then resolves the backend default", async () => {
@@ -309,7 +348,7 @@ describe("ReportViewer database selector", () => {
         await renderReport();
         const before = dataRequests().length;
 
-        fireEvent.change(databaseSelect(), { target: { value: "other" } });
+        fireEvent.change(databaseSelect(), { target: { value: "missing" } });
 
         expect(dataRequests().length).toBe(before);
         expect(databaseSelect().value).toBe("abc");
