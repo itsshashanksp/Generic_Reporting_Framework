@@ -16,9 +16,9 @@ Commit hashes refer to this repository. Entries are grouped by type; within a gr
 
 ### Added
 
-- Added an opt-in example library with a complete retail reference application,
-  standalone report/dashboard/widget catalogs, and a machine-readable backend
-  SQL Resource contract validated in CI.
+- Added a compact, generic example library for reports, dashboards, reusable
+  widgets, navigation, and both query modes. Application-specific compatibility
+  data is isolated under test fixtures rather than presented as framework examples.
 
 - Runtime database selector for dashboards: `databaseSelection: true` adds a **Database** dropdown beside Refresh. Authorized IDs and labels come only from `metadata.databases`; frontend configuration no longer registers them. Widgets whose request names no database follow the selection, pinned widgets keep theirs, and refresh, filters, paging, sorting, and export follow the correct context.
 - Runtime database selector for reports: `databaseSelection: true` uses the same backend-owned discovery. Switching reruns the report with the same filters and sort; refresh, paging, sorting, and All-rows export follow it, with cache entries separated by database.

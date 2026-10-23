@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import billDashboard from "../../../../examples/complete/retail-reference/config/dashboards/bill.json";
+import billDashboard from "../../../../tests/fixtures/runtime-config/dashboards/bill.json";
 import { getDashboard, mapWidgetFilters, resolveDashboardWidgetRequest } from "..";
 import { validateDashboard } from "../../DashboardValidator";
 import type { FilterDefinition } from "../../../types/filter";

@@ -1,21 +1,15 @@
 {
-  "id": "item-database-selector-example",
-  "title": "Item Report (database selector example)",
-  "description": "Users can rerun this report on an authorized backend-listed database that contains ItemMasterTable.",
-  "request": {
-    "action": "select",
-    "source": { "table": "ItemMasterTable" },
-    "fields": ["Item_Code", "Item_Desc", "Item_MRP"]
-  },
+  "id": "orders-database-selector-example",
+  "title": "Orders (Database Selector)",
+  "description": "Runs the same illustrative DemoOrders query on an authorized database selected at runtime.",
+  "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": ["OrderId", "CustomerName", "Amount"] },
   "databaseSelection": true,
   "columns": [
-    { "field": "Item_Code", "header": "Item Code", "dataType": "number" },
-    { "field": "Item_Desc", "header": "Item Description" },
-    { "field": "Item_MRP", "header": "Item MRP", "dataType": "number" }
+    { "field": "OrderId", "header": "Order", "dataType": "number" },
+    { "field": "CustomerName", "header": "Customer" },
+    { "field": "Amount", "header": "Amount", "dataType": "number" }
   ],
-  "sort": [{ "field": "Item_Code", "direction": "ASC" }],
-  "filters": [
-    { "field": "Item_Desc", "label": "Item Description", "type": "text" }
-  ],
+  "sort": [{ "field": "OrderId", "direction": "ASC" }],
+  "filters": [{ "field": "CustomerName", "label": "Customer", "type": "text" }],
   "export": { "enabled": true, "formats": ["csv", "excel"], "exportAll": true }
 }

@@ -1,93 +1,14 @@
 {
-  "id": "bill-example-dashboard",
-  "title": "Bill Dashboard (example)",
-  "description": "Shared required date range, per-widget field mapping, table export, stat and chart widgets.",
+  "id": "orders-date-filter-dashboard",
+  "title": "Orders by Date",
+  "description": "Required shared date range with per-widget field mapping, table export, stat and chart widgets.",
   "layout": { "columns": 12, "tabletColumns": 6, "mobileColumns": 1 },
-  "autoRefresh": { "enabled": false, "interval": 30000 },
   "dateFilterBehavior": "required",
-  "filters": [
-    { "field": "Bill_Date", "label": "Bill Date", "type": "daterange", "operator": "between", "required": true }
-  ],
+  "filters": [{ "field": "OrderDate", "label": "Order Date", "type": "daterange", "operator": "between", "required": true }],
   "widgets": [
-    {
-      "id": "sales-month-wise",
-      "type": "table",
-      "title": "Total Sales Month Wise",
-      "width": 6,
-      "position": { "x": 0, "y": 1 },
-      "queryDefinition": {
-        "format": "sql",
-        "database": "loyal-ibms",
-        "resource": "widgets/bill-sales-month-wise"
-      },
-      "columns": [
-        { "field": "Month", "header": "Month" },
-        { "field": "Sales", "header": "Sales", "dataType": "number" }
-      ],
-      "sort": [{ "field": "Month", "direction": "DESC" }],
-      "pageSize": 10,
-      "pageSizeOptions": [10, 25, 50],
-      "export": {
-        "enabled": true,
-        "formats": ["csv", "excel"],
-        "exportCurrentView": true,
-        "exportAll": true,
-        "filename": "sales-month-wise"
-      }
-    },
-    {
-      "id": "purchases-month-wise",
-      "type": "table",
-      "title": "Purchases Month Wise",
-      "width": 6,
-      "position": { "x": 6, "y": 1 },
-      "filterFields": { "Bill_Date": "GIN_Date" },
-      "queryDefinition": {
-        "format": "sql",
-        "database": "loyal-ibms",
-        "resource": "widgets/bill-purchases-month-wise"
-      },
-      "columns": [
-        { "field": "Month", "header": "Month" },
-        { "field": "Purchases", "header": "Purchases", "dataType": "number" }
-      ],
-      "sort": [{ "field": "Month", "direction": "DESC" }],
-      "pageSize": 10
-    },
-    {
-      "id": "total-sales",
-      "type": "stat",
-      "title": "Total Sales",
-      "width": 4,
-      "height": 175,
-      "position": { "x": 0, "y": 2 },
-      "queryDefinition": {
-        "format": "sql",
-        "database": "loyal-ibms",
-        "resource": "widgets/bill-total-sales"
-      },
-      "valueField": "TotalSales",
-      "format": "currency"
-    },
-    {
-      "id": "top-10-categories-chart",
-      "type": "chart",
-      "title": "Top 10 Item Category Sales",
-      "width": 8,
-      "height": 350,
-      "position": { "x": 4, "y": 2 },
-      "queryDefinition": {
-        "format": "sql",
-        "database": "loyal-ibms",
-        "resource": "widgets/bill-top-10-categories"
-      },
-      "chartType": "bar",
-      "xField": "Category",
-      "yField": "Sales",
-      "showTooltip": true,
-      "showGrid": true,
-      "showLegend": false,
-      "showLabels": false
-    }
+    { "id": "orders-table", "type": "table", "title": "Orders", "width": 6, "position": { "x": 0, "y": 1 }, "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": ["OrderId", "OrderDate", "Amount"] }, "columns": [{ "field": "OrderId", "header": "Order" }, { "field": "OrderDate", "header": "Date", "dataType": "date" }, { "field": "Amount", "header": "Amount", "dataType": "number" }], "sort": [{ "field": "OrderDate", "direction": "DESC" }], "pageSize": 10, "export": { "enabled": true, "formats": ["csv", "excel"], "exportAll": true } },
+    { "id": "shipments-table", "type": "table", "title": "Shipments", "width": 6, "position": { "x": 6, "y": 1 }, "filterFields": { "OrderDate": "ShippedDate" }, "request": { "action": "select", "source": { "table": "DemoShipments" }, "fields": ["ShipmentId", "ShippedDate"] }, "columns": [{ "field": "ShipmentId", "header": "Shipment" }, { "field": "ShippedDate", "header": "Shipped", "dataType": "date" }], "pageSize": 10 },
+    { "id": "order-total", "type": "stat", "title": "Order Total", "width": 4, "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": [{ "function": "SUM", "field": "Amount", "alias": "TotalAmount" }] }, "valueField": "TotalAmount", "format": "currency" },
+    { "id": "orders-by-status", "type": "chart", "title": "Orders by Status", "width": 8, "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": ["Status", { "function": "COUNT", "field": "*", "alias": "OrderCount" }], "groupBy": ["Status"] }, "chartType": "bar", "xField": "Status", "yField": "OrderCount", "showTooltip": true, "showGrid": true }
   ]
 }

@@ -16,12 +16,12 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     resolve: {
       alias: {
-        // Tests exercise the real import.meta.glob loaders against a tracked,
-        // complete fixture. Runtime builds still discover only local config.
+        // Tests exercise the real import.meta.glob loaders against tracked,
+        // test-only fixtures. Runtime builds still discover only local config.
         '@runtime-config': resolve(
           process.cwd(),
           mode === 'test'
-            ? 'examples/complete/retail-reference/config'
+            ? 'tests/fixtures/runtime-config'
             : 'src/config',
         ),
       },

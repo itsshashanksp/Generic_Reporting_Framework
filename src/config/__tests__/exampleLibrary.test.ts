@@ -1,33 +1,18 @@
-/// <reference types="node" />
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { validateDashboard } from "../../engine/DashboardValidator";
 import { getReportValidationErrors } from "../../engine/ReportDefinitionEngine/validator";
 import { loadNavigation } from "../../engine/NavigationEngine";
 import { buildWidgetRegistry } from "../../engine/WidgetEngine/widgetLoader";
-import contracts from "../../../examples/sql-resource-contracts.json";
 
-const reports = import.meta.glob("../../../examples/{reports,complete/**/reports}/*.json", { eager: true, import: "default" }) as Record<string, unknown>;
-const dashboards = import.meta.glob("../../../examples/{dashboards,complete/**/dashboards}/*.json", { eager: true, import: "default" }) as Record<string, unknown>;
-const widgets = import.meta.glob("../../../examples/{widgets,complete/**/widgets}/*.json", { eager: true, import: "default" }) as Record<string, unknown>;
-const menus = import.meta.glob("../../../examples/{menu,complete/**/menu}.json", { eager: true, import: "default" }) as Record<string, unknown>;
+const reports = import.meta.glob("../../../examples/reports/*.json", { eager: true, import: "default" }) as Record<string, unknown>;
+const dashboards = import.meta.glob("../../../examples/dashboards/*.json", { eager: true, import: "default" }) as Record<string, unknown>;
+const widgets = import.meta.glob("../../../examples/widgets/*.json", { eager: true, import: "default" }) as Record<string, unknown>;
+const menus = import.meta.glob("../../../examples/menu.json", { eager: true, import: "default" }) as Record<string, unknown>;
 
 const reportIds = Object.values(reports).flatMap(value => typeof value === "object" && value && "id" in value ? [String(value.id)] : []);
 const widgetIds = Object.keys(buildWidgetRegistry(widgets));
 const dashboardIds = Object.values(dashboards).flatMap(value => typeof value === "object" && value && "id" in value ? [String(value.id)] : []);
-
-function collectSqlResources(value: unknown, resources = new Set<string>()): Set<string> {
-    if (Array.isArray(value)) {
-        value.forEach(entry => collectSqlResources(entry, resources));
-    } else if (typeof value === "object" && value !== null) {
-        const record = value as Record<string, unknown>;
-        if (typeof record.resource === "string" && record.format === "sql") resources.add(record.resource);
-        Object.values(record).forEach(entry => collectSqlResources(entry, resources));
-    }
-    return resources;
-}
 
 describe("version-controlled example library", () => {
     it("validates every deployable report, dashboard, reusable widget and menu", () => {
@@ -41,26 +26,9 @@ describe("version-controlled example library", () => {
         expect(widgetIds.length).toBeGreaterThan(0);
     });
 
-    it("maps every frontend SQL Resource to a backend example outside the live query root", () => {
-        const backendRoot = resolve(process.cwd(), "../../Backend");
-        const referencedResources = collectSqlResources([reports, dashboards, widgets]);
-        expect(Object.keys(contracts.resources).sort()).toEqual([...referencedResources].sort());
-        for (const [resource, contract] of Object.entries(contracts.resources)) {
-            expect(resource).toMatch(/^[A-Za-z0-9][A-Za-z0-9_-]*(?:\/[A-Za-z0-9][A-Za-z0-9_-]*)*$/);
-            const path = resolve(backendRoot, contract.backendExample);
-            expect(contract.backendExample).toBe(`examples/sql-resources/${resource}.sql`);
-            expect(contract.outputFields.length).toBeGreaterThan(0);
-            expect(contract.frontendExamples.length).toBeGreaterThan(0);
-            // Frontend CI checks out only this repository. When a sibling
-            // backend checkout is available, additionally validate its SQL.
-            if (!existsSync(backendRoot)) continue;
-            expect(existsSync(path), `${resource}: ${path}`).toBe(true);
-            const sql = readFileSync(path, "utf8");
-            expect(sql).toMatch(/\b(?:SELECT|WITH)\b/i);
-            expect(path).not.toContain(`${resolve(backendRoot, "queries")}/`);
-            for (const field of contract.outputFields) {
-                expect(sql.toLowerCase(), `${resource} output ${field}`).toContain(field.toLowerCase());
-            }
-        }
+    it("keeps SQL Resource references as logical generic IDs", () => {
+        const serialized = JSON.stringify([reports, dashboards, widgets]);
+        expect(serialized).not.toMatch(/loyal-ibms|ItemMasterTable|BillDetTable|PurMastTable/);
+        expect(serialized).toContain("catalog/customer-summary");
     });
 });

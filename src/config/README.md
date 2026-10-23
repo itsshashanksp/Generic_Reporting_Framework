@@ -14,14 +14,13 @@ deployment repository.
 | `version.ts` | Version label shown in the UI |
 | `frontendCapabilities.ts` | Which roles User Management can assign |
 
-Unknown properties are rejected, so typos fail during loading. Every report and data widget uses exactly one data source: a JSON Query `request` or a backend SQL Resource `queryDefinition` (a logical ID such as `widgets/bill-total-sales`, never a file path or SQL). SQL files live only in the backend.
+Unknown properties are rejected, so typos fail during loading. Every report and data widget uses exactly one data source: a JSON Query `request` or a backend SQL Resource `queryDefinition` (a logical ID such as `catalog/customer-summary`, never a file path or SQL). SQL files live only in the backend.
 
 All JSON paths may be empty and `menu.json` may be absent; the framework then
 builds and displays an empty application home. Examples are never loaded
-automatically. To activate the complete retail reference, copy the contents of
-`examples/complete/retail-reference/config/` here and install its matching
-backend SQL resources. A configuration change reaches users only after a rebuild
-and redeploy.
+automatically. Copy only the generic definitions needed from `examples/`, adapt
+their IDs and illustrative schema, and install matching backend SQL Resources
+explicitly. A change reaches users only after a rebuild and redeploy.
 
 The full schema is in [`docs/CONFIGURATION.md`](../../docs/CONFIGURATION.md), the
 installation workflow is in [`docs/EXAMPLES.md`](../../docs/EXAMPLES.md), and

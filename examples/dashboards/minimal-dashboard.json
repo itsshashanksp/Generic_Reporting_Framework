@@ -1,17 +1,9 @@
 {
   "id": "minimal-example-dashboard",
-  "title": "Minimal Dashboard (example)",
-  "widgets": [
-    {
-      "id": "total-sales",
-      "type": "stat",
-      "title": "Total Sales",
-      "queryDefinition": {
-        "format": "sql",
-        "resource": "widgets/total-sales"
-      },
-      "valueField": "TotalSales",
-      "format": "currency"
-    }
-  ]
+  "title": "Minimal Dashboard",
+  "widgets": [{
+    "id": "order-count", "type": "stat", "title": "Orders",
+    "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": [{ "function": "COUNT", "field": "*", "alias": "TotalOrders" }] },
+    "valueField": "TotalOrders", "format": "number"
+  }]
 }

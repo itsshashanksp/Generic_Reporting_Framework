@@ -1,41 +1,11 @@
 {
-  "id": "sales-database-selector-example",
-  "title": "Sales Dashboard (database selector example)",
-  "description": "Widgets without their own database follow the Database dropdown; the stock chart stays on loyal-ibms.",
+  "id": "orders-database-selector-dashboard",
+  "title": "Orders by Database",
+  "description": "Widgets without an explicit database follow the authorized runtime selection; one widget demonstrates a pinned logical database.",
   "databaseSelection": true,
   "widgets": [
-    {
-      "id": "total-sales",
-      "type": "stat",
-      "title": "Total Sales",
-      "width": 4,
-      "queryDefinition": { "format": "sql", "resource": "widgets/total-sales" },
-      "valueField": "TotalSales",
-      "format": "currency"
-    },
-    {
-      "id": "sales-month-wise",
-      "type": "table",
-      "title": "Sales Month Wise",
-      "width": 8,
-      "queryDefinition": { "format": "sql", "resource": "widgets/sales-month-wise" },
-      "columns": [
-        { "field": "Month", "header": "Month" },
-        { "field": "Sales", "header": "Sales", "dataType": "number" }
-      ],
-      "sort": [{ "field": "Month", "direction": "DESC" }],
-      "export": { "enabled": true, "formats": ["csv", "excel"], "exportAll": true }
-    },
-    {
-      "id": "stock-value",
-      "type": "chart",
-      "title": "Stock Value by Category (always loyal-ibms)",
-      "width": 12,
-      "height": 350,
-      "queryDefinition": { "format": "sql", "database": "loyal-ibms", "resource": "widgets/item-stock-value-by-category" },
-      "chartType": "pie",
-      "xField": "Category",
-      "yField": "StockValue"
-    }
+    { "id": "order-count", "type": "stat", "title": "Orders", "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": [{ "function": "COUNT", "field": "*", "alias": "TotalOrders" }] }, "valueField": "TotalOrders", "format": "number", "width": 4 },
+    { "id": "order-total", "type": "stat", "title": "Order Total", "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": [{ "function": "SUM", "field": "Amount", "alias": "TotalAmount" }] }, "valueField": "TotalAmount", "format": "currency", "width": 4 },
+    { "id": "archive-count", "type": "stat", "title": "Archive Orders", "request": { "action": "select", "database": "archive", "source": { "table": "DemoOrders" }, "fields": [{ "function": "COUNT", "field": "*", "alias": "TotalOrders" }] }, "valueField": "TotalOrders", "format": "number", "width": 4 }
   ]
 }

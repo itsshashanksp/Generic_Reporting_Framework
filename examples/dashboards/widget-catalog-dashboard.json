@@ -1,20 +1,18 @@
 {
-  "id": "demo-widget-catalog",
+  "id": "widget-catalog-dashboard",
   "title": "Widget Catalog",
-  "description": "Standalone widget, layout, visibility, reference, chart and formatting examples.",
   "layout": { "columns": 12, "tabletColumns": 6, "mobileColumns": 1 },
   "autoRefresh": { "enabled": true, "interval": 60000 },
   "filters": [{ "field": "OrderDate", "label": "Order Date", "type": "daterange", "operator": "between" }],
   "dateFilterBehavior": "optional",
-  "databaseSelection": true,
   "widgets": [
-    { "id": "report-reference", "type": "report", "title": "Orders", "reportId": "demo-filter-catalog", "width": 11, "height": 420, "position": { "x": 1, "y": 1 } },
-    { "id": "reusable-table", "type": "table", "title": "Reusable Stock Table", "widgetId": "item-stock-value-by-category", "width": 6, "pageSize": 10, "pageSizeOptions": [10, 25], "export": { "enabled": true, "formats": ["csv", "excel"], "exportCurrentView": true, "exportAll": true } },
-    { "id": "total-number", "type": "stat", "title": "Orders", "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": [{ "function": "COUNT", "field": "*", "alias": "Total" }] }, "valueField": "Total", "format": "number", "width": 2 },
-    { "id": "total-currency", "type": "stat", "title": "Revenue", "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": [{ "function": "SUM", "field": "Amount", "alias": "Total" }] }, "valueField": "Total", "format": "currency", "width": 2 },
-    { "id": "average-decimal", "type": "stat", "title": "Average", "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": [{ "function": "AVG", "field": "Amount", "alias": "Average" }] }, "valueField": "Average", "format": "decimal", "width": 2, "visible": true },
-    { "id": "bar-chart", "type": "chart", "title": "Bar", "queryDefinition": { "format": "sql", "resource": "widgets/sales-month-wise" }, "chartType": "bar", "xField": "Month", "yField": "Sales", "showLegend": false, "showTooltip": true, "showGrid": true, "showLabels": false, "width": 4 },
-    { "id": "line-chart", "type": "chart", "title": "Line", "queryDefinition": { "format": "sql", "resource": "widgets/monthly-collection-trend" }, "chartType": "line", "xField": "Month", "yField": "Total_Collection", "showLegend": true, "showTooltip": true, "showGrid": true, "showLabels": true, "width": 4 },
-    { "id": "pie-chart", "type": "chart", "title": "Pie", "queryDefinition": { "format": "sql", "database": "loyal-ibms", "resource": "widgets/item-stock-value-by-category" }, "chartType": "pie", "xField": "Category", "yField": "StockValue", "showLegend": true, "showTooltip": true, "showGrid": false, "showLabels": true, "width": 4 }
+    { "id": "report-reference", "type": "report", "title": "Orders", "reportId": "orders-json-example", "width": 12, "height": 420 },
+    { "id": "reusable-table", "type": "table", "title": "Customer Summary", "widgetId": "customer-summary-widget", "width": 6, "pageSize": 10, "export": { "enabled": true, "formats": ["csv", "excel"], "exportAll": true } },
+    { "id": "number-stat", "type": "stat", "title": "Orders", "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": [{ "function": "COUNT", "field": "*", "alias": "Value" }] }, "valueField": "Value", "format": "number", "width": 2 },
+    { "id": "currency-stat", "type": "stat", "title": "Total", "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": [{ "function": "SUM", "field": "Amount", "alias": "Value" }] }, "valueField": "Value", "format": "currency", "width": 2 },
+    { "id": "decimal-stat", "type": "stat", "title": "Average", "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": [{ "function": "AVG", "field": "Amount", "alias": "Value" }] }, "valueField": "Value", "format": "decimal", "width": 2 },
+    { "id": "bar-chart", "type": "chart", "title": "Bar", "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": ["Status", { "function": "COUNT", "field": "*", "alias": "Value" }], "groupBy": ["Status"] }, "chartType": "bar", "xField": "Status", "yField": "Value", "showLegend": false, "showTooltip": true, "showGrid": true, "showLabels": false, "width": 4 },
+    { "id": "line-chart", "type": "chart", "title": "Line", "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": ["OrderDate", { "function": "SUM", "field": "Amount", "alias": "Value" }], "groupBy": ["OrderDate"] }, "chartType": "line", "xField": "OrderDate", "yField": "Value", "showLegend": true, "showTooltip": true, "showGrid": true, "showLabels": true, "width": 4 },
+    { "id": "pie-chart", "type": "chart", "title": "Pie", "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": ["Status", { "function": "COUNT", "field": "*", "alias": "Value" }], "groupBy": ["Status"] }, "chartType": "pie", "xField": "Status", "yField": "Value", "showLegend": true, "showTooltip": true, "showGrid": false, "showLabels": true, "width": 4 }
   ]
 }

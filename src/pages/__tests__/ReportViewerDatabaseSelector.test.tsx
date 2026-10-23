@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
-import itemReport from "../../../examples/complete/retail-reference/config/reports/item.json";
+import itemReport from "../../../tests/fixtures/runtime-config/reports/item.json";
 import { ApiClientError } from "../../api/client";
 import { FilterProvider } from "../../engine/FilterContext";
 import { GridProvider } from "../../engine/GridContext";

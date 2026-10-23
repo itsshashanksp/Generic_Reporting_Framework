@@ -1,20 +1,11 @@
 [
-  {
-    "id": "dashboards",
-    "title": "Dashboards",
-    "icon": "dashboard",
-    "children": [
-      { "id": "item_dashboard", "title": "Item Dashboard", "icon": "dashboard", "dashboardId": "item-dashboard" },
-      { "id": "bill_dashboard", "title": "Bill Dashboard", "icon": "dashboard", "dashboardId": "bill-dashboard" }
-    ]
-  },
-  {
-    "id": "reports",
-    "title": "Reports",
-    "icon": "reports",
-    "children": [
-      { "id": "item_report", "title": "Item Report", "icon": "report", "reportId": "item" }
-    ]
-  },
+  { "id": "dashboards", "title": "Dashboards", "icon": "dashboard", "children": [
+    { "id": "overview", "title": "Overview", "icon": "dashboard", "dashboardId": "minimal-example-dashboard" },
+    { "id": "widgets", "title": "Widget Catalog", "icon": "dashboard", "dashboardId": "widget-catalog-dashboard" }
+  ] },
+  { "id": "reports", "title": "Reports", "icon": "reports", "children": [
+    { "id": "orders", "title": "Orders", "icon": "report", "reportId": "orders-json-example" },
+    { "id": "customers", "title": "Customer Summary", "icon": "report", "reportId": "customer-summary-example" }
+  ] },
   { "id": "settings", "title": "Settings", "icon": "settings", "route": "/settings" }
 ]

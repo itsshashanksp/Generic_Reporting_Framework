@@ -1,52 +1,25 @@
 {
-  "id": "item-example",
-  "title": "Item Report (example)",
-  "description": "JSON Query mode report with filters, a dynamic select filter, paging and exports.",
-  "request": {
-    "action": "select",
-    "database": "loyal-ibms",
-    "source": { "table": "ItemMasterTable" },
-    "fields": ["Item_Code", "Item_Desc", "Item_MRP"]
-  },
+  "id": "orders-json-example",
+  "title": "Orders (JSON Query)",
+  "description": "JSON Query report with dynamic options, paging and exports over an illustrative schema.",
+  "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": ["OrderId", "CustomerName", "Amount", "Status", "OrderDate"] },
   "columns": [
-    { "field": "Item_Code", "header": "Item Code", "dataType": "number", "width": 140 },
-    { "field": "Item_Desc", "header": "Item Description", "width": 320 },
-    { "field": "Item_MRP", "header": "Item MRP", "dataType": "number" }
+    { "field": "OrderId", "header": "Order", "dataType": "number", "width": 120 },
+    { "field": "CustomerName", "header": "Customer", "width": 260 },
+    { "field": "Amount", "header": "Amount", "dataType": "number" },
+    { "field": "Status", "header": "Status" },
+    { "field": "OrderDate", "header": "Order Date", "dataType": "date" }
   ],
-  "sort": [{ "field": "Item_Code", "direction": "ASC" }],
+  "sort": [{ "field": "OrderDate", "direction": "DESC" }],
   "filters": [
-    { "field": "Item_Desc", "label": "Item Description", "type": "text", "operator": "contains", "placeholder": "Part of a description" },
-    { "field": "Item_MRP", "label": "MRP", "type": "number", "operator": "between" },
-    {
-      "field": "UserName",
-      "label": "User Name",
-      "type": "select",
-      "dynamicOptions": {
-        "request": {
-          "action": "select",
-          "source": { "table": "ItemMasterTable" },
-          "fields": ["UserName", { "function": "COUNT", "field": "*", "alias": "Frequency" }],
-          "groupBy": ["UserName"],
-          "sort": [{ "field": "Frequency", "direction": "DESC" }],
-          "limit": 1000
-        },
-        "valueField": "UserName",
-        "countField": "Frequency",
-        "searchable": true,
-        "searchPlaceholder": "Search users"
-      }
-    }
+    { "field": "CustomerName", "label": "Customer", "type": "text", "operator": "contains" },
+    { "field": "Amount", "label": "Amount", "type": "number", "operator": "between" },
+    { "field": "Status", "label": "Status", "type": "select", "dynamicOptions": {
+      "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": ["Status", { "function": "COUNT", "field": "*", "alias": "Frequency" }], "groupBy": ["Status"], "sort": [{ "field": "Frequency", "direction": "DESC" }], "limit": 100 },
+      "valueField": "Status", "countField": "Frequency", "searchable": true
+    } }
   ],
-  "grid": {
-    "pagination": { "enabled": true, "pageSize": 10, "pageSizeOptions": [10, 25, 50, 100] },
-    "rowSelection": "single"
-  },
+  "grid": { "pagination": { "enabled": true, "pageSize": 25, "pageSizeOptions": [10, 25, 50] }, "rowSelection": "single" },
   "toolbar": { "export": true, "refresh": true, "saveReport": true },
-  "export": {
-    "enabled": true,
-    "formats": ["csv", "excel"],
-    "filename": "items",
-    "exportCurrentView": true,
-    "exportAll": true
-  }
+  "export": { "enabled": true, "formats": ["csv", "excel"], "filename": "orders", "exportCurrentView": true, "exportAll": true }
 }
