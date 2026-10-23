@@ -3,7 +3,7 @@ import { getReportValidationErrors } from "../ReportDefinitionEngine/validator";
 import { loadDefinition } from "../ReportDefinitionEngine/loader";
 
 const reportFiles = import.meta.glob(
-    "../../config/reports/*.json",
+    "@runtime-config/reports/*.json",
     {
         eager: true,
         import: "default",

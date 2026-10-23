@@ -40,7 +40,7 @@ export type DashboardLoadResult =
       };
 
 const dashboardModules = import.meta.glob(
-    "../../config/dashboards/*.json",
+    "@runtime-config/dashboards/*.json",
     { eager: true, import: "default" }
 ) as Record<string, unknown>;
 

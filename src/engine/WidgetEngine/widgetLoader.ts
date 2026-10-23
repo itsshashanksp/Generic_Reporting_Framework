@@ -3,7 +3,7 @@ import type { WidgetDefinitionConfiguration } from "../../types/widget";
 import { loadDefinition } from "../ReportDefinitionEngine";
 
 const widgetModules = import.meta.glob(
-    "../../config/widgets/*.json",
+    "@runtime-config/widgets/*.json",
     { eager: true, import: "default" }
 ) as Record<string, WidgetDefinitionConfiguration>;
 

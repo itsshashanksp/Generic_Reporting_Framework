@@ -2,7 +2,7 @@ import type { NavigationIcon, NavigationItem } from "../../types/navigation";
 
 const icons: NavigationIcon[] = ["dashboard", "reports", "report", "settings", "user"];
 const itemKeys = ["id", "title", "icon", "visible", "route", "reportId", "dashboardId", "children"];
-const menuModules = import.meta.glob("../../config/menu.json", { eager: true, import: "default" }) as Record<string, unknown>;
+const menuModules = import.meta.glob("@runtime-config/menu.json", { eager: true, import: "default" }) as Record<string, unknown>;
 
 export interface NavigationLoadOptions {
     reportIds?: Iterable<string>;

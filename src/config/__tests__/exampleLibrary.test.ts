@@ -18,6 +18,17 @@ const reportIds = Object.values(reports).flatMap(value => typeof value === "obje
 const widgetIds = Object.keys(buildWidgetRegistry(widgets));
 const dashboardIds = Object.values(dashboards).flatMap(value => typeof value === "object" && value && "id" in value ? [String(value.id)] : []);
 
+function collectSqlResources(value: unknown, resources = new Set<string>()): Set<string> {
+    if (Array.isArray(value)) {
+        value.forEach(entry => collectSqlResources(entry, resources));
+    } else if (typeof value === "object" && value !== null) {
+        const record = value as Record<string, unknown>;
+        if (typeof record.resource === "string" && record.format === "sql") resources.add(record.resource);
+        Object.values(record).forEach(entry => collectSqlResources(entry, resources));
+    }
+    return resources;
+}
+
 describe("version-controlled example library", () => {
     it("validates every deployable report, dashboard, reusable widget and menu", () => {
         for (const [file, report] of Object.entries(reports)) expect(getReportValidationErrors(report), file).toEqual([]);
@@ -32,9 +43,17 @@ describe("version-controlled example library", () => {
 
     it("maps every frontend SQL Resource to a backend example outside the live query root", () => {
         const backendRoot = resolve(process.cwd(), "../../Backend");
+        const referencedResources = collectSqlResources([reports, dashboards, widgets]);
+        expect(Object.keys(contracts.resources).sort()).toEqual([...referencedResources].sort());
         for (const [resource, contract] of Object.entries(contracts.resources)) {
             expect(resource).toMatch(/^[A-Za-z0-9][A-Za-z0-9_-]*(?:\/[A-Za-z0-9][A-Za-z0-9_-]*)*$/);
             const path = resolve(backendRoot, contract.backendExample);
+            expect(contract.backendExample).toBe(`examples/sql-resources/${resource}.sql`);
+            expect(contract.outputFields.length).toBeGreaterThan(0);
+            expect(contract.frontendExamples.length).toBeGreaterThan(0);
+            // Frontend CI checks out only this repository. When a sibling
+            // backend checkout is available, additionally validate its SQL.
+            if (!existsSync(backendRoot)) continue;
             expect(existsSync(path), `${resource}: ${path}`).toBe(true);
             const sql = readFileSync(path, "utf8");
             expect(sql).toMatch(/\b(?:SELECT|WITH)\b/i);

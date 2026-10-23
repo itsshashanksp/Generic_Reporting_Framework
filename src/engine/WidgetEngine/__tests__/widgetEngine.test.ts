@@ -24,8 +24,12 @@ describe("WidgetEngine", () => {
         },
     });
 
-    it("does not require standalone definitions when production widgets are inline", () => {
-        expect(getWidgetDefinitionIds()).toEqual([]);
+    it("supports an empty application widget registry", () => {
+        expect(buildWidgetRegistry({})).toEqual({});
+    });
+
+    it("discovers the tracked reusable widget through the test runtime loader", () => {
+        expect(getWidgetDefinitionIds()).toContain("retail-item-stock-value-by-category");
     });
 
     it("loads reusable backend SQL resource definitions without parsing SQL", () => {

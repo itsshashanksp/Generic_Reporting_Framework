@@ -1,6 +1,7 @@
 import { loadEnv } from 'vite'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import { resolve } from 'node:path'
 
 import { getProductionApiUrlError } from './tooling/productionApiUrl.ts'
 
@@ -13,6 +14,18 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    resolve: {
+      alias: {
+        // Tests exercise the real import.meta.glob loaders against a tracked,
+        // complete fixture. Runtime builds still discover only local config.
+        '@runtime-config': resolve(
+          process.cwd(),
+          mode === 'test'
+            ? 'examples/complete/retail-reference/config'
+            : 'src/config',
+        ),
+      },
+    },
     build: {
       sourcemap: false,
     },
