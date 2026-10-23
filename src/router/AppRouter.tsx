@@ -2,7 +2,6 @@ import { BrowserRouter, Navigate, Outlet, Routes, Route } from "react-router-dom
 
 import Layout from "../components/Layout/Layout";
 
-import Dashboard from "../pages/Dashboard";
 import ReportViewer from "../pages/ReportViewer";
 import DashboardViewer from "../pages/DashboardViewer";
 import Login from "../pages/Login";
@@ -10,14 +9,13 @@ import UserManagement from "../pages/UserManagement";
 import Settings from "../pages/Settings";
 import ErrorState from "../components/Common/Error";
 import Loading from "../components/Common/Loading";
-import menu from "../config/menu.json";
 import { getDashboardIds } from "../engine/DashboardEngine";
-import { getFirstDashboardRoute, loadNavigation } from "../engine/NavigationEngine";
+import { getFirstDashboardRoute, loadConfiguredNavigation } from "../engine/NavigationEngine";
 import { getReportIds } from "../engine/ReportEngine/reportLoader";
 import { useSetup } from "../setup";
 import { useAuth } from "../auth";
 
-const homeRoute = getFirstDashboardRoute(loadNavigation(menu, {
+const homeRoute = getFirstDashboardRoute(loadConfiguredNavigation({
     reportIds: getReportIds(),
     dashboardIds: getDashboardIds(),
 }));
@@ -65,7 +63,7 @@ export function ApplicationRoutes() {
                         path="/"
                         element={homeRoute
                             ? <Navigate to={homeRoute} replace />
-                            : <Dashboard dashboardId="item-dashboard" />}
+                            : <EmptyApplicationHome />}
                     />
 
                     <Route
@@ -88,6 +86,10 @@ export function ApplicationRoutes() {
             </Route>
         </Routes>
     );
+}
+
+function EmptyApplicationHome() {
+    return <main className="dashboard"><ErrorState title="No dashboards configured" message="Copy or create local report, dashboard, widget, and menu configuration to activate this framework." /></main>;
 }
 
 function SetupRequired() {

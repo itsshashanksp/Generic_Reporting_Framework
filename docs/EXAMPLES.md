@@ -1,5 +1,23 @@
 # Examples
 
+Application JSON is deployment-owned: `src/config/**/*.json` and
+`src/config/menu.json` are intentionally ignored, while this directory is the
+tracked reference library. Examples are never loaded automatically.
+
+For a complete opt-in application, copy
+`examples/complete/retail-reference/config/` into `src/config/`, then copy the
+matching backend `examples/sql-resources/reports/` and `widgets/` files into the
+backend `queries/` directories. Review the logical database IDs and physical
+retail schema first. To author a smaller application, copy one validated report,
+dashboard, widget, or menu example and change its globally unique `id` and
+references. Reports use exactly one `request` (JSON Query) or `queryDefinition`
+(SQL Resource); dashboards may define inline widgets or refer to a tracked local
+widget by `widgetId`.
+
+Run `npm test -- --run src/config/__tests__/exampleLibrary.test.ts` after edits.
+See the [capability matrix](EXAMPLE-CAPABILITY-MATRIX.md) for coverage and the
+distinction between structural validation and live database execution.
+
 ## Example files
 
 [`examples/`](../examples/) holds complete definitions you can copy into `src/config/`. They use real backend SQL Resource IDs, plus the field names of the checked-in configuration.

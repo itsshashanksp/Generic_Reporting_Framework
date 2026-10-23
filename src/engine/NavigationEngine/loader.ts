@@ -2,10 +2,17 @@ import type { NavigationIcon, NavigationItem } from "../../types/navigation";
 
 const icons: NavigationIcon[] = ["dashboard", "reports", "report", "settings", "user"];
 const itemKeys = ["id", "title", "icon", "visible", "route", "reportId", "dashboardId", "children"];
+const menuModules = import.meta.glob("../../config/menu.json", { eager: true, import: "default" }) as Record<string, unknown>;
 
 export interface NavigationLoadOptions {
     reportIds?: Iterable<string>;
     dashboardIds?: Iterable<string>;
+}
+
+/** Missing local navigation is a supported empty application configuration. */
+export function loadConfiguredNavigation(options: NavigationLoadOptions = {}): NavigationItem[] {
+    const configured = Object.values(menuModules)[0];
+    return configured === undefined ? [] : loadNavigation(configured, options);
 }
 
 export function getNavigationRoute(item: NavigationItem): string {

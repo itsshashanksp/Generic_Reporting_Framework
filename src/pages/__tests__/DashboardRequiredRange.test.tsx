@@ -1,8 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import itemDashboard from "../../config/dashboards/item.json";
-import purchaseDashboard from "../../config/dashboards/purchases.json";
+import itemDashboard from "../../../examples/complete/retail-reference/config/dashboards/item.json";
+import purchaseDashboard from "../../../examples/complete/retail-reference/config/dashboards/purchases.json";
 import { FilterProvider } from "../../engine/FilterContext";
 import { clearRequestCache } from "../../engine/RequestCache";
 import Dashboard from "../Dashboard";

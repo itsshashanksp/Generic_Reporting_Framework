@@ -16,6 +16,10 @@ Commit hashes refer to this repository. Entries are grouped by type; within a gr
 
 ### Added
 
+- Added an opt-in example library with a complete retail reference application,
+  standalone report/dashboard/widget catalogs, and a machine-readable backend
+  SQL Resource contract validated in CI.
+
 - Runtime database selector for dashboards: `databaseSelection: true` adds a **Database** dropdown beside Refresh. Authorized IDs and labels come only from `metadata.databases`; frontend configuration no longer registers them. Widgets whose request names no database follow the selection, pinned widgets keep theirs, and refresh, filters, paging, sorting, and export follow the correct context.
 - Runtime database selector for reports: `databaseSelection: true` uses the same backend-owned discovery. Switching reruns the report with the same filters and sort; refresh, paging, sorting, and All-rows export follow it, with cache entries separated by database.
 - Database discovery fails closed: a denied, failed, or malformed listing offers no configured fallback and sends no data request. The authorized default is selected when usable, otherwise the first enabled and available backend result. Authentication identity changes invalidate cached listings and report data.
@@ -32,6 +36,10 @@ Commit hashes refer to this repository. Entries are grouped by type; within a gr
 - Contract tests for JSON Query mode, SQL Resource mode, filter serialization, grouping, pagination, response validation, and backend error details.
 
 ### Changed
+
+- Application-owned JSON is now local and ignored; tracked examples replace
+  embedded application configuration. Empty configuration and a missing menu
+  are supported without a hardcoded dashboard route.
 
 - The Bill dashboard's TOP-10 month-wise category widget uses `widgets/sales-top-10-month-wise-category-wise`, the SQL Resource the Sales dashboard already uses, instead of a byte-identical copy. Each dashboard keeps its own database, date-filter behavior, and export filename (`15200c5`).
 - Sign-in state is synchronized across tabs through `BroadcastChannel`. A change of user rebuilds the protected pages and discards filter values and cached responses (`983ee7d`).

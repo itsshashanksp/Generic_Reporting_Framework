@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, FileBarChart, FolderKanban, LayoutDashboard, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, UserRound, X } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 
-import menu from "../../config/menu.json";
-import { getNavigationRoute, loadNavigation } from "../../engine/NavigationEngine";
+import { getNavigationRoute, loadConfiguredNavigation } from "../../engine/NavigationEngine";
 import { getReportIds } from "../../engine/ReportEngine/reportLoader";
 import { getDashboardIds } from "../../engine/DashboardEngine";
 import type { NavigationIcon, NavigationItem } from "../../types/navigation";
@@ -12,7 +11,7 @@ import { APPLICATION_VERSION } from "../../config/version";
 
 const SIDEBAR_STORAGE_KEY = "generic-report-sidebar-collapsed";
 const REPORTS_STORAGE_KEY = "generic-report-sidebar-reports-expanded";
-const configuredItems = loadNavigation(menu, {
+const configuredItems = loadConfiguredNavigation({
     reportIds: getReportIds(),
     dashboardIds: getDashboardIds(),
 });

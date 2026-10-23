@@ -65,12 +65,14 @@ CI (`.github/workflows/frontend-ci.yml`) runs `npm ci`, then test, lint, typeche
 | Setting | Where | Notes |
 | --- | --- | --- |
 | `VITE_API_URL` | `.env` (development), `.env.production` (build) | The single API endpoint. It defaults to `/api` and is embedded at **build time**. See [Configuration](docs/CONFIGURATION.md#environment-variables) |
-| Reports | `src/config/reports/*.json` | Discovered automatically |
-| Dashboards | `src/config/dashboards/*.json` | Discovered automatically |
-| Reusable widgets | `src/config/widgets/*.json` | Optional; none are checked in |
-| Navigation | `src/config/menu.json` | References report and dashboard IDs |
+| Reports | `src/config/reports/*.json` | Local, ignored; discovered automatically |
+| Dashboards | `src/config/dashboards/*.json` | Local, ignored; discovered automatically |
+| Reusable widgets | `src/config/widgets/*.json` | Local, ignored and optional |
+| Navigation | `src/config/menu.json` | Local, ignored and optional |
 
-Validated starting points are in [`examples/`](examples/).
+Validated, tracked starting points are in [`examples/`](examples/). They are
+opt-in and never bundled until copied into `src/config/`; the framework also
+builds safely with no application JSON.
 
 ## Deployment
 
@@ -89,6 +91,7 @@ Validated starting points are in [`examples/`](examples/).
 | [Feature behavior](docs/FEATURES.md) | Filtering, sorting, paging, export, saved views, and caching |
 | [Authentication](docs/AUTHENTICATION.md) | Setup gate, sessions, roles, CSRF, and user management |
 | [Examples](docs/EXAMPLES.md) | Annotated configurations and request/response pairs |
+| [Example capability matrix](docs/EXAMPLE-CAPABILITY-MATRIX.md) | Frontend, backend, and integration coverage and verification status |
 | [API reference](docs/API-REFERENCE.md) | The requests the frontend sends and the responses it accepts |
 | [Deployment and hosting](docs/DEPLOYMENT.md) | Build, hosting requirements, and checks |
 | [Testing](docs/TESTING.md) | Test strategy and CI |

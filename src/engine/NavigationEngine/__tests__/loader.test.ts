@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import menu from "../../../config/menu.json";
-import { getFirstDashboardRoute, getNavigationRoute, loadNavigation } from "..";
+import { getFirstDashboardRoute, getNavigationRoute, loadConfiguredNavigation, loadNavigation } from "..";
 
 describe("NavigationEngine dashboard routing", () => {
     it("builds dashboard routes from configured dashboard IDs", () => {
-        const navigation = loadNavigation(menu, {
+        const navigation = loadNavigation([
+            { id: "dashboards", title: "Dashboards", icon: "dashboard", children: [
+                { id: "item", title: "Item", icon: "dashboard", dashboardId: "item-dashboard" },
+                { id: "bill", title: "Bill", icon: "dashboard", dashboardId: "bill-dashboard" },
+            ] },
+        ], {
             dashboardIds: ["item-dashboard", "sales-dashboard", "receipts-dashboard", "purchase-dashboard", "bill-dashboard"],
             reportIds: ["customer", "item"],
         });
@@ -16,6 +20,10 @@ describe("NavigationEngine dashboard routing", () => {
         expect(getNavigationRoute(item)).toBe("/dashboard/item-dashboard");
         expect(getNavigationRoute(bill)).toBe("/dashboard/bill-dashboard");
         expect(getFirstDashboardRoute(navigation)).toBe("/dashboard/item-dashboard");
+    });
+
+    it("loads the optional local menu without requiring one at build time", () => {
+        expect(loadConfiguredNavigation()).toEqual(expect.any(Array));
     });
 
     it("selects a nested visible dashboard without dashboard-specific conditions", () => {

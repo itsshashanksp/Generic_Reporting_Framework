@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import billDashboard from "../../../config/dashboards/bill.json";
+import billDashboard from "../../../../examples/complete/retail-reference/config/dashboards/bill.json";
 import {
     applyDateFilterBehavior,
     getDashboard,

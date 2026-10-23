@@ -21,7 +21,7 @@ vi.mock("../../components/Grid/GenericGrid", () => ({
 // no production dashboard changes. Their date filter has no own `required`.
 vi.mock("../../engine/DashboardEngine", async importOriginal => {
     const actual = await importOriginal<typeof import("../../engine/DashboardEngine")>();
-    const bill = (await import("../../config/dashboards/bill.json")).default;
+    const bill = (await import("../../../examples/complete/retail-reference/config/dashboards/bill.json")).default;
     const unflagged = bill.filters.map(filter => Object.fromEntries(Object.entries(filter).filter(([key]) => key !== "required")));
     const fixtures: Record<string, unknown> = {
         "optional-bill-test": { ...bill, id: "optional-bill-test", dateFilterBehavior: "optional", filters: unflagged },

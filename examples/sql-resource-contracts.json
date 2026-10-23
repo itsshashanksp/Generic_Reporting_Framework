@@ -1,0 +1,346 @@
+{
+  "version": 1,
+  "resources": {
+    "widgets/bill-sales-month-wise": {
+      "backendExample": "examples/sql-resources/widgets/bill-sales-month-wise.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/bill.json",
+        "examples/dashboards/date-filtered-dashboard.json"
+      ],
+      "outputFields": [
+        "Month",
+        "Sales"
+      ],
+      "filterFields": []
+    },
+    "widgets/bill-purchases-month-wise": {
+      "backendExample": "examples/sql-resources/widgets/bill-purchases-month-wise.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/bill.json",
+        "examples/dashboards/date-filtered-dashboard.json"
+      ],
+      "outputFields": [
+        "Month",
+        "Purchases"
+      ],
+      "filterFields": []
+    },
+    "widgets/bill-top-10-categories": {
+      "backendExample": "examples/sql-resources/widgets/bill-top-10-categories.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/bill.json",
+        "examples/dashboards/date-filtered-dashboard.json"
+      ],
+      "outputFields": [
+        "Category",
+        "Sales"
+      ],
+      "filterFields": []
+    },
+    "widgets/sales-top-10-month-wise-category-wise": {
+      "backendExample": "examples/sql-resources/widgets/sales-top-10-month-wise-category-wise.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/bill.json",
+        "examples/complete/retail-reference/config/dashboards/sales.json"
+      ],
+      "outputFields": [
+        "Month",
+        "Category",
+        "Sales"
+      ],
+      "filterFields": []
+    },
+    "widgets/bill-category-sales-month-wise": {
+      "backendExample": "examples/sql-resources/widgets/bill-category-sales-month-wise.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/bill.json"
+      ],
+      "outputFields": [
+        "Month",
+        "Category",
+        "Sales"
+      ],
+      "filterFields": []
+    },
+    "widgets/bill-total-sales": {
+      "backendExample": "examples/sql-resources/widgets/bill-total-sales.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/bill.json",
+        "examples/dashboards/date-filtered-dashboard.json"
+      ],
+      "outputFields": [
+        "TotalSales"
+      ],
+      "filterFields": []
+    },
+    "widgets/bill-total-purchases": {
+      "backendExample": "examples/sql-resources/widgets/bill-total-purchases.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/bill.json"
+      ],
+      "outputFields": [
+        "TotalPurchases"
+      ],
+      "filterFields": []
+    },
+    "widgets/item-dashboard-table": {
+      "backendExample": "examples/sql-resources/widgets/item-dashboard-table.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/item.json"
+      ],
+      "outputFields": [
+        "Item_Code",
+        "Item_Desc",
+        "Sale_Rate",
+        "Item_MRP",
+        "Std_Vat",
+        "cl_stock",
+        "stock_value"
+      ],
+      "filterFields": []
+    },
+    "widgets/item-dashboard-stats": {
+      "backendExample": "examples/sql-resources/widgets/item-dashboard-stats.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/item.json"
+      ],
+      "outputFields": [
+        "TotalItems",
+        "MinimumSP",
+        "MaximumSP"
+      ],
+      "filterFields": []
+    },
+    "widgets/item-stock-value-by-category": {
+      "backendExample": "examples/sql-resources/widgets/item-stock-value-by-category.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/item.json",
+        "examples/dashboards/database-selector-dashboard.json",
+        "examples/dashboards/widget-catalog-dashboard.json",
+        "examples/widgets/item-stock-value-by-category.json"
+      ],
+      "outputFields": [
+        "Category",
+        "StockValue"
+      ],
+      "filterFields": []
+    },
+    "widgets/purchases-month-wise": {
+      "backendExample": "examples/sql-resources/widgets/purchases-month-wise.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/purchases.json"
+      ],
+      "outputFields": [
+        "Month",
+        "Purchases"
+      ],
+      "filterFields": []
+    },
+    "widgets/purchases-day-wise": {
+      "backendExample": "examples/sql-resources/widgets/purchases-day-wise.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/purchases.json"
+      ],
+      "outputFields": [
+        "Date",
+        "Purchases"
+      ],
+      "filterFields": []
+    },
+    "widgets/total-purchases": {
+      "backendExample": "examples/sql-resources/widgets/total-purchases.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/purchases.json"
+      ],
+      "outputFields": [
+        "TotalPurchases"
+      ],
+      "filterFields": []
+    },
+    "widgets/daily-collection-summary": {
+      "backendExample": "examples/sql-resources/widgets/daily-collection-summary.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/receipts.json"
+      ],
+      "outputFields": [
+        "Date",
+        "Receipt_Count",
+        "Total_Collection",
+        "Total_Commission",
+        "Bill_Date"
+      ],
+      "filterFields": []
+    },
+    "widgets/payment-mode-wise-collection": {
+      "backendExample": "examples/sql-resources/widgets/payment-mode-wise-collection.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/receipts.json"
+      ],
+      "outputFields": [
+        "Payment_Mode",
+        "Date",
+        "Receipt_Count",
+        "Total_Collection",
+        "Average_Receipt",
+        "Bill_Date"
+      ],
+      "filterFields": []
+    },
+    "widgets/monthly-collection-trend": {
+      "backendExample": "examples/sql-resources/widgets/monthly-collection-trend.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/receipts.json",
+        "examples/dashboards/widget-catalog-dashboard.json"
+      ],
+      "outputFields": [
+        "Month",
+        "Receipt_Count",
+        "Total_Collection"
+      ],
+      "filterFields": []
+    },
+    "widgets/user-wise-day-wise-collection": {
+      "backendExample": "examples/sql-resources/widgets/user-wise-day-wise-collection.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/receipts.json"
+      ],
+      "outputFields": [
+        "UserName",
+        "Date",
+        "Receipt_Count",
+        "Total_Collection",
+        "Average_Receipt",
+        "Bill_Date"
+      ],
+      "filterFields": []
+    },
+    "widgets/top-10-largest-receipts": {
+      "backendExample": "examples/sql-resources/widgets/top-10-largest-receipts.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/receipts.json"
+      ],
+      "outputFields": [
+        "Bill_No",
+        "Payment_Mode",
+        "Amount",
+        "UserName"
+      ],
+      "filterFields": []
+    },
+    "widgets/sales-month-wise": {
+      "backendExample": "examples/sql-resources/widgets/sales-month-wise.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/sales.json",
+        "examples/dashboards/database-selector-dashboard.json",
+        "examples/dashboards/widget-catalog-dashboard.json"
+      ],
+      "outputFields": [
+        "Month",
+        "Sales"
+      ],
+      "filterFields": []
+    },
+    "widgets/top-10-categories-sales": {
+      "backendExample": "examples/sql-resources/widgets/top-10-categories-sales.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/sales.json"
+      ],
+      "outputFields": [
+        "Category",
+        "Sales"
+      ],
+      "filterFields": []
+    },
+    "widgets/category-sales-month-wise": {
+      "backendExample": "examples/sql-resources/widgets/category-sales-month-wise.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/sales.json"
+      ],
+      "outputFields": [
+        "Month",
+        "Category",
+        "Sales"
+      ],
+      "filterFields": []
+    },
+    "widgets/sales-day-wise": {
+      "backendExample": "examples/sql-resources/widgets/sales-day-wise.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/sales.json"
+      ],
+      "outputFields": [
+        "Date",
+        "Sales",
+        "Bill_Date"
+      ],
+      "filterFields": []
+    },
+    "widgets/date-wise-gst-wise-sales": {
+      "backendExample": "examples/sql-resources/widgets/date-wise-gst-wise-sales.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/sales.json"
+      ],
+      "outputFields": [
+        "Date",
+        "GST_Per",
+        "SalesOnAmt",
+        "GST_Amount",
+        "TotalSalesAmount",
+        "Bill_Date"
+      ],
+      "filterFields": []
+    },
+    "widgets/gst-wise-sales": {
+      "backendExample": "examples/sql-resources/widgets/gst-wise-sales.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/sales.json"
+      ],
+      "outputFields": [
+        "GST_Per",
+        "SalesOnAmt",
+        "GST_Amount",
+        "TotalSalesAmount"
+      ],
+      "filterFields": []
+    },
+    "widgets/top-50-item-wise-sales": {
+      "backendExample": "examples/sql-resources/widgets/top-50-item-wise-sales.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/sales.json"
+      ],
+      "outputFields": [
+        "Item_Code",
+        "Item_Desc",
+        "Sales"
+      ],
+      "filterFields": []
+    },
+    "widgets/total-sales": {
+      "backendExample": "examples/sql-resources/widgets/total-sales.sql",
+      "frontendExamples": [
+        "examples/complete/retail-reference/config/dashboards/sales.json",
+        "examples/dashboards/database-selector-dashboard.json",
+        "examples/dashboards/minimal-dashboard.json"
+      ],
+      "outputFields": [
+        "TotalSales"
+      ],
+      "filterFields": []
+    },
+    "reports/customer": {
+      "backendExample": "examples/sql-resources/reports/customer.sql",
+      "frontendExamples": [
+        "examples/reports/sql-resource-report.json"
+      ],
+      "outputFields": [
+        "Cust_Name",
+        "TotalCustomers",
+        "MinimumBill",
+        "MaximumBill"
+      ],
+      "filterFields": [
+        "Cust_Name"
+      ]
+    }
+  }
+}

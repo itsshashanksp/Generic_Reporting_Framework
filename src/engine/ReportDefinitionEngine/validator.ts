@@ -213,7 +213,11 @@ function validateFilters(value: unknown, errors: string[], sqlResource: boolean)
         if (entry.dynamicOptions !== undefined && entry.type !== "select" && entry.type !== "multiselect") errors.push(`${label} dynamicOptions are not supported for type ${String(entry.type)}.`);
         if (entry.options !== undefined && entry.dynamicOptions !== undefined) errors.push(`${label} must use either options or dynamicOptions.`);
         validateOptions(entry.options, entry.type, entry.operator, label, errors);
-        validateDynamicOptions(entry.dynamicOptions, entry.type, entry.operator, label, errors);
+        // Static options satisfy select/multiselect requirements; only ask the
+        // dynamic validator to enforce presence when static options are absent.
+        if (entry.options === undefined) {
+            validateDynamicOptions(entry.dynamicOptions, entry.type, entry.operator, label, errors);
+        }
     });
 }
 

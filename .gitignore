@@ -61,3 +61,12 @@ coverage/
 
 # Local development
 *.local
+
+# Application-owned runtime configuration (copy from examples/ or create locally)
+/src/config/menu.json
+/src/config/reports/*.json
+/src/config/reports/**/*.json
+/src/config/dashboards/*.json
+/src/config/dashboards/**/*.json
+/src/config/widgets/*.json
+/src/config/widgets/**/*.json

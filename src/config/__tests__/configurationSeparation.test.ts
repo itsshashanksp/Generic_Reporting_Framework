@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import customer from "../reports/customer.json";
-import item from "../reports/item.json";
-import itemDashboard from "../dashboards/item.json";
-import billDashboard from "../dashboards/bill.json";
+import customer from "../../../examples/complete/retail-reference/config/reports/customer.json";
+import item from "../../../examples/complete/retail-reference/config/reports/item.json";
+import itemDashboard from "../../../examples/complete/retail-reference/config/dashboards/item.json";
+import billDashboard from "../../../examples/complete/retail-reference/config/dashboards/bill.json";
 import { loadDefinition } from "../../engine/ReportDefinitionEngine";
 
 const frontendReportSql = import.meta.glob("../reports/*.sql");
