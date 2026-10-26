@@ -23,7 +23,8 @@ export interface DashboardDefinition {
 
     /**
      * Backend-owned runtime database discovery and switching. The registry
-     * default is the initial selection; widgets whose request names no
+     * global default is the initial selection when authorized, otherwise the
+     * registry default is used; widgets whose request names no
      * `database` follow the selection, and widgets with their own keep it.
      */
     databaseSelection?: true;

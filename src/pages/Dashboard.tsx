@@ -13,6 +13,7 @@ import StatWidget from "../components/Dashboard/StatWidget";
 import ChartWidget from "../components/Dashboard/ChartWidget";
 import DatabaseSelect from "../components/Toolbar/DatabaseSelect";
 import { useDatabaseSelection } from "../components/Toolbar/useDatabaseSelection";
+import { useOptionalGlobalDatabase } from "../engine/DatabaseContext";
 
 import { useFilters } from "../engine/FilterContext";
 import { isRequiredFilterIncomplete } from "../engine/FilterEngine";
@@ -138,12 +139,23 @@ function DashboardContent({
         appliedFilters,
     } = useDashboard();
 
-    // Same selection logic as reports: the backend registry decides the
-    // default. Until a database is resolved no widget is mounted, so none
+    // Same selection logic as reports: an authorized global default is used
+    // before the backend registry fallback. Until a database is resolved no widget is mounted, so none
     // can silently query the backend default.
-    const databaseSelection = useDatabaseSelection(dashboard.id, dashboard.databaseSelection === true);
+    const globalDatabase = useOptionalGlobalDatabase();
+    const databaseSelection = useDatabaseSelection(
+        dashboard.id,
+        dashboard.databaseSelection === true,
+        globalDatabase?.database
+    );
     const selectedDatabase = databaseSelection.database;
-    const databaseBlocked = databaseSelection.status !== "off" && databaseSelection.status !== "ready";
+    const effectiveInheritedDatabase = dashboard.databaseSelection ? selectedDatabase : globalDatabase?.database ?? "";
+    const hasUnpinnedWidget = visibleWidgets.some(widget => {
+        const request = resolveDashboardWidgetRequest(widget, dashboard.filters ?? []);
+        return request && request.database === undefined;
+    });
+    const databaseBlocked = databaseSelection.status !== "off" && databaseSelection.status !== "ready"
+        || !dashboard.databaseSelection && hasUnpinnedWidget && globalDatabase?.resolving === true;
 
     // Widgets mount (and so request, refresh and export) only once the applied
     // filters complete every required filter, e.g. both dates of a range.
@@ -241,7 +253,7 @@ function DashboardContent({
                 dashboard.filters.length > 0 && (
                     <ResponsiveFilterPanel
                         filters={dashboard.filters}
-                        database={dashboard.databaseSelection ? selectedDatabase : undefined}
+                        database={effectiveInheritedDatabase || undefined}
                         className="dashboard-filters"
                         error={filterError}
                         onApply={handleSearch}
@@ -256,7 +268,7 @@ function DashboardContent({
             )}
 
             {databaseBlocked ? (
-                databaseSelection.status === "loading" ? (
+                databaseSelection.status === "loading" || globalDatabase?.resolving ? (
                     <div className="dashboard-empty" role="status">Loading databases…</div>
                 ) : (
                     <div className="dashboard-empty" role="status">
@@ -310,7 +322,7 @@ function DashboardContent({
                                 ?? resolveDashboardWidgetRequest(widget, dashboard.filters ?? []);
                             // Widgets without their own database follow the selector.
                             const widgetRequest = resolvedRequest
-                                && inheritDashboardDatabase(resolvedRequest, selectedDatabase);
+                                && inheritDashboardDatabase(resolvedRequest, effectiveInheritedDatabase);
                             const widgetDefinition = resolvedDefinition && widgetRequest
                                 ? { ...resolvedDefinition, request: widgetRequest }
                                 : resolvedDefinition;

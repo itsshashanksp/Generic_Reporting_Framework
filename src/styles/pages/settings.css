@@ -27,8 +27,9 @@
 
 .settings-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
+    align-items: stretch;
 }
 
 .settings-option,
@@ -43,7 +44,15 @@
 .settings-option {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: 1fr;
     gap: 14px 16px;
+    min-width: 0;
+}
+
+.settings-option__content {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
 }
 
 .settings-option__icon {
@@ -76,9 +85,53 @@
     line-height: 1.55;
 }
 
+.settings-database-form {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.settings-database-form label {
+    display: grid;
+    gap: 6px;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 650;
+}
+
+.settings-database-form select {
+    width: 100%;
+    min-height: 40px;
+    padding: 8px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    color: #0f172a;
+}
+
+.settings-database-form__help {
+    color: #64748b;
+    font-size: 13px !important;
+}
+
+.settings-option__action {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 18px;
+}
+
+.settings-option__action .app-button,
+.settings-option__action .settings-option__link {
+    flex: 0 0 auto;
+}
+
 .settings-option__link {
     display: inline-flex;
-    grid-column: 2;
     width: fit-content;
     min-height: 40px;
     align-items: center;
@@ -138,5 +191,15 @@
         grid-column: 1;
         width: 100%;
         justify-content: center;
+    }
+}
+
+@media (max-width: 760px) {
+    .settings-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .settings-option__action {
+        flex-wrap: wrap;
     }
 }

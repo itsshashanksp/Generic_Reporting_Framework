@@ -62,7 +62,8 @@ export interface ReportPresentationDefinition {
 
     /**
      * Enables backend-owned runtime database discovery and switching. The
-     * registry default (or first available result) is selected initially.
+     * The configured report/global default is selected when authorized;
+     * otherwise the registry default (or first available result) is used.
      */
     databaseSelection?: true;
 }

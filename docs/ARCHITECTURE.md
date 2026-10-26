@@ -100,7 +100,7 @@ Every request is a JSON `POST` to `VITE_API_URL` with `credentials: "include"`. 
 - Filter form (draft) state is separate from applied state. Only **Search** applies it.
 - Sort and page state live in the report or widget component.
 - Dashboard filters and the grid API use React contexts.
-- Saved report views use `localStorage`, keyed per user. Sidebar collapse and group state also use `localStorage`.
+- Saved report views and the optional global database selection use `localStorage`, keyed per user. The database ID is revalidated against authorized backend metadata before use. Sidebar collapse and group state also use `localStorage`.
 - The request cache is in memory. A page reload or a change of user clears it.
 
 ## Error handling

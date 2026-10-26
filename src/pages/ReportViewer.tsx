@@ -17,6 +17,7 @@ import ReportTableFrame from "../components/Grid/ReportTableFrame";
 import SavedReports from "../components/SavedReports/SavedReports";
 import { ReportToolbar } from "../components/Toolbar";
 import { useDatabaseSelection } from "../components/Toolbar/useDatabaseSelection";
+import { resolveConfiguredDatabase, useOptionalGlobalDatabase } from "../engine/DatabaseContext";
 import { useFilters } from "../engine/FilterContext";
 import { buildFilters } from "../engine/FilterQueryBuilder";
 import { isEmptyFilterValue } from "../engine/FilterEngine";
@@ -40,13 +41,22 @@ export default function ReportViewer() {
     const { api } = useGrid();
     const report = getReport(reportId || "") ?? null;
     const reportConfigurationError = getReportError(reportId || "");
-    // Runtime database (reports with databaseSelection): resolved from the
-    // backend registry, never from request.database. Every report request
+    const globalDatabase = useOptionalGlobalDatabase();
+    // Runtime database (reports with databaseSelection): initialized from the
+    // configured/global default when authorized, then the backend fallback.
+    // Every report request
     // (load, page, sort, filters, refresh, export) reads databaseRef; "" means
     // not resolved yet, and then nothing is requested.
-    const databaseSelection = useDatabaseSelection(report?.id ?? "", report?.databaseSelection === true);
+    const configuredDatabase = resolveConfiguredDatabase(report?.request.database, globalDatabase?.database);
+    const databaseSelection = useDatabaseSelection(
+        report?.id ?? "",
+        report?.databaseSelection === true,
+        configuredDatabase
+    );
     const selectedDatabase = databaseSelection.database;
-    const databaseBlocked = databaseSelection.status !== "off" && databaseSelection.status !== "ready";
+    const inheritsGlobalDatabase = Boolean(report && !report.databaseSelection && !report.request.database);
+    const databaseBlocked = databaseSelection.status !== "off" && databaseSelection.status !== "ready"
+        || inheritsGlobalDatabase && globalDatabase?.resolving === true;
     const [initialRequestState] = useState(() => {
         if (!report) {
             return { response: null, pageSize: 10 };
@@ -58,7 +68,7 @@ export default function ReportViewer() {
 
         const pageSize = report.grid.pagination.pageSize;
         const requestPayload = {
-            ...withRuntimeDatabase(report.request, report.databaseSelection ? selectedDatabase : ""),
+            ...withRuntimeDatabase(report.request, report.databaseSelection ? selectedDatabase : configuredDatabase),
             filters: Array.isArray(report.request.filters) ? report.request.filters : [],
             sort: report.request.sort ?? [],
             ...getReportPaginationParameters(report.grid.pagination, 1, pageSize),
@@ -84,7 +94,8 @@ export default function ReportViewer() {
     const [currentSorting, setCurrentSorting] = useState<SortDefinition[]>(report?.request.sort ?? []);
     const [appliedFilters, setAppliedFilters] = useState<Record<string, FilterValue>>({});
     const [savedReportsRevision, setSavedReportsRevision] = useState(0);
-    const databaseRef = useRef(report?.databaseSelection ? "" : report?.request.database ?? "");
+    const databaseRef = useRef(report?.databaseSelection ? "" : configuredDatabase);
+    const previousGlobalDatabase = useRef(globalDatabase?.database ?? "");
     const requestSequence = useRef(0);
     const activeController = useRef<AbortController | null>(null);
     const exportController = useRef<AbortController | null>(null);
@@ -98,6 +109,9 @@ export default function ReportViewer() {
         bypassCache = false
     ) => {
         if (!report) {
+            return;
+        }
+        if (!report.databaseSelection && !report.request.database && globalDatabase?.resolving) {
             return;
         }
         // Never fall back to the backend default by omitting the database.
@@ -179,7 +193,7 @@ export default function ReportViewer() {
                 setIsGridLoading(false);
             }
         }
-    }, [report]);
+    }, [report, globalDatabase?.resolving]);
 
     useEffect(() => {
         if (!report) {
@@ -187,7 +201,7 @@ export default function ReportViewer() {
         }
 
         // A switchable report loads once its database is resolved (below).
-        databaseRef.current = report.databaseSelection ? "" : report.request.database ?? "";
+        databaseRef.current = report.databaseSelection ? "" : configuredDatabase;
         const timer = window.setTimeout(() => {
             clearFilters();
             setAppliedFilters({});
@@ -201,7 +215,20 @@ export default function ReportViewer() {
             activeController.current?.abort();
             exportController.current?.abort();
         };
+        // Global changes are handled below without clearing filters or paging.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [report, clearFilters, loadReport]);
+
+    useEffect(() => {
+        const next = globalDatabase?.database ?? "";
+        const previous = previousGlobalDatabase.current;
+        previousGlobalDatabase.current = next;
+        if (!report || report.databaseSelection || report.request.database || globalDatabase?.resolving || next === previous) return;
+        databaseRef.current = next;
+        setResult(null);
+        setLoadedReportId("");
+        void loadReport(appliedFilters, currentPage, currentPageSize, currentSorting);
+    }, [globalDatabase?.database, globalDatabase?.resolving, report, appliedFilters, currentPage, currentPageSize, currentSorting, loadReport]);
 
     // First load of a switchable report, as soon as its database is resolved.
     useEffect(() => {
@@ -440,7 +467,7 @@ export default function ReportViewer() {
             {report.filters.length > 0 && (
                 <ResponsiveFilterPanel
                     filters={report.filters}
-                    database={report.databaseSelection ? selectedDatabase : undefined}
+                    database={report.databaseSelection ? selectedDatabase : configuredDatabase || undefined}
                     className="report-section"
                     error={filterError}
                     disabled={isGridLoading}
@@ -493,7 +520,7 @@ export default function ReportViewer() {
                 )}
             >
                     {databaseBlocked ? (
-                        databaseSelection.status === "loading"
+                        databaseSelection.status === "loading" || globalDatabase?.resolving
                             ? <div className="report-table-frame__loading"><Loading label="Loading databases…" compact /></div>
                             : databaseSelection.status === "listing-failed"
                                 ? <ErrorState title="Database list unavailable" message={databaseSelection.error} onRetry={databaseSelection.retry} />

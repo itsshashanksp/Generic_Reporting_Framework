@@ -50,17 +50,17 @@ Safety limits (`src/engine/ExportEngine`):
 
 A report that sets `databaseSelection` (see [Configuration](CONFIGURATION.md#runtime-database-selection)) shows a **Database** dropdown at the start of the report toolbar, beside **Refresh**; on phones it sits beside **More**.
 
-Reports and dashboards share the same selection logic (`src/components/Toolbar/useDatabaseSelection.ts`). The backend registry, read with `metadata.databases`, decides the initial database:
+Reports and dashboards share the same selection logic (`src/components/Toolbar/useDatabaseSelection.ts`). The backend registry, read with `metadata.databases`, authorizes every option and fallback:
 
 1. **Options:** every database returned by the authorized listing that is **enabled**, labelled with its backend display name. Databases whose availability gate is closed are shown as "(unavailable)" and can't be chosen. Disabled rows are left out.
-2. **Initial selection:** the listing's **default** database when it is enabled and available.
-3. **Fallback:** otherwise, the **first** enabled and available result.
+2. **Configured initial selection:** reports prefer their explicit JSON database, then the browser-local global default. Dashboards prefer the global default. The value is used only when present in the authorized, enabled, available listing.
+3. **Registry fallback:** otherwise, the listing's available **default**, then the **first** enabled and available result.
 4. **None usable:** "No database available" is shown, and **nothing is requested**.
 5. **Listing fails** (for example `403` when an enforced access scope lacks `listDatabases`): "Database list unavailable" is shown, with **Try again**. No IDs are offered and **nothing is requested**.
 
 Until a database is resolved, no report or widget request is sent, so nothing can silently fall back to the backend default by omitting `database`. Frontend JSON contains no selector IDs or names. The listing contains only logical metadata, never connection details, and is cached for 5 minutes. Authentication identity changes clear that cache before the next user can load data.
 
-- **Reopening:** opening the report again, or another report, resolves the database again. The selection is not saved, and saved views do not record it.
+- **Reopening:** opening the report again, or another report, resolves its initial selection again. Manual page choices are not saved, do not change the global setting, and saved views do not record them.
 - **Switching** reruns the report on the chosen database, from page 1, with the same applied filters, filter logic, and sort. Refresh, paging, sorting, saved-view loading, and **All rows** export then all use the chosen database. A request still running for the previous database is aborted, and its late result is ignored. The selector is disabled while an export runs.
 - **Caching:** the cache key includes the database, so rows from one database are never shown for another. Switching back to a database can be answered from its own cached entry.
 - **Errors:** a failing database (for example `DATABASE_UNAVAILABLE`, or `403` when an access scope does not grant it) shows the backend's error in the grid area. The selector stays usable, so the user can switch back.

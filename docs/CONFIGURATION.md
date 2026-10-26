@@ -5,6 +5,8 @@ The frontend has two kinds of configuration:
 1. **Environment variables**, read by Vite at build time.
 2. **JSON definitions** in `src/config/`, bundled at build time and validated when they load. Unknown properties are rejected, so a misspelled or misplaced key fails with an error instead of being silently ignored.
 
+Authenticated users can also choose a frontend-wide default under **Settings → Database Selection**. The choice is stored per username in browser storage and is accepted only after the current `metadata.databases` response confirms that it is enabled, available, and authorized. **Use Backend Default** removes the choice and preserves the backend's normal fallback.
+
 Validated example files for every definition type are in [`examples/`](../examples/). [Examples](EXAMPLES.md) shows the requests they produce.
 
 ## Environment variables
@@ -161,10 +163,12 @@ The pagination values are positive integers. `rowSelection` is `single` or `mult
 ```
 
 - `true` opts in. IDs and display names are never registered in frontend configuration; `metadata.databases` is the only option source.
-- The backend registry decides the initial database ([rule](FEATURES.md#database-selector)). A switchable report normally omits `request.database` / `queryDefinition.database`, because the selected backend ID is supplied at runtime.
+- An authorized explicit report database initializes a report selector, followed by the browser-local global default and then the backend registry default. A manual page choice overrides that initial value. A switchable report may omit `request.database` / `queryDefinition.database`, because the selected backend ID is supplied at runtime.
 - Omit `databaseSelection` to keep the report on its configured database, as before. Reusable widget files accept the key but ignore it, and dashboard widgets reject it. Dashboards have their own dashboard-level form ([Dashboards](DASHBOARDS.md#database-selector)).
 - Any value other than `true`, including the former `{ databases: [...] }` shape, is rejected.
 - Example: [`examples/reports/database-selector-report.json`](../examples/reports/database-selector-report.json). Runtime behavior: [Feature behavior](FEATURES.md#database-selector).
+
+The Settings default fills only otherwise omitted database values. For a switchable report, explicit JSON initializes the selector ahead of the global and metadata defaults; a manual page choice then wins. On dashboards, explicit widget databases remain pinned, dashboard runtime selection controls unpinned widgets, and an authorized global value initializes that selector ahead of the metadata default. Dynamic filter requests follow the same effective database unless they specify their own.
 
 ### Toolbar and export
 
