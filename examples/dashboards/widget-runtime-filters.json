@@ -1,0 +1,50 @@
+{
+  "id": "widget-runtime-filters-dashboard",
+  "title": "Independent Widget Filters",
+  "description": "Each widget owns its filter controls; applying one filter does not reload the other widgets.",
+  "layout": { "columns": 12, "tabletColumns": 6, "mobileColumns": 1 },
+  "widgets": [
+    {
+      "id": "filtered-orders",
+      "type": "table",
+      "title": "Orders",
+      "width": 4,
+      "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": ["OrderId", "CustomerName", "OrderDate", "Status", "Amount"] },
+      "columns": [
+        { "field": "OrderId", "header": "Order", "dataType": "number" },
+        { "field": "CustomerName", "header": "Customer" },
+        { "field": "OrderDate", "header": "Date", "dataType": "date" },
+        { "field": "Status", "header": "Status" },
+        { "field": "Amount", "header": "Amount", "dataType": "number" }
+      ],
+      "runtimeFilters": [{ "field": "Status", "label": "Order Status", "type": "select", "operator": "equals", "options": [{ "label": "Open", "value": "OPEN" }, { "label": "Closed", "value": "CLOSED" }] }],
+      "pageSize": 10
+    },
+    {
+      "id": "filtered-customers",
+      "type": "chart",
+      "title": "Customers by City",
+      "width": 4,
+      "request": { "action": "select", "source": { "table": "DemoCustomers" }, "fields": ["City", { "function": "COUNT", "field": "*", "alias": "CustomerCount" }], "groupBy": ["City"] },
+      "chartType": "bar",
+      "xField": "City",
+      "yField": "CustomerCount",
+      "runtimeFilters": [{ "field": "City", "label": "Customer City", "type": "text", "operator": "contains", "placeholder": "Enter a city" }]
+    },
+    {
+      "id": "filtered-shipments",
+      "type": "table",
+      "title": "Shipments",
+      "width": 4,
+      "request": { "action": "select", "source": { "table": "DemoShipments" }, "fields": ["ShipmentId", "OrderId", "ShippedDate", "Status"] },
+      "columns": [
+        { "field": "ShipmentId", "header": "Shipment" },
+        { "field": "OrderId", "header": "Order" },
+        { "field": "ShippedDate", "header": "Shipped", "dataType": "date" },
+        { "field": "Status", "header": "Status" }
+      ],
+      "runtimeFilters": [{ "field": "Status", "label": "Shipment Status", "type": "select", "operator": "equals", "options": [{ "label": "Pending", "value": "PENDING" }, { "label": "Shipped", "value": "SHIPPED" }, { "label": "Delivered", "value": "DELIVERED" }] }],
+      "pageSize": 10
+    }
+  ]
+}

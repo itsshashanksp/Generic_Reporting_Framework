@@ -7,6 +7,8 @@ interface DashboardWidgetFrameProps {
     refreshing?: boolean;
     children: ReactNode;
     variant?: "default" | "stat";
+    actions?: ReactNode;
+    filterPanel?: ReactNode;
 }
 
 export default function DashboardWidgetFrame({
@@ -15,6 +17,8 @@ export default function DashboardWidgetFrame({
     refreshing = false,
     children,
     variant = "default",
+    actions,
+    filterPanel,
 }: DashboardWidgetFrameProps) {
     return (
         <section className={`dashboard-widget-content dashboard-widget-content--${variant}`}>
@@ -23,12 +27,14 @@ export default function DashboardWidgetFrame({
                     <h2>{title}</h2>
                     {description && <p>{description}</p>}
                 </div>
-                {refreshing && (
-                    <span className="dashboard-widget-content__refreshing" role="status">
-                        Refreshing…
-                    </span>
-                )}
+                <div className="dashboard-widget-content__actions">
+                    {refreshing && (
+                        <span className="dashboard-widget-content__refreshing" role="status">Refreshing…</span>
+                    )}
+                    {actions}
+                </div>
             </header>
+            {filterPanel}
             <div className="dashboard-widget-content__body">
                 {children}
             </div>

@@ -1,0 +1,40 @@
+{
+  "id": "combined-dashboard-widget-filters",
+  "title": "Dashboard and Widget Filters",
+  "description": "The shared order-date filter combines with a different local filter in each widget.",
+  "layout": { "columns": 12, "tabletColumns": 6, "mobileColumns": 1 },
+  "filters": [{ "field": "OrderDate", "label": "Order Date", "type": "daterange", "operator": "between" }],
+  "widgets": [
+    {
+      "id": "orders-by-status-table",
+      "type": "table",
+      "title": "Orders",
+      "width": 6,
+      "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": ["OrderId", "OrderDate", "Status", "Amount"] },
+      "columns": [{ "field": "OrderId", "header": "Order" }, { "field": "OrderDate", "header": "Date", "dataType": "date" }, { "field": "Status", "header": "Status" }, { "field": "Amount", "header": "Amount", "dataType": "number" }],
+      "runtimeFilters": [{ "field": "Status", "label": "Order Status", "type": "select", "operator": "equals", "options": [{ "label": "Open", "value": "OPEN" }, { "label": "Closed", "value": "CLOSED" }] }],
+      "pageSize": 10
+    },
+    {
+      "id": "sales-by-category-chart",
+      "type": "chart",
+      "title": "Sales by Product Category",
+      "width": 6,
+      "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": ["ProductCategory", { "function": "SUM", "field": "Amount", "alias": "SalesAmount" }], "groupBy": ["ProductCategory"] },
+      "chartType": "bar",
+      "xField": "ProductCategory",
+      "yField": "SalesAmount",
+      "runtimeFilters": [{ "field": "ProductCategory", "label": "Product Category", "type": "text", "operator": "equals" }]
+    },
+    {
+      "id": "payment-summary",
+      "type": "stat",
+      "title": "Order Total",
+      "width": 4,
+      "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": [{ "function": "SUM", "field": "Amount", "alias": "TotalAmount" }] },
+      "valueField": "TotalAmount",
+      "format": "currency",
+      "runtimeFilters": [{ "field": "PaymentStatus", "label": "Payment Status", "type": "select", "operator": "equals", "options": [{ "label": "Paid", "value": "PAID" }, { "label": "Pending", "value": "PENDING" }] }]
+    }
+  ]
+}

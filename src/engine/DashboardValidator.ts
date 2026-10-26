@@ -290,7 +290,8 @@ function validateDateFilterBehavior(
 
 function validateFilters(
     filters: unknown,
-    errors: string[]
+    errors: string[],
+    scope = "Dashboard"
 ) {
 
     if (filters === undefined) {
@@ -299,7 +300,7 @@ function validateFilters(
 
     if (!Array.isArray(filters)) {
         errors.push(
-            "Dashboard filters must be an array."
+            `${scope} filters must be an array.`
         );
 
         return;
@@ -312,7 +313,7 @@ function validateFilters(
 
     filters.forEach((filter, index) => {
         const label =
-            `Dashboard filter at index ${index}`;
+            `${scope} filter at index ${index}`;
 
         if (!isRecord(filter)) {
             errors.push(
@@ -334,11 +335,13 @@ function validateFilters(
             errors.push(
                 `${label} requires field.`
             );
+        } else if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(filter.field)) {
+            errors.push(`${label} field must be a field name (letters, digits and underscores, not starting with a digit).`);
         } else if (
             filterFields.has(filter.field)
         ) {
             errors.push(
-                `Duplicate dashboard filter field: ${filter.field}`
+                `Duplicate ${scope.toLowerCase()} filter field: ${filter.field}`
             );
         } else {
             filterFields.add(filter.field);
@@ -399,7 +402,7 @@ function validateFilters(
             errors.push(
                 error instanceof Error
                     ? error.message
-                    : "Dashboard filter configuration is invalid."
+                    : `${scope} filter configuration is invalid.`
             );
         }
     }
@@ -427,7 +430,7 @@ function validateWidget(
 
 
     const commonKeys = [
-        "id", "type", "title", "description", "width", "height", "visible", "position", "filterFields",
+        "id", "type", "title", "description", "width", "height", "visible", "position", "filterFields", "runtimeFilters",
     ];
     const definitionKeys = ["queryDefinition", "columns", "filters", "sort", "filterLogic", "grid", "toolbar"];
     const typeKeys: Record<string, string[]> = {
@@ -515,6 +518,8 @@ function validateWidget(
         {},
         validateFilterFields(widget, widgetLabel, sharedFilters, errors)
     ).filters;
+    validateFilters(widget.runtimeFilters, errors, `${widgetLabel} runtime`);
+    validateRuntimeFilterConflicts(widget, widgetLabel, widgetSharedFilters, errors);
 
     const hasReportId = widget.reportId !== undefined;
     const hasWidgetId = widget.widgetId !== undefined;
@@ -725,6 +730,34 @@ function validateFilterFields(
     return errors.length === initialErrorCount
         ? widget.filterFields as Record<string, string>
         : undefined;
+}
+
+function validateRuntimeFilterConflicts(
+    widget: Record<string, unknown>,
+    widgetLabel: string,
+    sharedFilters: FilterDefinition[],
+    errors: string[]
+) {
+    if (!Array.isArray(widget.runtimeFilters)) return;
+    const sharedFields = new Set(sharedFilters.map(filter => filter.field.toLowerCase()));
+    const staticFields = new Set<string>();
+    if (isRecord(widget.request) && Array.isArray(widget.request.filters)) {
+        widget.request.filters.forEach(condition => {
+            if (isRecord(condition) && typeof condition.field === "string") {
+                staticFields.add(condition.field.toLowerCase());
+            }
+        });
+    }
+    widget.runtimeFilters.forEach(filter => {
+        if (!isRecord(filter) || typeof filter.field !== "string") return;
+        const field = filter.field.toLowerCase();
+        if (sharedFields.has(field)) {
+            errors.push(`${widgetLabel} runtime filter "${filter.field}" conflicts with a dashboard filter targeting the same field.`);
+        }
+        if (staticFields.has(field)) {
+            errors.push(`${widgetLabel} runtime filter "${filter.field}" conflicts with an authored request filter targeting the same field.`);
+        }
+    });
 }
 
 function mergeFilterDefinitions(widgetFilters: unknown, sharedFilters: FilterDefinition[]) {

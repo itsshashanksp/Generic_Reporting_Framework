@@ -15,6 +15,10 @@ still depends on an operator-provided schema and authorized backend.
 | Report, stat, table and chart widgets | widget catalog | Supported and validated |
 | Bar, line and pie charts | widget catalog | Supported and validated |
 | Reusable widget reference | `widgets/customer-summary.json` | Supported and validated |
+| Independent widget runtime filters | `dashboards/widget-runtime-filters.json` | Supported and validated for table and chart widgets |
+| Combined dashboard and widget filter scopes | `dashboards/combined-dashboard-widget-filters.json` | Supported and validated; fields must not conflict |
+| Dynamic widget filter options | `dashboards/dynamic-widget-runtime-filters.json` | Supported and validated; option queries inherit effective database |
+| Widget-instance filters with `widgetId` and `reportId` | `dashboards/referenced-widget-runtime-filters.json` | Supported and validated; referenced definitions must also be installed |
 | Database selection, inheritance and explicit pinning | database-selector examples | Conditional on backend registry |
 | Nested navigation and direct routes | `menu.json` | Supported and validated |
 | Procedures, metadata and writes | none | Backend-only; not presented as frontend functionality |

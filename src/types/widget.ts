@@ -1,6 +1,7 @@
 import type { ExportConfig } from "./export";
 import type { DataRequest } from "./api";
 import type { ColumnDefinition } from "./column";
+import type { FilterDefinition } from "./filter";
 import type {
     ReportPresentationDefinition,
     ReportQueryDefinitionReference,
@@ -83,6 +84,9 @@ export interface DashboardWidgetPresentation {
      * whose column has another name. A field-name mapping, never SQL.
      */
     filterFields?: Record<string, string>;
+
+    /** Runtime controls whose values apply only to this dashboard widget. */
+    runtimeFilters?: FilterDefinition[];
 
     position?: {
         x: number;

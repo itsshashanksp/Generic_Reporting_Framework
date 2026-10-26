@@ -23,6 +23,7 @@ import ErrorState from "../Common/Error";
 import Loading from "../Common/Loading";
 import DashboardWidgetFrame from "./DashboardWidgetFrame";
 import { useDashboardWidgetRequest } from "./useDashboardWidgetRequest";
+import WidgetFilterController, { type WidgetFilterControls } from "./WidgetFilterController";
 
 const EMPTY_FILTER_DEFINITIONS: FilterDefinition[] = [];
 const CHART_COLORS = ["#2563eb", "#0d9488", "#7c3aed", "#ea580c", "#db2777"];
@@ -42,9 +43,21 @@ interface ChartWidgetProps {
     /** Renames shared dashboard filter fields for this widget (see DashboardWidget). */
     filterFields?: WidgetFilterFields;
     cacheScope?: string;
+    runtimeFilters?: FilterDefinition[];
 }
 
 export default function ChartWidget({
+    runtimeFilters = EMPTY_FILTER_DEFINITIONS,
+    ...props
+}: ChartWidgetProps) {
+    return (
+        <WidgetFilterController filters={runtimeFilters} database={props.request.database} widgetTitle={props.title}>
+            {controls => <ChartWidgetContent {...props} runtimeFilters={runtimeFilters} widgetFilterControls={controls} />}
+        </WidgetFilterController>
+    );
+}
+
+function ChartWidgetContent({
     title,
     description,
     request,
@@ -58,12 +71,16 @@ export default function ChartWidget({
     filterDefinitions = EMPTY_FILTER_DEFINITIONS,
     filterFields,
     cacheScope,
-}: ChartWidgetProps) {
+    runtimeFilters = EMPTY_FILTER_DEFINITIONS,
+    widgetFilterControls,
+}: ChartWidgetProps & { widgetFilterControls: WidgetFilterControls }) {
     const { response, loading, error, retry } = useDashboardWidgetRequest(
         request,
         filterDefinitions,
         cacheScope,
-        filterFields
+        filterFields,
+        runtimeFilters,
+        widgetFilterControls.appliedValues
     );
     const data = useMemo(
         () => response?.data?.map(row => {
@@ -82,6 +99,8 @@ export default function ChartWidget({
             title={title}
             description={description}
             refreshing={loading && data.length > 0}
+            actions={widgetFilterControls.button}
+            filterPanel={widgetFilterControls.panel}
         >
             {loading && data.length === 0 && <Loading label="Loading chart…" compact />}
             {!loading && error && data.length === 0 && (

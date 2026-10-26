@@ -1,0 +1,53 @@
+{
+  "id": "dynamic-widget-runtime-filters",
+  "title": "Dynamic Widget Filters",
+  "description": "Each widget loads its dropdown choices through an authorized JSON Query using the widget's effective database.",
+  "layout": { "columns": 12, "tabletColumns": 6, "mobileColumns": 1 },
+  "widgets": [
+    {
+      "id": "orders-by-customer",
+      "type": "table",
+      "title": "Orders by Customer",
+      "width": 6,
+      "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": ["OrderId", "CustomerId", "CustomerName", "OrderDate", "Amount"] },
+      "columns": [{ "field": "OrderId", "header": "Order" }, { "field": "CustomerName", "header": "Customer" }, { "field": "OrderDate", "header": "Date", "dataType": "date" }, { "field": "Amount", "header": "Amount", "dataType": "number" }],
+      "runtimeFilters": [{
+        "field": "CustomerId",
+        "label": "Customer",
+        "type": "select",
+        "operator": "equals",
+        "dynamicOptions": {
+          "request": { "action": "select", "source": { "table": "DemoCustomers" }, "fields": ["CustomerId", "CustomerName"], "sort": [{ "field": "CustomerName", "direction": "ASC" }], "limit": 500 },
+          "valueField": "CustomerId",
+          "labelField": "CustomerName",
+          "searchable": true,
+          "searchPlaceholder": "Search customers"
+        }
+      }],
+      "pageSize": 10
+    },
+    {
+      "id": "orders-by-dynamic-status",
+      "type": "chart",
+      "title": "Orders by Status",
+      "width": 6,
+      "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": ["Status", { "function": "COUNT", "field": "*", "alias": "OrderCount" }], "groupBy": ["Status"] },
+      "chartType": "pie",
+      "xField": "Status",
+      "yField": "OrderCount",
+      "runtimeFilters": [{
+        "field": "Status",
+        "label": "Order Status",
+        "type": "select",
+        "operator": "equals",
+        "dynamicOptions": {
+          "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": ["Status", { "function": "COUNT", "field": "*", "alias": "Frequency" }], "groupBy": ["Status"], "sort": [{ "field": "Frequency", "direction": "DESC" }], "limit": 100 },
+          "valueField": "Status",
+          "labelField": "Status",
+          "countField": "Frequency",
+          "searchable": true
+        }
+      }]
+    }
+  ]
+}

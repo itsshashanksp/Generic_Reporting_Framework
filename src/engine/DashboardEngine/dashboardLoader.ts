@@ -103,6 +103,27 @@ export function loadDashboardConfiguration(
     // A database selector must control at least one widget: one whose resolved
     // request (inline, reportId or widgetId) names no database of its own.
     const definition = dashboardConfiguration as DashboardDefinition;
+    const runtimeFilterErrors = definition.widgets.flatMap(widget => {
+        if (!widget.runtimeFilters?.length) return [];
+        const request = resolveDashboardWidgetDefinition(widget, definition.filters ?? [])?.request;
+        const authoredFields = new Set(
+            (Array.isArray(request?.filters) ? request.filters : [])
+                .flatMap(condition => typeof condition === "object" && condition !== null
+                    && "field" in condition && typeof condition.field === "string"
+                    ? [condition.field.toLowerCase()] : [])
+        );
+        return widget.runtimeFilters
+            .filter(filter => authoredFields.has(filter.field.toLowerCase()))
+            .map(filter => `Widget "${widget.id}" runtime filter "${filter.field}" conflicts with an authored request filter targeting the same field.`);
+    });
+    if (runtimeFilterErrors.length > 0) {
+        const conflictValidation = {
+            ...validation,
+            valid: false,
+            errors: [...validation.errors, ...runtimeFilterErrors],
+        };
+        return { status: "invalid", dashboard: dashboardConfiguration, validation: conflictValidation };
+    }
     if (definition.databaseSelection && !definition.widgets.some(widget =>
         widget.visible !== false
         && requestInheritsDatabase(resolveDashboardWidgetRequest(widget, definition.filters ?? []))
@@ -138,6 +159,12 @@ export function loadDashboardConfiguration(
                 loadFilters((dashboardConfiguration as DashboardDefinition).filters ?? []),
                 (dashboardConfiguration as DashboardDefinition).dateFilterBehavior
             ),
+            widgets: (dashboardConfiguration as DashboardDefinition).widgets.map(widget => ({
+                ...widget,
+                ...(widget.runtimeFilters !== undefined
+                    ? { runtimeFilters: loadFilters(widget.runtimeFilters) }
+                    : {}),
+            })),
         },
         validation,
     };
@@ -181,7 +208,10 @@ export function resolveDashboardWidgetDefinition(
     dashboardFilters: FilterDefinition[] = []
 ): ReportDefinition | undefined {
     const sharedFilters = mapWidgetFilters(dashboardFilters, {}, widget.filterFields).filters;
-    const filters = mergeFilterDefinitions(widget.filters ?? [], sharedFilters);
+    const filters = mergeFilterDefinitions(
+        mergeFilterDefinitions(widget.filters ?? [], widget.runtimeFilters ?? []),
+        sharedFilters
+    );
     if (widget.queryDefinition || widget.request) {
         const configuration: ReportConfiguration = {
             id: widget.id,
@@ -205,11 +235,11 @@ export function resolveDashboardWidgetDefinition(
     }
 
     if (widget.widgetId) {
-        return addSharedFilters(getWidgetDefinition(widget.widgetId), sharedFilters);
+        return addSharedFilters(getWidgetDefinition(widget.widgetId), [...sharedFilters, ...(widget.runtimeFilters ?? [])]);
     }
 
     if (widget.reportId) {
-        return addSharedFilters(getReport(widget.reportId), sharedFilters);
+        return addSharedFilters(getReport(widget.reportId), [...sharedFilters, ...(widget.runtimeFilters ?? [])]);
     }
 
     return undefined;

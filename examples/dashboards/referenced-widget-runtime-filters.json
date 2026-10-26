@@ -1,0 +1,25 @@
+{
+  "id": "referenced-widget-runtime-filters",
+  "title": "Referenced Definitions with Local Filters",
+  "description": "Runtime filters belong to dashboard widget instances even when their data definition comes from widgetId or reportId.",
+  "layout": { "columns": 12, "tabletColumns": 6, "mobileColumns": 1 },
+  "widgets": [
+    {
+      "id": "reusable-customer-summary",
+      "type": "table",
+      "title": "Reusable Customer Summary",
+      "widgetId": "customer-summary-widget",
+      "width": 6,
+      "runtimeFilters": [{ "field": "CustomerName", "label": "Customer Name", "type": "text", "operator": "contains" }],
+      "pageSize": 10
+    },
+    {
+      "id": "referenced-orders-report",
+      "type": "report",
+      "title": "Referenced Orders",
+      "reportId": "orders-json-example",
+      "width": 6,
+      "runtimeFilters": [{ "field": "PaymentStatus", "label": "Payment Status", "type": "select", "operator": "equals", "options": [{ "label": "Paid", "value": "PAID" }, { "label": "Pending", "value": "PENDING" }] }]
+    }
+  ]
+}

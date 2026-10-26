@@ -445,6 +445,7 @@ function DashboardContent({
                                                     dashboard.filters ?? []
                                                 }
                                                 filterFields={widget.filterFields}
+                                                runtimeFilters={widget.runtimeFilters}
                                                 cacheScope={`${dashboard.id}:${widget.id}`}
                                             />
                                         )}
@@ -469,6 +470,7 @@ function DashboardContent({
                                                     dashboard.filters ?? []
                                                 }
                                                 filterFields={widget.filterFields}
+                                                runtimeFilters={widget.runtimeFilters}
                                                 cacheScope={`${dashboard.id}:${widget.id}`}
                                             />
                                         )}
@@ -498,6 +500,7 @@ function DashboardContent({
                                                     dashboard.filters ?? []
                                                 }
                                                 filterFields={widget.filterFields}
+                                                runtimeFilters={widget.runtimeFilters}
                                                 cacheScope={`${dashboard.id}:${widget.id}`}
                                                 exportConfig={widget.export}
                                             />
@@ -542,6 +545,7 @@ function DashboardContent({
                                                     dashboard.filters ?? []
                                                 }
                                                 filterFields={widget.filterFields}
+                                                runtimeFilters={widget.runtimeFilters}
                                                 cacheScope={`${dashboard.id}:${widget.id}`}
                                             />
                                         )}

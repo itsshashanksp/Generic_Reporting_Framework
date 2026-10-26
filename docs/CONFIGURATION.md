@@ -202,6 +202,7 @@ Every widget requires a unique `id`, a `type` (`report`, `stat`, `table`, `chart
 | `height` | all | Positive integer in pixels |
 | `position` | all | `{ x, y }`: `x` is zero-based, `y` is a one-based CSS grid row, and `x + width` must not exceed `layout.columns`. Ignored at tablet and mobile widths |
 | `filterFields` | all | Renames shared filter fields for this widget ([details](DASHBOARDS.md#per-widget-filter-fields)) |
+| `runtimeFilters` | all | Optional widget-local runtime controls using the standard filter definition shape. They affect only this widget ([details](DASHBOARDS.md#widget-level-runtime-filters)) |
 | `reportId` | `report` (required); `stat`/`table`/`chart` (one source) | Reuses a report definition |
 | `request` / `queryDefinition` / `widgetId` | `stat`/`table`/`chart` | Exactly one source in total, counting `reportId` |
 | `columns`, `sort`, `grid`, `toolbar`, `filters` | inline `stat`/`table`/`chart` | Same shapes as in reports. Dashboard-level filters are the active controls |

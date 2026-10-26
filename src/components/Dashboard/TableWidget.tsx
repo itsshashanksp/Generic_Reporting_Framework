@@ -27,6 +27,7 @@ import Loading from "../Common/Loading";
 import GenericGrid from "../Grid/GenericGrid";
 import ReportTableFrame from "../Grid/ReportTableFrame";
 import { getDashboardTableViewportHeight } from "./tableViewport";
+import WidgetFilterController, { type WidgetFilterControls } from "./WidgetFilterController";
 
 
 const EMPTY_FILTER_DEFINITIONS: FilterDefinition[] = [];
@@ -44,6 +45,7 @@ interface TableWidgetProps {
     filterFields?: WidgetFilterFields;
     cacheScope?: string;
     exportConfig?: ExportConfig;
+    runtimeFilters?: FilterDefinition[];
 }
 
 type SortDirection = "ASC" | "DESC";
@@ -94,6 +96,17 @@ function getColumnWidth(
 }
 
 export default function TableWidget({
+    runtimeFilters = EMPTY_FILTER_DEFINITIONS,
+    ...props
+}: TableWidgetProps) {
+    return (
+        <WidgetFilterController filters={runtimeFilters} database={props.request.database} widgetTitle={props.title}>
+            {controls => <TableWidgetContent {...props} runtimeFilters={runtimeFilters} widgetFilterControls={controls} />}
+        </WidgetFilterController>
+    );
+}
+
+function TableWidgetContent({
     title,
     description,
     pageSize,
@@ -104,7 +117,9 @@ export default function TableWidget({
     filterFields,
     cacheScope = title,
     exportConfig,
-}: TableWidgetProps) {
+    runtimeFilters = EMPTY_FILTER_DEFINITIONS,
+    widgetFilterControls,
+}: TableWidgetProps & { widgetFilterControls: WidgetFilterControls }) {
     const { refreshKey, appliedFilters } = useDashboard();
 
     const configuredPageSize = normalizePageSize(pageSize);
@@ -140,14 +155,19 @@ export default function TableWidget({
         const { filters, values } = mapWidgetFilters(filterDefinitions, appliedFilters, filterFields);
         return buildFilters(values, filters, request.action === "sql");
     }, [appliedFilters, filterDefinitions, filterFields, request.action]);
+    const widgetFilters = useMemo(
+        () => buildFilters(widgetFilterControls.appliedValues, runtimeFilters, request.action === "sql"),
+        [widgetFilterControls.appliedValues, runtimeFilters, request.action]
+    );
 
     const queryKey = useMemo(
         () => JSON.stringify({
             request,
             dashboardFilters,
+            widgetFilters,
             configuredPageSize,
         }),
-        [request, dashboardFilters, configuredPageSize]
+        [request, dashboardFilters, widgetFilters, configuredPageSize]
     );
 
     const currentPage = pageState.queryKey === queryKey
@@ -162,10 +182,11 @@ export default function TableWidget({
         filters: [
             ...(Array.isArray(request.filters) ? request.filters : []),
             ...dashboardFilters,
+            ...widgetFilters,
         ],
         pagination: { page: currentPage, pageSize: activePageSize },
         ...(sort ? { sort: [sort] } : {}),
-    }), [request, dashboardFilters, currentPage, activePageSize, sort]);
+    }), [request, dashboardFilters, widgetFilters, currentPage, activePageSize, sort]);
     const cacheKey = useMemo(
         () => createRequestCacheKey(`dashboard:${cacheScope}`, requestPayload),
         [cacheScope, requestPayload]
@@ -394,6 +415,7 @@ export default function TableWidget({
                 filters: [
                     ...(Array.isArray(request.filters) ? request.filters : []),
                     ...dashboardFilters,
+                    ...widgetFilters,
                 ],
                 ...(sort ? { sort: [sort] } : {}),
             }, {
@@ -419,7 +441,7 @@ export default function TableWidget({
             setExportProgress("");
             setExporting(false);
         }
-    }, [request, dashboardFilters, sort, exportRows]);
+    }, [request, dashboardFilters, widgetFilters, sort, exportRows]);
 
     const exportOptions: ExportMenuOption[] = [];
     if (exportConfig?.enabled) {
@@ -464,6 +486,7 @@ export default function TableWidget({
                     {isViewLoading && visibleRows.length > 0 && (
                         <span className="report-table-frame__status" role="status">Refreshing…</span>
                     )}
+                    {widgetFilterControls.button}
                     <ExportMenu
                         options={exportOptions}
                         disabled={isViewLoading && !visibleRows.length}
@@ -473,6 +496,8 @@ export default function TableWidget({
                 </>
             )}
         >
+
+            {widgetFilterControls.panel}
 
             {exportProgress && (
                 <div className="dashboard-table__export-progress" role="status">{exportProgress}</div>

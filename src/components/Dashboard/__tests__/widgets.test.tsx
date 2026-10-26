@@ -392,4 +392,38 @@ describe("dashboard widgets", () => {
         expect(screen.queryByText("1")).toBeNull();
         expect(screen.queryByText("Unable to load statistic")).toBeNull();
     });
+
+    it("applies widget filters to tables, resets paging, and preserves sorting", async () => {
+        executeRequestMock.mockResolvedValue({
+            success: true,
+            message: "ok",
+            data: [{ Item_Code: "A1", Item_Desc: "Alpha" }],
+            meta: { page: 1, pageSize: 10, totalRows: 20, rowsReturned: 1, executionTime: 1 },
+        });
+        render(
+            <DashboardProvider>
+                <TableWidget
+                    title="Filterable items"
+                    request={request}
+                    pageSize={10}
+                    runtimeFilters={[{ field: "Item_Desc", label: "Local description", type: "text", operator: "contains" }]}
+                />
+            </DashboardProvider>
+        );
+        await waitFor(() => expect(genericGridProps).toHaveBeenCalled());
+        act(() => genericGridProps.mock.calls.at(-1)?.[0].serverPagination.onPageChange(2));
+        await waitFor(() => expect(executeRequestMock.mock.calls.at(-1)?.[0].pagination.page).toBe(2));
+        act(() => genericGridProps.mock.calls.at(-1)?.[0].onSortChange([{ field: "Item_Code", direction: "DESC" }]));
+        await waitFor(() => expect(executeRequestMock.mock.calls.at(-1)?.[0].sort).toEqual([{ field: "Item_Code", direction: "DESC" }]));
+
+        fireEvent.click(screen.getByRole("button", { name: "Filter Filterable items" }));
+        fireEvent.change(screen.getByLabelText("Local description"), { target: { value: "pen" } });
+        fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+
+        await waitFor(() => expect(executeRequestMock.mock.calls.at(-1)?.[0]).toMatchObject({
+            filters: [{ field: "Item_Desc", operator: "LIKE", value: "%pen%" }],
+            pagination: { page: 1, pageSize: 10 },
+            sort: [{ field: "Item_Code", direction: "DESC" }],
+        }));
+    });
 });

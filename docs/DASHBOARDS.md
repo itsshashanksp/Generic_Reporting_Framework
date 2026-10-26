@@ -83,6 +83,71 @@ Validation rejects a mapping unless:
 
 `filterFields` renames a field; it is never SQL. The backend resolves the mapped name exactly as it would resolve a shared filter's name, and access scopes check that name.
 
+## Widget-level runtime filters
+
+An optional `runtimeFilters` array on a dashboard widget adds independent controls inside that widget. It uses the same filter definitions, types, operators, static options, and `dynamicOptions` as report and dashboard filters. It works with inline JSON Queries, inline SQL Resources, `widgetId`, and `reportId` widgets.
+
+```json
+{
+  "id": "open-orders",
+  "type": "table",
+  "title": "Open Orders",
+  "queryDefinition": { "format": "sql", "resource": "widgets/open-orders" },
+  "runtimeFilters": [
+    { "field": "Customer", "label": "Customer", "type": "text", "operator": "contains" }
+  ]
+}
+```
+
+The widget header shows **Filter** only when at least one local filter is visible. Editing is draft-only; **Apply** reloads that widget, and **Reset** clears only that widget. Dashboard Search and Clear do not alter widget-local values. An active marker appears after local values are applied.
+
+Dashboard and widget filters are appended to existing authored request filters:
+
+```text
+authored request filters + mapped dashboard filters + widget runtime filters
+```
+
+They use the request's existing flat `filterLogic`; grouped scope-specific AND/OR logic is not supported. Configuration is rejected when a widget runtime filter targets the same effective field as a dashboard filter (after `filterFields` mapping) or an authored request filter. Conditions are never silently overwritten.
+
+For SQL Resources, fields remain logical runtime identifiers and must be permitted by the backend resource contract. The frontend never constructs SQL. A backend rejection is shown only in the owning widget.
+
+Dynamic option requests inherit the owning widget's effective database—explicit widget database, dashboard selection, or global fallback—unless the option request explicitly names its own database. Existing authorization and database access scopes still apply.
+
+Table widgets apply the same local filters to screen requests and **All rows** exports. Applying a local filter returns the table to page 1 while preserving sort and page size. Cache keys include the complete filtered request.
+
+Dashboard and widget filters together:
+
+```json
+{
+  "filters": [
+    { "field": "Bill_Date", "label": "Date", "type": "daterange" }
+  ],
+  "widgets": [
+    {
+      "id": "sales-by-category",
+      "type": "chart",
+      "title": "Sales by Category",
+      "reportId": "sales",
+      "xField": "Category",
+      "yField": "Amount",
+      "runtimeFilters": [
+        {
+          "field": "Region",
+          "label": "Region",
+          "type": "select",
+          "dynamicOptions": {
+            "request": { "action": "select", "source": { "table": "Regions" }, "fields": ["Region"] },
+            "valueField": "Region"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+Existing `filters` on reports and reusable definitions retain their prior metadata meaning and are not automatically exposed as widget controls. Declare `runtimeFilters` on the dashboard widget instance to opt in.
+
 ## Database selector
 
 A dashboard can let users switch the database its widgets read from:

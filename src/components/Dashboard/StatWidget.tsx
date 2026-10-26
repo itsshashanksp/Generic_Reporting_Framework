@@ -8,6 +8,7 @@ import Empty from "../Common/Empty";
 import ErrorState from "../Common/Error";
 import Loading from "../Common/Loading";
 import DashboardWidgetFrame from "./DashboardWidgetFrame";
+import WidgetFilterController, { type WidgetFilterControls } from "./WidgetFilterController";
 import { useDashboardWidgetRequest } from "./useDashboardWidgetRequest";
 
 const EMPTY_FILTER_DEFINITIONS: FilterDefinition[] = [];
@@ -22,6 +23,7 @@ interface StatWidgetProps {
     /** Renames shared dashboard filter fields for this widget (see DashboardWidget). */
     filterFields?: WidgetFilterFields;
     cacheScope?: string;
+    runtimeFilters?: FilterDefinition[];
 }
 
 function formatValue(
@@ -56,6 +58,17 @@ function formatValue(
 }
 
 export default function StatWidget({
+    runtimeFilters = EMPTY_FILTER_DEFINITIONS,
+    ...props
+}: StatWidgetProps) {
+    return (
+        <WidgetFilterController filters={runtimeFilters} database={props.request.database} widgetTitle={props.title}>
+            {controls => <StatWidgetContent {...props} runtimeFilters={runtimeFilters} widgetFilterControls={controls} />}
+        </WidgetFilterController>
+    );
+}
+
+function StatWidgetContent({
     title,
     description,
     request,
@@ -64,12 +77,16 @@ export default function StatWidget({
     filterDefinitions = EMPTY_FILTER_DEFINITIONS,
     filterFields,
     cacheScope,
-}: StatWidgetProps) {
+    runtimeFilters = EMPTY_FILTER_DEFINITIONS,
+    widgetFilterControls,
+}: StatWidgetProps & { widgetFilterControls: WidgetFilterControls }) {
     const { response, loading, error, retry } = useDashboardWidgetRequest(
         request,
         filterDefinitions,
         cacheScope,
-        filterFields
+        filterFields,
+        runtimeFilters,
+        widgetFilterControls.appliedValues
     );
     const statistic = useMemo(() => {
         const firstRow = response?.data?.[0];
@@ -91,6 +108,8 @@ export default function StatWidget({
             description={description}
             refreshing={loading && hasValue}
             variant="stat"
+            actions={widgetFilterControls.button}
+            filterPanel={widgetFilterControls.panel}
         >
             {loading && !hasValue && <Loading label="Loading statistic…" compact />}
             {!loading && error && !hasValue && (

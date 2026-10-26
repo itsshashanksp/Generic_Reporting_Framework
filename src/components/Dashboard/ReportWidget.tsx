@@ -8,6 +8,7 @@ import Loading from "../Common/Loading";
 import ReportTableFrame from "../Grid/ReportTableFrame";
 import ReportDataGrid from "./ReportDataGrid";
 import { useDashboardWidgetRequest } from "./useDashboardWidgetRequest";
+import WidgetFilterController, { type WidgetFilterControls } from "./WidgetFilterController";
 
 const EMPTY_FILTER_DEFINITIONS: FilterDefinition[] = [];
 
@@ -20,9 +21,22 @@ interface ReportWidgetProps {
     /** Renames shared dashboard filter fields for this widget (see DashboardWidget). */
     filterFields?: WidgetFilterFields;
     cacheScope?: string;
+    runtimeFilters?: FilterDefinition[];
 }
 
 export default function ReportWidget({
+    runtimeFilters = EMPTY_FILTER_DEFINITIONS,
+    ...props
+}: ReportWidgetProps) {
+    const report = props.definition ?? (props.reportId ? getReport(props.reportId) : undefined) ?? null;
+    return (
+        <WidgetFilterController filters={runtimeFilters} database={report?.request.database} widgetTitle={props.title}>
+            {controls => <ReportWidgetContent {...props} runtimeFilters={runtimeFilters} widgetFilterControls={controls} />}
+        </WidgetFilterController>
+    );
+}
+
+function ReportWidgetContent({
     reportId,
     definition,
     title,
@@ -30,13 +44,17 @@ export default function ReportWidget({
     filterDefinitions = EMPTY_FILTER_DEFINITIONS,
     filterFields,
     cacheScope,
-}: ReportWidgetProps) {
+    runtimeFilters = EMPTY_FILTER_DEFINITIONS,
+    widgetFilterControls,
+}: ReportWidgetProps & { widgetFilterControls: WidgetFilterControls }) {
     const report = definition ?? (reportId ? getReport(reportId) : undefined) ?? null;
     const { response, loading, error, retry } = useDashboardWidgetRequest(
         report?.request ?? null,
         filterDefinitions,
         cacheScope,
-        filterFields
+        filterFields,
+        runtimeFilters,
+        widgetFilterControls.appliedValues
     );
     const rows = response?.data ?? [];
 
@@ -46,10 +64,12 @@ export default function ReportWidget({
             title={title}
             description={description}
             busy={loading}
-            actions={loading && rows.length > 0
-                ? <span className="report-table-frame__status" role="status">Refreshing…</span>
-                : undefined}
+            actions={<>
+                {loading && rows.length > 0 && <span className="report-table-frame__status" role="status">Refreshing…</span>}
+                {widgetFilterControls.button}
+            </>}
         >
+            {widgetFilterControls.panel}
             {!report && (
                 <ErrorState title="Report unavailable" message="The configured report was not found." compact />
             )}

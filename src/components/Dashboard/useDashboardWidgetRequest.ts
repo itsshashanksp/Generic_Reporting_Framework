@@ -16,6 +16,7 @@ import {
 } from "../../engine/RequestCache";
 import type { ApiResponse } from "../../types/api";
 import type { FilterDefinition } from "../../types/filter";
+import type { FilterValues } from "../../engine/FilterContext";
 
 interface RequestWithFilters {
     action?: string;
@@ -33,7 +34,9 @@ export function useDashboardWidgetRequest(
     request: (object & RequestWithFilters) | null,
     filterDefinitions: FilterDefinition[],
     cacheScope = "dashboard-widget",
-    filterFields?: WidgetFilterFields
+    filterFields?: WidgetFilterFields,
+    runtimeFilterDefinitions: FilterDefinition[] = [],
+    runtimeFilterValues: FilterValues = {}
 ) {
     const { refreshKey, appliedFilters } = useDashboard();
     const [retryKey, setRetryKey] = useState(0);
@@ -45,17 +48,22 @@ export function useDashboardWidgetRequest(
         const { filters, values } = mapWidgetFilters(filterDefinitions, appliedFilters, filterFields);
         return buildFilters(values, filters, request?.action === "sql");
     }, [appliedFilters, filterDefinitions, filterFields, request?.action]);
+    const widgetFilters = useMemo(
+        () => buildFilters(runtimeFilterValues, runtimeFilterDefinitions, request?.action === "sql"),
+        [runtimeFilterValues, runtimeFilterDefinitions, request?.action]
+    );
     const queryKey = useMemo(
-        () => JSON.stringify({ request, dashboardFilters }),
-        [request, dashboardFilters]
+        () => JSON.stringify({ request, dashboardFilters, widgetFilters }),
+        [request, dashboardFilters, widgetFilters]
     );
     const requestPayload = useMemo(() => request ? ({
         ...request,
         filters: [
             ...(Array.isArray(request.filters) ? request.filters : []),
             ...dashboardFilters,
+            ...widgetFilters,
         ],
-    }) : null, [request, dashboardFilters]);
+    }) : null, [request, dashboardFilters, widgetFilters]);
     const cacheKey = useMemo(
         () => requestPayload
             ? createRequestCacheKey(`dashboard:${cacheScope}`, requestPayload)

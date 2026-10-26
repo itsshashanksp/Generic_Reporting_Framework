@@ -31,4 +31,24 @@ describe("version-controlled example library", () => {
         expect(serialized).not.toMatch(/loyal-ibms|ItemMasterTable|BillDetTable|PurMastTable/);
         expect(serialized).toContain("catalog/customer-summary");
     });
+
+    it("keeps complete widget runtime-filter demonstrations in the public library", () => {
+        const byId = new Map(Object.values(dashboards).flatMap(value =>
+            typeof value === "object" && value !== null && "id" in value
+                ? [[String(value.id), value as { widgets?: Array<Record<string, unknown>> }]] as const
+                : []));
+        for (const id of [
+            "widget-runtime-filters-dashboard",
+            "combined-dashboard-widget-filters",
+            "dynamic-widget-runtime-filters",
+            "referenced-widget-runtime-filters",
+        ]) {
+            const example = byId.get(id);
+            expect(example, id).toBeDefined();
+            expect(example?.widgets?.some(widget => Array.isArray(widget.runtimeFilters) && widget.runtimeFilters.length > 0), id).toBe(true);
+        }
+        const referenced = byId.get("referenced-widget-runtime-filters")?.widgets ?? [];
+        expect(referenced.some(widget => typeof widget.widgetId === "string")).toBe(true);
+        expect(referenced.some(widget => typeof widget.reportId === "string")).toBe(true);
+    });
 });
