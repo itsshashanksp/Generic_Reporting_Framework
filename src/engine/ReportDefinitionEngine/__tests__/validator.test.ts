@@ -11,6 +11,19 @@ const presentation = {
 };
 
 describe("report request contract alignment", () => {
+    it("accepts optional column alignment and rejects unsupported values", () => {
+        const report = {
+            ...presentation,
+            queryDefinition: { format: "sql", resource: "reports/customer" },
+            columns: [{ field: "CustomerName", header: "Customer", align: "left" }],
+        };
+        expect(getReportValidationErrors(report)).toEqual([]);
+        expect(getReportValidationErrors({
+            ...report,
+            columns: [{ field: "CustomerName", header: "Customer", align: "justify" }],
+        })).toContain("Report column at index 0 align must be left, center, or right.");
+    });
+
     it("accepts CSV/Excel report exports and rejects chart or empty format lists", () => {
         const report = {
             ...presentation,

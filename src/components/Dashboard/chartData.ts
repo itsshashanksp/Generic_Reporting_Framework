@@ -5,6 +5,22 @@ export interface ChartDatum {
     value: number | null;
 }
 
+const MINIMUM_HORIZONTAL_CHART_HEIGHT = 260;
+const HORIZONTAL_BAR_ROW_HEIGHT = 36;
+const HORIZONTAL_CHART_VERTICAL_CHROME = 76;
+
+/** Keeps every category readable; the chart viewport scrolls when its card is shorter. */
+export function getHorizontalBarChartHeight(categoryCount: number): number {
+    const count = Number.isFinite(categoryCount) ? Math.max(0, Math.floor(categoryCount)) : 0;
+    return Math.max(MINIMUM_HORIZONTAL_CHART_HEIGHT, count * HORIZONTAL_BAR_ROW_HEIGHT + HORIZONTAL_CHART_VERTICAL_CHROME);
+}
+
+/** Reserves label room while allowing long category names to use more axis space. */
+export function getHorizontalCategoryAxisWidth(data: ChartDatum[]): number {
+    const longest = data.reduce((length, item) => Math.max(length, item.name.length), 0);
+    return Math.min(190, Math.max(110, longest * 6.5 + 18));
+}
+
 const compactNumber = new Intl.NumberFormat("en", {
     notation: "compact",
     maximumFractionDigits: 2,

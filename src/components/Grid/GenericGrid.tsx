@@ -14,7 +14,7 @@ import { getContentMinWidth } from "../../engine/GridEngine/contentWidth";
 import { formatValueForDisplay } from "../../engine/ValueFormatter";
 
 import type { GridConfig, SortDefinition } from "../../types/report";
-import type { ColumnDefinition } from "../../types/column";
+import type { ColumnAlignment, ColumnDefinition } from "../../types/column";
 import MobileReportView from "./MobileReportView";
 import Pagination from "./Pagination";
 
@@ -41,6 +41,10 @@ interface Props {
 
 function formatGridValue(value: unknown, dataType?: ColumnDefinition["dataType"]): string {
     return formatValueForDisplay(value, dataType);
+}
+
+function getColumnAlignment(column: Pick<ColumnDefinition, "align" | "dataType">): ColumnAlignment {
+    return column.align ?? (column.dataType === "number" ? "right" : "left");
 }
 
 export default function GenericGrid({
@@ -107,6 +111,9 @@ export default function GenericGrid({
                     ),
                     valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value),
                     dataType: undefined,
+                    align: "left" as const,
+                    cellClass: "universal-grid__cell--left",
+                    headerClass: "universal-grid__header--left",
                     comparator: (left: unknown, right: unknown) => compareGridValues(left, right),
                     ...getInitialSortState(group.field),
                 })),
@@ -128,14 +135,18 @@ export default function GenericGrid({
                     ),
                     valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value, "number"),
                     dataType: "number" as const,
-                    cellClass: "universal-grid__cell--numeric",
+                    align: "right" as const,
+                    cellClass: "universal-grid__cell--right",
+                    headerClass: "universal-grid__header--right",
                     comparator: (left: unknown, right: unknown) => compareGridValues(left, right, "number"),
                     ...getInitialSortState(aggregate.alias ?? `${aggregate.function}_${aggregate.field}`),
                 })),
             ]
             : columns
                 .filter(column => column.visible)
-                .map(column => ({
+                .map(column => {
+                    const alignment = getColumnAlignment(column);
+                    return ({
                     field: column.field,
                     headerName: column.header,
                     sortable: column.sortable,
@@ -151,10 +162,13 @@ export default function GenericGrid({
                     ),
                     valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value, column.dataType),
                     dataType: column.dataType,
-                    cellClass: column.dataType === "number" ? "universal-grid__cell--numeric" : undefined,
+                    align: alignment,
+                    cellClass: `universal-grid__cell--${alignment}`,
+                    headerClass: `universal-grid__header--${alignment}`,
                     comparator: (left: unknown, right: unknown) => compareGridValues(left, right, column.dataType),
                     ...getInitialSortState(column.field),
-                }));
+                });
+                });
     }, [columns, gridConfig.grouping, initialSort, rows]);
 
     const mobileColumns = columnDefs.map(column => ({
@@ -162,6 +176,7 @@ export default function GenericGrid({
         headerName: column.headerName,
         sortable: column.sortable !== false,
         dataType: column.dataType,
+        align: column.align,
     }));
 
     const mobileRows = useMemo(() => {

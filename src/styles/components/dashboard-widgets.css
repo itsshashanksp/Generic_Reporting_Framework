@@ -161,6 +161,20 @@
     background: linear-gradient(180deg, #fff 0%, #fbfdff 100%);
 }
 
+.dashboard-widget-content__chart-canvas {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 100%;
+}
+
+.dashboard-widget-content__chart--scrollable {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+
 .dashboard-widget-content__chart .recharts-text {
     fill: #64748b;
     font-size: 11px;
@@ -203,6 +217,14 @@
     font-weight: 700;
 }
 
+.dashboard-chart-center-caption {
+    fill: #64748b;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
 .dashboard-chart-external-label {
     fill: #475569;
     font-size: 11px;
@@ -216,14 +238,51 @@
     stroke-width: 1;
 }
 
-.dashboard-stat-value {
+.dashboard-widget-content--stat .dashboard-widget-content__body {
+    min-height: 0;
+}
+
+.dashboard-stat-card {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    min-height: 96px;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 10px;
+    padding: clamp(14px, 3cqw, 22px);
     overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+    box-sizing: border-box;
+}
+
+.dashboard-stat-card > .ui-state {
+    width: 100%;
+    min-height: 0;
+    padding: 8px;
+}
+
+.dashboard-stat-card > .dashboard-widget-inline-error {
+    width: 100%;
+    margin-bottom: 0;
+    box-sizing: border-box;
+}
+
+.dashboard-stat-value {
+    display: block;
+    width: 100%;
+    max-width: 100%;
     color: #111827;
-    font-size: clamp(25px, 4vw, 34px);
-    font-weight: 650;
+    font-size: clamp(24px, 8cqw, 36px);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
     line-height: 1.2;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    text-align: center;
 }
 
 .dashboard-widget-inline-error {
@@ -252,6 +311,15 @@
 
     .dashboard-widget-content__chart {
         min-height: 240px;
+    }
+
+    .dashboard-widget-content__chart-canvas {
+        min-height: 240px;
+    }
+
+    .dashboard-stat-card {
+        min-height: 88px;
+        padding: 14px;
     }
 
     .dashboard-widget-inline-error {
@@ -328,6 +396,10 @@
         min-height: 230px;
         padding-right: 0;
         padding-left: 0;
+    }
+
+    .dashboard-widget-content__chart-canvas {
+        min-height: 230px;
     }
 
     .dashboard-widget-content__chart .recharts-legend-item-text {

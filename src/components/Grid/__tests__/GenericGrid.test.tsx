@@ -97,6 +97,36 @@ describe("GenericGrid shared configuration", () => {
         expect(screen.getByText("12,509.55")).toBeTruthy();
     });
 
+    it("aligns typed numeric values and headers without treating text identifiers as numbers", () => {
+        const row = { Code: "00123", Integer: 7, Currency: -1250.5, Percentage: null, Override: 42 };
+        render(<GridProvider><GenericGrid rows={[row]} columns={[
+            { field: "Code", header: "Code", dataType: "text", visible: true },
+            { field: "Integer", header: "Integer", dataType: "number", visible: true },
+            { field: "Currency", header: "Currency", dataType: "number", visible: true },
+            { field: "Percentage", header: "Percentage", dataType: "number", visible: true },
+            { field: "Override", header: "Override", dataType: "number", align: "left", visible: true },
+        ]} gridConfig={gridConfig} /></GridProvider>);
+        const definitions = agGridProps.mock.calls.at(-1)?.[0].columnDefs;
+
+        expect(definitions.map((column: { cellClass: string }) => column.cellClass)).toEqual([
+            "universal-grid__cell--left",
+            "universal-grid__cell--right",
+            "universal-grid__cell--right",
+            "universal-grid__cell--right",
+            "universal-grid__cell--left",
+        ]);
+        expect(definitions.map((column: { headerClass: string }) => column.headerClass)).toEqual([
+            "universal-grid__header--left",
+            "universal-grid__header--right",
+            "universal-grid__header--right",
+            "universal-grid__header--right",
+            "universal-grid__header--left",
+        ]);
+        expect(definitions[0].valueFormatter({ value: row.Code })).toBe("00123");
+        expect(definitions[2].valueFormatter({ value: row.Currency })).toBe("-1,250.5");
+        expect(definitions[3].valueFormatter({ value: row.Percentage })).toBe("—");
+    });
+
     it("passes the declared column type to the desktop grid comparator", () => {
         const numericColumns = [{ field: "Amount", header: "Amount", dataType: "number" as const, visible: true }];
         render(<GridProvider><GenericGrid rows={[{ Amount: "10" }, { Amount: "2" }]} columns={numericColumns} gridConfig={gridConfig} /></GridProvider>);

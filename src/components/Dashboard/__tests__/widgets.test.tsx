@@ -85,7 +85,7 @@ describe("dashboard widgets", () => {
         expect(props.columns.map((column: { field: string }) => column.field)).toEqual(["Item_Code", "Item_Desc"]);
         expect(props.serverPagination).toMatchObject({ page: 1, pageSize: 10, totalRows: 1 });
         expect(props.height).toBe(466);
-        expect(props.autoHeight).toBe(true);
+        expect(props.autoHeight).toBeUndefined();
         expect(executeRequestMock).toHaveBeenCalledTimes(1);
     });
 
@@ -124,7 +124,47 @@ describe("dashboard widgets", () => {
         expect(getDashboardTableViewportHeight(100)).toBe(466);
     });
 
-    it("uses the controlled scroll viewport only when the returned page exceeds ten rows", async () => {
+    it.each([2, 8, 10])("keeps %i real rows inside the full dashboard table viewport", async rowCount => {
+        const rows = Array.from({ length: rowCount }, (_, index) => ({ Item_Code: String(index + 1) }));
+        executeRequestMock.mockResolvedValue({
+            success: true,
+            message: "ok",
+            data: rows,
+            meta: { page: 1, pageSize: 10, totalRows: rowCount, rowsReturned: rowCount, executionTime: 1 },
+        });
+        render(
+            <DashboardProvider>
+                <TableWidget title={`Items ${rowCount}`} request={request} pageSize={10} />
+            </DashboardProvider>
+        );
+
+        await waitFor(() => expect(screen.getByTestId("shared-generic-grid")).toBeTruthy());
+        const props = genericGridProps.mock.calls.at(-1)?.[0];
+        expect(props.rows).toEqual(rows);
+        expect(props.height).toBe(466);
+        expect(props.autoHeight).toBeUndefined();
+        expect(props.serverPagination).toMatchObject({ page: 1, pageSize: 10, totalRows: rowCount });
+    });
+
+    it("preserves the dashboard empty state without adding placeholder grid rows", async () => {
+        executeRequestMock.mockResolvedValue({
+            success: true,
+            message: "ok",
+            data: [],
+            meta: { page: 1, pageSize: 10, totalRows: 0, rowsReturned: 0, executionTime: 1 },
+        });
+        render(
+            <DashboardProvider>
+                <TableWidget title="Empty items" request={request} pageSize={10} />
+            </DashboardProvider>
+        );
+
+        expect(await screen.findByText("No records found")).toBeTruthy();
+        expect(screen.queryByTestId("shared-generic-grid")).toBeNull();
+        expect(genericGridProps).not.toHaveBeenCalled();
+    });
+
+    it("uses the controlled dashboard viewport when the returned page exceeds ten rows", async () => {
         executeRequestMock.mockResolvedValue({
             success: true,
             message: "ok",
@@ -137,7 +177,8 @@ describe("dashboard widgets", () => {
             </DashboardProvider>
         );
 
-        await waitFor(() => expect(genericGridProps.mock.calls.at(-1)?.[0].autoHeight).toBe(false));
+        await waitFor(() => expect(screen.getByTestId("shared-generic-grid")).toBeTruthy());
+        expect(genericGridProps.mock.calls.at(-1)?.[0].autoHeight).toBeUndefined();
         expect(genericGridProps.mock.calls.at(-1)?.[0].height).toBe(466);
     });
 
@@ -202,10 +243,24 @@ describe("dashboard widgets", () => {
         });
         render(
             <DashboardProvider>
-                <StatWidget title="Total Items" request={request} valueField="TotalItems" format="number" />
+                <StatWidget
+                    title="Total Items"
+                    description="Available catalog items"
+                    request={request}
+                    valueField="TotalItems"
+                    format="number"
+                    runtimeFilters={[{ field: "Item_Desc", label: "Item", type: "text" }]}
+                />
             </DashboardProvider>
         );
-        expect(await screen.findByText("1,234")).toBeTruthy();
+        const value = await screen.findByText("1,234");
+        const card = value.closest(".dashboard-stat-card");
+        expect(card).not.toBeNull();
+        expect(card?.parentElement?.classList.contains("dashboard-widget-content__body")).toBe(true);
+        expect(value.tagName).toBe("OUTPUT");
+        expect(value.getAttribute("title")).toBe("1,234");
+        expect(screen.getByText("Available catalog items")).toBeTruthy();
+        expect(screen.getByRole("button", { name: "Filter Total Items" })).toBeTruthy();
     });
 
     it("removes floating-point artifacts from stat presentation", async () => {
@@ -256,6 +311,30 @@ describe("dashboard widgets", () => {
         expect(await screen.findByText("—")).toBeTruthy();
         expect(row.value).toBeNull();
         expect(screen.queryByText("No data")).toBeNull();
+    });
+
+    it.each([
+        ["currency", -1234.5, "-₹1,234.50"],
+        ["decimal", 0, "0.00"],
+        ["percentage", 12.345, "12.35%"],
+        ["number", 1234567890, "1,23,45,67,890"],
+        ["number", "", "—"],
+        ["number", "   ", "—"],
+    ] as const)("renders %s stat value %s inside the shared value card", async (format, rawValue, expected) => {
+        executeRequestMock.mockResolvedValue({
+            success: true,
+            message: "ok",
+            data: [{ value: rawValue }],
+        });
+        render(
+            <DashboardProvider>
+                <StatWidget title={`${format} statistic`} request={request} valueField="value" format={format} />
+            </DashboardProvider>
+        );
+
+        const value = await screen.findByText(expected);
+        expect(value.closest(".dashboard-stat-card")).not.toBeNull();
+        expect(value.classList.contains("dashboard-stat-value")).toBe(true);
     });
 
     it("applies Item Dashboard filters to every statistic and maps all statistic fields", async () => {

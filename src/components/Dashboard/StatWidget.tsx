@@ -3,7 +3,7 @@ import { formatNumberForDisplay, NULL_DISPLAY_VALUE } from "../../engine/ValueFo
 
 import type { FilterDefinition } from "../../types/filter";
 import type { WidgetFilterFields } from "../../engine/DashboardEngine/filterFields";
-import type { WidgetRequest } from "../../types/widget";
+import type { WidgetFormat, WidgetRequest } from "../../types/widget";
 import Empty from "../Common/Empty";
 import ErrorState from "../Common/Error";
 import Loading from "../Common/Loading";
@@ -18,7 +18,7 @@ interface StatWidgetProps {
     description?: string;
     request: WidgetRequest;
     valueField?: string;
-    format?: "number" | "currency" | "decimal";
+    format?: WidgetFormat;
     filterDefinitions?: FilterDefinition[];
     /** Renames shared dashboard filter fields for this widget (see DashboardWidget). */
     filterFields?: WidgetFilterFields;
@@ -31,7 +31,9 @@ function formatValue(
     value: unknown,
     format: StatWidgetProps["format"]
 ) {
-    if (value === null) return NULL_DISPLAY_VALUE;
+    if (value === null || (typeof value === "string" && value.trim() === "")) {
+        return NULL_DISPLAY_VALUE;
+    }
 
     const numericValue = Number(value);
 
@@ -53,6 +55,13 @@ function formatValue(
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
         });
+    }
+
+    if (format === "percentage") {
+        return `${numericValue.toLocaleString("en-IN", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        })}%`;
     }
 
     return formatNumberForDisplay(numericValue);
@@ -102,6 +111,7 @@ function StatWidgetContent({
         return { available: values.length > 0, value: values[0] };
     }, [response, valueField]);
     const { available: hasValue, value } = statistic;
+    const formattedValue = hasValue ? formatValue(value, format) : "";
 
     return (
         <DashboardWidgetFrame
@@ -112,25 +122,27 @@ function StatWidgetContent({
             actions={widgetFilterControls.button}
             filterPanel={widgetFilterControls.panel}
         >
-            {loading && !hasValue && <Loading label="Loading statistic…" compact />}
-            {!loading && error && !hasValue && (
-                <ErrorState
-                    title="Unable to load statistic"
-                    message={error}
-                    onRetry={retry}
-                    compact
-                />
-            )}
-            {!loading && error && hasValue && (
-                <div className="dashboard-widget-inline-error" role="alert">
-                    <span>Refresh failed.</span>
-                    <button type="button" className="app-button" onClick={retry}>Retry</button>
-                </div>
-            )}
-            {!loading && !error && !hasValue && (
-                <Empty title="No data" message="No statistic is available." compact />
-            )}
-            {hasValue && <div className="dashboard-stat-value">{formatValue(value, format)}</div>}
+            <div className="dashboard-stat-card">
+                {loading && !hasValue && <Loading label="Loading statistic…" compact />}
+                {!loading && error && !hasValue && (
+                    <ErrorState
+                        title="Unable to load statistic"
+                        message={error}
+                        onRetry={retry}
+                        compact
+                    />
+                )}
+                {!loading && error && hasValue && (
+                    <div className="dashboard-widget-inline-error" role="alert">
+                        <span>Refresh failed.</span>
+                        <button type="button" className="app-button" onClick={retry}>Retry</button>
+                    </div>
+                )}
+                {!loading && !error && !hasValue && (
+                    <Empty title="No data" message="No statistic is available." compact />
+                )}
+                {hasValue && <output className="dashboard-stat-value" title={formattedValue}>{formattedValue}</output>}
+            </div>
         </DashboardWidgetFrame>
     );
 }

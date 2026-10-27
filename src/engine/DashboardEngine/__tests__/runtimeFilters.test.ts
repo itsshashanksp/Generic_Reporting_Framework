@@ -18,6 +18,14 @@ describe("dashboard widget runtimeFilters validation", () => {
         expect(validateDashboard(dashboard([widget()])).errors).toEqual([]);
     });
 
+    it("accepts percentage stat formatting without changing existing formats", () => {
+        for (const format of ["number", "decimal", "currency", "percentage"]) {
+            expect(validateDashboard(dashboard([widget({ format })])).errors, format).toEqual([]);
+        }
+        expect(validateDashboard(dashboard([widget({ format: "ratio" })])).errors)
+            .toContain('Stat widget "orders" has invalid format.');
+    });
+
     it("accepts dialog display and rejects unsupported runtime filter displays", () => {
         expect(validateDashboard(dashboard([widget({ runtimeFilterDisplay: "dialog" })])).errors).toEqual([]);
         expect(validateDashboard(dashboard([widget({ runtimeFilterDisplay: "drawer" })])).errors)

@@ -566,7 +566,6 @@ function TableWidgetContent({
                         columns={columns}
                         gridConfig={gridConfig}
                         height={getDashboardTableViewportHeight(activePageSize)}
-                        autoHeight={visibleRows.length <= 10}
                         initialSort={request.sort}
                         serverPagination={{
                             page: currentPage,

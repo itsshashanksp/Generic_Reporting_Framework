@@ -39,6 +39,7 @@ const statFormats = [
     "number",
     "currency",
     "decimal",
+    "percentage",
 ] as const;
 
 const filterTypes = [

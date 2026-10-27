@@ -28,12 +28,12 @@ vi.mock("recharts", () => {
         BarChart: ({ children, layout, data }: { children: ReactNode; layout?: string; data: unknown[] }) => <svg data-testid="bar-chart" data-layout={layout ?? "horizontal"} data-count={data.length}>{children}</svg>,
         LineChart: ({ children, data }: { children: ReactNode; data: unknown[] }) => <svg data-testid="line-chart" data-count={data.length}>{children}</svg>,
         PieChart: ({ children }: { children: ReactNode }) => <svg data-testid="pie-chart">{children}</svg>,
-        Pie: ({ children, innerRadius, data, label }: { children: ReactNode; innerRadius?: string | number; data: Array<{ value: number }>; label?: false | ((props: Record<string, unknown>) => ReactNode) }) => <g data-testid="pie" data-inner-radius={innerRadius}>{children}{typeof label === "function" && data.map((item, index) => <g data-testid="pie-external-label" key={index}>{label({ index, value: item.value, cx: 100, cy: 100, outerRadius: 100, midAngle: 90 - index * 40 })}</g>)}</g>,
+        Pie: ({ children, innerRadius, outerRadius, cy, data, label }: { children: ReactNode; innerRadius?: string | number; outerRadius?: string | number; cy?: string | number; data: Array<{ value: number }>; label?: false | ((props: Record<string, unknown>) => ReactNode) }) => <g data-testid="pie" data-inner-radius={innerRadius} data-outer-radius={outerRadius} data-cy={cy}>{children}{typeof label === "function" && data.map((item, index) => <g data-testid="pie-external-label" key={index}>{label({ index, value: item.value, cx: 100, cy: 100, outerRadius: 100, midAngle: 90 - index * 40 })}</g>)}</g>,
         Bar: passthrough, Line: passthrough, Cell: () => null, Label: ({ value }: { value: string }) => <text>{value}</text>,
         CartesianGrid: () => null, Legend: () => null,
         Tooltip: ({ formatter }: { formatter?: (value: unknown) => string }) => <text data-testid="tooltip-value">{formatter?.(12908199.939999992)}</text>,
         XAxis: ({ tickFormatter }: { tickFormatter?: (value: unknown) => string }) => <text data-testid="x-axis-value">{tickFormatter?.(12908199.939999992)}</text>,
-        YAxis: ({ tickFormatter }: { tickFormatter?: (value: unknown) => string }) => <text data-testid="y-axis-value">{tickFormatter?.(12908199.939999992)}</text>,
+        YAxis: ({ tickFormatter, width }: { tickFormatter?: (value: unknown) => string; width?: number }) => <text data-testid="y-axis-value" data-width={width}>{tickFormatter?.(12908199.939999992)}</text>,
     };
 });
 
@@ -52,8 +52,10 @@ describe("modern chart widget", () => {
         mocks.executeRequest.mockResolvedValue(response([{ Category: "A", Amount: 7 }, { Category: "B", Amount: 3 }]));
         const { rerender } = render(<DashboardProvider><ChartWidget title="Sales" request={request} xField="Category" yField="Amount" chartType="pie" chartOptions={{ appearance: "donut", showCenterTotal: true }} /></DashboardProvider>);
         expect(await screen.findByTestId("pie")).toBeTruthy();
-        expect(screen.getByTestId("pie").getAttribute("data-inner-radius")).toBe("46%");
+        expect(screen.getByTestId("pie").getAttribute("data-inner-radius")).toBe("50%");
+        expect(screen.getByTestId("pie").getAttribute("data-outer-radius")).toBe("80%");
         expect(screen.getByText("10")).toBeTruthy();
+        expect(screen.getByText("Total")).toBeTruthy();
 
         rerender(<DashboardProvider><ChartWidget title="Sales" request={request} xField="Category" yField="Amount" chartType="bar" chartOptions={{ orientation: "horizontal" }} /></DashboardProvider>);
         expect(await screen.findByTestId("bar-chart")).toBeTruthy();
@@ -76,6 +78,22 @@ describe("modern chart widget", () => {
 
         view.rerender(<DashboardProvider><ChartWidget title="Values" request={request} xField="Category" yField="Amount" chartType="bar" showTooltip chartOptions={{ orientation: "horizontal" }} /></DashboardProvider>);
         expect((await screen.findByTestId("x-axis-value")).textContent).toBe("12.91M");
+        expect(document.querySelector(".dashboard-widget-content__chart-canvas")?.getAttribute("style")).toContain("508px");
+        expect(screen.getByTestId("y-axis-value").getAttribute("data-width")).toBe("110");
+    });
+
+    it("gives long horizontal categories a readable axis and scrollable dynamic plot", async () => {
+        mocks.executeRequest.mockResolvedValue(response(Array.from({ length: 12 }, (_, index) => ({
+            Category: `Category with a deliberately long enterprise label ${index + 1}`,
+            Amount: index % 2 ? -(index + 1) : index,
+        }))));
+        render(<DashboardProvider><ChartWidget title="Categories" request={request} xField="Category" yField="Amount" chartType="bar" chartOptions={{ orientation: "horizontal" }} /></DashboardProvider>);
+
+        expect(await screen.findByTestId("bar-chart")).toBeTruthy();
+        expect(document.querySelector(".dashboard-widget-content__chart--scrollable")).toBeTruthy();
+        expect(document.querySelector(".dashboard-widget-content__chart-canvas")?.getAttribute("style")).toContain("508px");
+        expect(screen.getByTestId("y-axis-value").getAttribute("data-width")).toBe("190");
+        expect(screen.getByTestId("bar-chart").getAttribute("data-count")).toBe("12");
     });
 
     it("honors both label flags and center-total visibility", async () => {
@@ -116,12 +134,19 @@ describe("modern chart widget", () => {
         const openMenu = () => fireEvent.click(screen.getByRole("button", { name: "Export" }));
         openMenu();
         fireEvent.click(screen.getByRole("menuitem", { name: "Displayed chart — PNG" }));
-        await waitFor(() => expect(mocks.exportPng).toHaveBeenCalledWith(expect.any(HTMLElement), "sales-chart.png"));
+        await waitFor(() => expect(mocks.exportPng).toHaveBeenCalledWith(expect.objectContaining({ className: "dashboard-widget-content__chart-canvas" }), "sales-chart.png"));
+        openMenu();
+        fireEvent.click(screen.getByRole("menuitem", { name: "Displayed chart — SVG" }));
+        expect(mocks.exportSvg).toHaveBeenCalledWith(expect.objectContaining({ className: "dashboard-widget-content__chart-canvas" }), "sales-chart.svg");
         openMenu();
         fireEvent.click(screen.getByRole("menuitem", { name: "Complete filtered source — CSV" }));
-        expect(mocks.exportCsv).toHaveBeenCalledWith([
+        const completeSource = [
             { Category: "=Formula", Amount: 10 }, { Category: "B", Amount: 8 }, { Category: "C", Amount: -2 },
-        ], "sales-chart.csv");
+        ];
+        expect(mocks.exportCsv).toHaveBeenCalledWith(completeSource, "sales-chart.csv");
+        openMenu();
+        fireEvent.click(screen.getByRole("menuitem", { name: "Complete filtered source — Excel" }));
+        await waitFor(() => expect(mocks.exportExcel).toHaveBeenCalledWith(completeSource, "sales-chart.xlsx"));
     });
 
     it("hides disabled export and surfaces export failures", async () => {

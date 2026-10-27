@@ -1,12 +1,13 @@
 import type { KeyboardEvent } from "react";
 import { formatNumberForDisplay, formatValueForDisplay, NULL_DISPLAY_VALUE } from "../../engine/ValueFormatter";
-import type { ColumnDataType } from "../../types/column";
+import type { ColumnAlignment, ColumnDataType } from "../../types/column";
 
 interface MobileColumn {
     field: string;
     headerName: string;
     sortable: boolean;
     dataType?: ColumnDataType;
+    align?: ColumnAlignment;
 }
 
 interface MobileSort {
@@ -145,7 +146,7 @@ export default function MobileReportView({
                             {detailColumns.length > 0 && (
                                 <dl className="mobile-report-record__details">
                                     {detailColumns.map(column => (
-                                        <div key={column.field} className="mobile-report-record__field">
+                                        <div key={column.field} className={`mobile-report-record__field mobile-report-record__field--${column.align ?? (column.dataType === "number" ? "right" : "left")}`}>
                                             <dt>{column.headerName}</dt>
                                             <dd>{formatValue(row[column.field], column.dataType)}</dd>
                                         </div>

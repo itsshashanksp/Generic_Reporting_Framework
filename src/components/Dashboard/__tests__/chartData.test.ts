@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { applyChartTopN, formatChartNumber, formatChartTooltipValue, getVisiblePieLabelIndexes, mapChartData } from "../chartData";
+import { applyChartTopN, formatChartNumber, formatChartTooltipValue, getHorizontalBarChartHeight, getHorizontalCategoryAxisWidth, getVisiblePieLabelIndexes, mapChartData } from "../chartData";
 
 describe("chart data presentation", () => {
     it("formats chart values without changing their numeric precision", () => {
@@ -25,6 +25,13 @@ describe("chart data presentation", () => {
         expect(narrow.size).toBeLessThan(crowded.length);
         expect(wide.size).toBeGreaterThanOrEqual(narrow.size);
         expect(getVisiblePieLabelIndexes([{ name: "Zero", value: 0 }], 100).size).toBe(0);
+    });
+
+    it("allocates readable horizontal bar space for category count and long names", () => {
+        expect(getHorizontalBarChartHeight(2)).toBe(260);
+        expect(getHorizontalBarChartHeight(12)).toBe(508);
+        expect(getHorizontalCategoryAxisWidth([{ name: "Short", value: 1 }])).toBe(110);
+        expect(getHorizontalCategoryAxisWidth([{ name: "A very long category name that needs room", value: 1 }])).toBe(190);
     });
 
     it("preserves missing values as gaps and signed numeric values", () => {

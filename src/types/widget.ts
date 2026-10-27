@@ -17,7 +17,8 @@ export type WidgetType =
 export type WidgetFormat =
     | "number"
     | "currency"
-    | "decimal";
+    | "decimal"
+    | "percentage";
 
 export type ChartType =
     | "bar"

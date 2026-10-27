@@ -13,7 +13,7 @@ import ExportMenu, { type ExportMenuOption } from "../Common/ExportMenu";
 import Loading from "../Common/Loading";
 import DashboardWidgetFrame from "./DashboardWidgetFrame";
 import WidgetFilterController, { type WidgetFilterControls } from "./WidgetFilterController";
-import { applyChartTopN, formatChartNumber, formatChartTooltipValue, getVisiblePieLabelIndexes, mapChartData, type ChartDatum } from "./chartData";
+import { applyChartTopN, formatChartNumber, formatChartTooltipValue, getHorizontalBarChartHeight, getHorizontalCategoryAxisWidth, getVisiblePieLabelIndexes, mapChartData, type ChartDatum } from "./chartData";
 import { useDashboardWidgetRequest } from "./useDashboardWidgetRequest";
 
 const EMPTY_FILTER_DEFINITIONS: FilterDefinition[] = [];
@@ -104,6 +104,9 @@ function ChartWidgetContent({
     const legend = chartOptions?.showLegend ?? showLegend;
     const labels = chartOptions?.showLabels ?? chartOptions?.showDataLabels ?? showLabels;
     const grid = chartOptions?.showGrid ?? showGrid;
+    const horizontalBars = chartType === "bar" && chartOptions?.orientation === "horizontal";
+    const chartContentHeight = horizontalBars ? getHorizontalBarChartHeight(data.length) : undefined;
+    const categoryAxisWidth = horizontalBars ? getHorizontalCategoryAxisWidth(data) : 110;
     const filename = exportConfig?.filename?.trim() || title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "chart";
     const sourceRows = useMemo(() => sourceData.map(item => ({ [xField]: item.name, [yField]: item.value })), [sourceData, xField, yField]);
 
@@ -152,7 +155,8 @@ function ChartWidgetContent({
             {!loading && pieHasNegative && <Empty title="Pie chart cannot display negative values" message="Use a bar or line chart for signed values. CSV and Excel exports preserve the raw signed data." compact />}
             {!loading && chartType === "pie" && hasNumericData && !pieHasNegative && !pieHasPositive && <Empty title="No positive pie values" message="All displayed values are zero, so no proportional slices can be drawn." compact />}
             {sourceData.length > 0 && hasNumericData && !pieHasNegative && (chartType !== "pie" || pieHasPositive) && (
-                <div ref={chartRef} className={`dashboard-widget-content__chart dashboard-widget-content__chart--${chartType}`} role="img" aria-label={`${title} ${chartType} chart`}>
+                <div className={`dashboard-widget-content__chart dashboard-widget-content__chart--${chartType}${horizontalBars ? " dashboard-widget-content__chart--scrollable" : ""}`} role="img" aria-label={`${title} ${chartType} chart`}>
+                    <div ref={chartRef} className="dashboard-widget-content__chart-canvas" style={chartContentHeight ? { height: chartContentHeight } : undefined}>
                     <ResponsiveContainer width="100%" height="100%">
                         {chartType === "line" ? (
                             <LineChart data={data} margin={{ top: 12, right: 18, bottom: 12, left: 4 }}>
@@ -163,10 +167,13 @@ function ChartWidgetContent({
                                 <Line type={chartOptions?.smooth ? "monotone" : "linear"} dataKey="value" name={yField} stroke={CHART_COLORS[0]} strokeWidth={2.5} dot={chartOptions?.showPoints !== false ? { r: 3 } : false} activeDot={{ r: 5 }} connectNulls={false} label={labels} />
                             </LineChart>
                         ) : chartType === "pie" ? (
-                            <PieChart margin={{ top: 8, right: 8, bottom: legend ? 30 : 8, left: 8 }}>
-                                <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius="68%" innerRadius={chartOptions?.appearance === "donut" ? "46%" : 0} paddingAngle={chartOptions?.appearance === "donut" ? 2 : 0} label={labels ? props => renderPieLabel(props, data) : false} labelLine={labels ? props => renderPieLabelLine(props, data) : false}>
+                            <PieChart margin={{ top: 4, right: 8, bottom: legend ? 24 : 4, left: 8 }}>
+                                <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy={legend ? "43%" : "50%"} outerRadius={labels ? "70%" : "80%"} innerRadius={chartOptions?.appearance === "donut" ? "50%" : 0} paddingAngle={chartOptions?.appearance === "donut" ? 2 : 0} label={labels ? props => renderPieLabel(props, data) : false} labelLine={labels ? props => renderPieLabelLine(props, data) : false}>
                                     {data.map((entry, index) => <Cell key={`${entry.name}-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} stroke="#fff" strokeWidth={2} />)}
-                                    {chartOptions?.appearance === "donut" && chartOptions.showCenterTotal && <Label value={formatChartNumber(data.reduce((sum, item) => sum + (item.value ?? 0), 0))} position="center" className="dashboard-chart-center-total" />}
+                                    {chartOptions?.appearance === "donut" && chartOptions.showCenterTotal && <>
+                                        <Label value={formatChartNumber(data.reduce((sum, item) => sum + (item.value ?? 0), 0))} position="center" dy={-5} className="dashboard-chart-center-total" />
+                                        <Label value="Total" position="center" dy={15} className="dashboard-chart-center-caption" />
+                                    </>}
                                 </Pie>
                                 {tooltip}{legend && <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: 10 }} formatter={value => <span title={String(value)}>{String(value)}</span>} />}
                             </PieChart>
@@ -174,7 +181,7 @@ function ChartWidgetContent({
                             <BarChart data={data} layout="vertical" margin={{ top: 8, right: 20, bottom: 12, left: 8 }}>
                                 {grid && <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" horizontal={false} />}
                                 <XAxis type="number" stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={axisDomain} tickFormatter={formatChartNumber} minTickGap={18} />
-                                <YAxis type="category" dataKey="name" width={110} stroke={AXIS_COLOR} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} interval={0} />
+                                <YAxis type="category" dataKey="name" width={categoryAxisWidth} stroke={AXIS_COLOR} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} interval={0} />
                                 {tooltip}{legend && <Legend />}
                                 <Bar dataKey="value" name={yField} fill={CHART_COLORS[0]} radius={[0, 4, 4, 0]} label={labels ? { formatter: formatChartNumber, position: "right" } : false} />
                             </BarChart>
@@ -188,6 +195,7 @@ function ChartWidgetContent({
                             </BarChart>
                         )}
                     </ResponsiveContainer>
+                    </div>
                 </div>
             )}
         </DashboardWidgetFrame>

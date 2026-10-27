@@ -101,6 +101,9 @@ describe("version-controlled example library", () => {
             expect((chart.export as { formats?: string[] }).formats).toEqual(["png", "svg", "csv", "excel"]);
             expect(() => resolveDashboardWidgetDefinition(chart, itemDashboard?.filters ?? [])).not.toThrow();
         }
+        const stockCharts = charts.filter(chart => chart.id === "stock-value" || chart.id === "stock-value-bar");
+        expect(stockCharts).toHaveLength(2);
+        expect(stockCharts.every(chart => chart.height === 540)).toBe(true);
     });
 
     it("keeps the public catalog explicit about modern conditional presentation options", () => {
@@ -119,6 +122,7 @@ describe("version-controlled example library", () => {
         });
         expect(charts.some(widget => (widget.chartOptions as Record<string, unknown>)?.appearance === "donut")).toBe(true);
         expect(charts.some(widget => (widget.chartOptions as Record<string, unknown>)?.orientation === "horizontal")).toBe(true);
+        expect(charts.filter(widget => widget.id === "bar-chart" || widget.id === "pie-chart").every(widget => widget.height === 440)).toBe(true);
         expect(charts.every(widget => (widget.export as { formats?: string[] })?.formats?.join(",") === "png,svg,csv,excel")).toBe(true);
     });
 });

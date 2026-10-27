@@ -19,6 +19,13 @@ export function validateColumns(columns: ColumnDefinition[]): ColumnDefinition[]
             throw new Error(`Invalid data type for column '${column.field}'.`);
         }
 
+        if (
+            column.align !== undefined &&
+            !["left", "center", "right"].includes(column.align)
+        ) {
+            throw new Error(`Invalid alignment for column '${column.field}'.`);
+        }
+
     });
 
     return columns;
