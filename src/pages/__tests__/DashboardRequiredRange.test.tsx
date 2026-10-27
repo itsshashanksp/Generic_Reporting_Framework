@@ -20,7 +20,8 @@ vi.mock("../../components/Grid/GenericGrid", () => ({
 }));
 
 const GATE = "Enter Start Date (start and end dates) and choose Search to load this dashboard.";
-const INCOMPLETE = "Complete the required filter: Start Date (start and end dates).";
+const REQUIRED = "Start Date is required.";
+const INCOMPLETE = "Start Date requires both a lower and an upper value.";
 
 type SentRequest = { resource: string; filters: { field: string; operator: string; value: unknown }[] };
 const sentRequests = () => executeRequestMock.mock.calls.map(call => call[0] as SentRequest);
@@ -64,14 +65,14 @@ describe("Bill dashboard required date range", () => {
     });
 
     it.each([
-        ["no dates", "", ""],
-        ["only a start date", "2021-04-01", ""],
-        ["only an end date", "", "2022-03-31"],
-    ])("refuses %s with an accessible message and keeps the form editable", (_name, start, end) => {
+        ["no dates", "", "", REQUIRED],
+        ["only a start date", "2021-04-01", "", INCOMPLETE],
+        ["only an end date", "", "2022-03-31", INCOMPLETE],
+    ])("refuses %s with an accessible message and keeps the form editable", (_name, start, end, message) => {
         renderBill();
         search(start, end);
 
-        expect(screen.getByRole("alert").textContent).toBe(INCOMPLETE);
+        expect(screen.getByRole("alert").textContent).toBe(message);
         expect(screen.getByRole("status").textContent).toBe(GATE);
         expect(executeRequestMock).not.toHaveBeenCalled();
         expect((screen.getByLabelText("Start Date start") as HTMLInputElement).value).toBe(start);

@@ -18,6 +18,17 @@ export interface FilterCondition {
 
 }
 
+/** Preserve authored → dashboard → widget ordering in every request path. */
+export function composeRequestFilters(
+    authored: unknown,
+    ...runtimeGroups: readonly unknown[][]
+): unknown[] {
+    return [
+        ...(Array.isArray(authored) ? authored : []),
+        ...runtimeGroups.flat(),
+    ];
+}
+
 
 function getSqlOperator(
     operator: FilterOperator
@@ -233,18 +244,6 @@ export function buildFilters(
                 const end = Array.isArray(value) ? value[1] : undefined;
                 const hasStart = start !== undefined && start !== null && start !== "";
                 const hasEnd = end !== undefined && end !== null && end !== "";
-
-                if (definition?.type === "daterange" && operator === "between") {
-                    if (hasStart && !hasEnd) {
-                        filters.push({ field, operator: ">=", value: start, ...semanticType });
-                        return;
-                    }
-
-                    if (!hasStart && hasEnd) {
-                        filters.push({ field, operator: "<=", value: end, ...semanticType });
-                        return;
-                    }
-                }
 
                 if (
                     !Array.isArray(value) ||

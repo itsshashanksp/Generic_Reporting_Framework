@@ -81,9 +81,11 @@
     min-width: 0;
     margin-bottom: 12px;
     padding: 12px;
+    overflow-wrap: anywhere;
     border: 1px solid #bfdbfe;
     border-radius: 7px;
     background: #f8fbff;
+    box-sizing: border-box;
 }
 
 .widget-filter-panel .filter-grid {
@@ -96,6 +98,12 @@
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 12px;
+}
+
+.dashboard-widget:has(.widget-filter-panel) .dashboard-widget-content,
+.dashboard-widget:has(.widget-filter-panel) .report-table-frame {
+    height: auto;
+    overflow: visible;
 }
 
 .dashboard-widget-content__body {
@@ -172,6 +180,39 @@
     .dashboard-widget-content__actions,
     .widget-filter-panel__actions {
         justify-content: flex-start;
+    }
+
+    .widget-filter-panel__actions .app-button {
+        flex: 1 1 120px;
+    }
+}
+
+@container dashboard-widget (max-width: 420px) {
+    .dashboard-widget-content__header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .dashboard-widget-content__header h2,
+    .report-table-frame__heading h2 {
+        overflow: visible;
+        text-overflow: clip;
+        white-space: normal;
+    }
+
+    .dashboard-widget-content__actions,
+    .report-table-frame__actions,
+    .widget-filter-panel__actions {
+        justify-content: flex-start;
+    }
+
+    .widget-filter-panel .filter-grid,
+    .widget-filter-panel .filter-range {
+        grid-template-columns: 1fr;
+    }
+
+    .widget-filter-panel .filter-range__separator {
+        display: none;
     }
 
     .widget-filter-panel__actions .app-button {

@@ -103,7 +103,7 @@ export function loadDashboardConfiguration(
     // A database selector must control at least one widget: one whose resolved
     // request (inline, reportId or widgetId) names no database of its own.
     const definition = dashboardConfiguration as DashboardDefinition;
-    const runtimeFilterErrors = definition.widgets.flatMap(widget => {
+    const runtimeFilterWarnings = definition.widgets.flatMap(widget => {
         if (!widget.runtimeFilters?.length) return [];
         const request = resolveDashboardWidgetDefinition(widget, definition.filters ?? [])?.request;
         const authoredFields = new Set(
@@ -114,16 +114,22 @@ export function loadDashboardConfiguration(
         );
         return widget.runtimeFilters
             .filter(filter => authoredFields.has(filter.field.toLowerCase()))
-            .map(filter => `Widget "${widget.id}" runtime filter "${filter.field}" conflicts with an authored request filter targeting the same field.`);
+            .map(filter => `Widget "${widget.id}" runtime filter "${filter.field}" repeats an authored request filter targeting the same field; both conditions are sent.`);
     });
-    if (runtimeFilterErrors.length > 0) {
-        const conflictValidation = {
-            ...validation,
-            valid: false,
-            errors: [...validation.errors, ...runtimeFilterErrors],
-        };
-        return { status: "invalid", dashboard: dashboardConfiguration, validation: conflictValidation };
-    }
+    validation.warnings.push(...runtimeFilterWarnings);
+    definition.widgets.forEach(widget => {
+        const request = resolveDashboardWidgetDefinition(widget, definition.filters ?? [])?.request;
+        if (request?.filterLogic !== "OR") return;
+        const sourceCount = [
+            Array.isArray(request.filters) && request.filters.length > 0,
+            (definition.filters?.length ?? 0) > 0,
+            (widget.runtimeFilters?.length ?? 0) > 0,
+        ].filter(Boolean).length;
+        if (sourceCount > 1) {
+            validation.warnings.push(`Widget "${widget.id}" uses flat OR across authored, dashboard, or widget filters; every condition is an alternative, not a mandatory constraint.`);
+        }
+    });
+    validation.warnings = [...new Set(validation.warnings)];
     if (definition.databaseSelection && !definition.widgets.some(widget =>
         widget.visible !== false
         && requestInheritsDatabase(resolveDashboardWidgetRequest(widget, definition.filters ?? []))

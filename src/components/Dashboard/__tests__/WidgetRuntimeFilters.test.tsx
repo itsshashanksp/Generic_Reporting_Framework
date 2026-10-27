@@ -61,4 +61,84 @@ describe("widget runtime filters", () => {
         const optionRequest = executeRequestMock.mock.calls.map(call => call[0]).find(input => input.source?.table === "Statuses");
         expect(optionRequest.database).toBe("archive");
     });
+
+    it("resets local filters only when the effective database changes", async () => {
+        const view = render(
+            <DashboardProvider>
+                <StatWidget title="Orders" request={{ ...request, database: "archive" }} valueField="Total" runtimeFilters={runtimeFilters} />
+            </DashboardProvider>
+        );
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(1));
+        fireEvent.click(screen.getByRole("button", { name: "Filter Orders" }));
+        fireEvent.change(screen.getByLabelText("Status"), { target: { value: "Open" } });
+        fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+        await waitFor(() => expect(screen.getByRole("button", { name: "Filter Orders" }).textContent).toContain("•"));
+
+        view.rerender(
+            <DashboardProvider>
+                <StatWidget title="Orders" request={{ ...request, database: "archive" }} valueField="Total" runtimeFilters={runtimeFilters} />
+            </DashboardProvider>
+        );
+        expect(screen.getByRole("button", { name: "Filter Orders" }).textContent).toContain("•");
+
+        view.rerender(
+            <DashboardProvider>
+                <StatWidget title="Orders" request={{ ...request, database: "current" }} valueField="Total" runtimeFilters={runtimeFilters} />
+            </DashboardProvider>
+        );
+        await waitFor(() => expect(screen.getByRole("button", { name: "Filter Orders" }).textContent).not.toContain("•"));
+    });
+
+    it("renders multiple filter controls and actions in an in-flow panel that closes cleanly", async () => {
+        const filters = [
+            { field: "Amount", label: "Order amount with a long descriptive label", type: "number" as const },
+            { field: "CreatedAt", label: "Created", type: "daterange" as const, operator: "between" as const },
+            ...runtimeFilters,
+        ];
+        const { container } = render(
+            <DashboardProvider>
+                <StatWidget title="Orders" request={request} valueField="Total" runtimeFilters={filters} />
+            </DashboardProvider>
+        );
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(1));
+
+        fireEvent.click(screen.getByRole("button", { name: "Filter Orders" }));
+
+        const panel = container.querySelector(".widget-filter-panel");
+        expect(panel).not.toBeNull();
+        expect(panel?.parentElement?.classList.contains("dashboard-widget-content")).toBe(true);
+        expect(screen.getByLabelText("Order amount with a long descriptive label").getAttribute("type")).toBe("number");
+        expect(screen.getByLabelText("Created start").getAttribute("type")).toBe("date");
+        expect(screen.getByRole("button", { name: "Apply" }).closest(".widget-filter-panel")).toBe(panel);
+        expect(screen.getByRole("button", { name: "Reset" }).closest(".widget-filter-panel")).toBe(panel);
+
+        fireEvent.click(screen.getByRole("button", { name: "Filter Orders" }));
+        expect(container.querySelector(".widget-filter-panel")).toBeNull();
+    });
+
+    it.each([
+        [
+            { field: "CreatedAt", label: "Created", type: "daterange" as const, operator: "between" as const },
+            "Created start",
+            "2026-10-01",
+        ],
+        [
+            { field: "Amount", label: "Amount", type: "number" as const, operator: "between" as const },
+            "Amount minimum",
+            "10",
+        ],
+    ])("does not request data for an incomplete $type range", async (definition, inputLabel, value) => {
+        render(
+            <DashboardProvider>
+                <StatWidget title="Orders" request={request} valueField="Total" runtimeFilters={[definition]} />
+            </DashboardProvider>
+        );
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(1));
+        fireEvent.click(screen.getByRole("button", { name: "Filter Orders" }));
+        fireEvent.change(screen.getByLabelText(inputLabel), { target: { value } });
+        fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+
+        expect(screen.getByRole("alert").textContent).toContain("requires both");
+        expect(executeRequestMock).toHaveBeenCalledTimes(1);
+    });
 });

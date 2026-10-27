@@ -140,4 +140,34 @@ describe("TableWidget CSV export and export-all limits", () => {
         expect((await screen.findByRole("alert")).textContent).toBe(message);
         expect(downloads).toEqual([]);
     });
+
+    it("cancels an all-rows export when an applied widget filter changes", async () => {
+        mockBrowserDownloads();
+        render(
+            <DashboardProvider>
+                <TableWidget
+                    title="Sales"
+                    request={{ action: "sql", resource: "widgets/sales" }}
+                    runtimeFilters={[{ field: "Region", label: "Region", type: "text", operator: "equals" }]}
+                    exportConfig={{ enabled: true, formats: ["csv"], exportAll: true, exportCurrentView: true }}
+                />
+            </DashboardProvider>
+        );
+        await screen.findByTestId("table-grid");
+        executeRequestMock.mockImplementation((_request, options?: RequestInit) => new Promise((_resolve, reject) => {
+            options?.signal?.addEventListener("abort", () => {
+                const error = new Error("Aborted");
+                error.name = "AbortError";
+                reject(error);
+            }, { once: true });
+        }));
+
+        chooseExport("All rows — CSV");
+        fireEvent.click(screen.getByRole("button", { name: "Filter Sales" }));
+        fireEvent.change(screen.getByLabelText("Region"), { target: { value: "West" } });
+        fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+
+        expect((await screen.findByRole("alert")).textContent).toContain("Export canceled");
+        expect(downloads).toEqual([]);
+    });
 });

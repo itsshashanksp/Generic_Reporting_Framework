@@ -29,7 +29,7 @@ Each message below is the exact text the frontend shows or logs. Backend-specifi
 | A widget shows "… Invalid request." followed by `path: message` details | The backend rejected the request | Read the appended detail. Typical causes: a column/filter field the resource doesn't have, or a page size above the backend `maxPageSize` |
 | "The current filters returned no data." | An empty result set | Widen the filters. Some SQL Resources also restrict dates internally (for example to the current financial year) |
 | Numbers sort as text (1, 10, 2…) or aren't formatted | The column has no `"dataType": "number"` | Add `dataType` to the column |
-| Filter dropdown shows "Unable to load filter values." | The `dynamicOptions.request` failed | Test that request on its own. It must be a valid JSON Query `select` |
+| Filter dropdown shows "Unable to load filter values." | The `dynamicOptions.request` failed | Choose **Retry** after checking connectivity. If it repeats, test that request on its own; it must be a valid JSON Query `select` |
 | A change to a JSON file has no effect on a deployed site | The configuration is bundled at build time | Rebuild and redeploy |
 
 ## Export

@@ -6,7 +6,7 @@ import {
     isRequestAbort,
 } from "../../api/request";
 import { useDashboard } from "../../engine/DashboardContext";
-import { buildFilters } from "../../engine/FilterQueryBuilder";
+import { buildFilters, composeRequestFilters } from "../../engine/FilterQueryBuilder";
 import { mapWidgetFilters, type WidgetFilterFields } from "../../engine/DashboardEngine/filterFields";
 import {
     createRequestCacheKey,
@@ -58,11 +58,7 @@ export function useDashboardWidgetRequest(
     );
     const requestPayload = useMemo(() => request ? ({
         ...request,
-        filters: [
-            ...(Array.isArray(request.filters) ? request.filters : []),
-            ...dashboardFilters,
-            ...widgetFilters,
-        ],
+        filters: composeRequestFilters(request.filters, dashboardFilters, widgetFilters),
     }) : null, [request, dashboardFilters, widgetFilters]);
     const cacheKey = useMemo(
         () => requestPayload

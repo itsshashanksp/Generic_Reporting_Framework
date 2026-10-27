@@ -87,7 +87,7 @@ describe('dateFilterBehavior "required"', () => {
 
         enterDates("2021-04-01", "");
         search();
-        expect(screen.getByRole("alert").textContent).toBe("Complete the required filter: Start Date (start and end dates).");
+        expect(screen.getByRole("alert").textContent).toBe("Start Date requires both a lower and an upper value.");
         await settle();
         expect(executeRequestMock).not.toHaveBeenCalled();
 
@@ -166,9 +166,7 @@ describe('dateFilterBehavior "optional"', () => {
         search();
         await settle();
 
-        expect(screen.getByRole("alert").textContent).toBe(
-            "Enter both a start and an end date for Start Date, or clear the dates to search without a date range. The results shown are unchanged."
-        );
+        expect(screen.getByRole("alert").textContent).toBe("Start Date requires both a lower and an upper value.");
         expect(executeRequestMock).toHaveBeenCalledTimes(14);
         expect(appliedRange()).toBe("Showing results for Start Date 2021-04-01 to 2022-03-31.");
         expect(screen.getAllByTestId("table-grid")).toHaveLength(5);

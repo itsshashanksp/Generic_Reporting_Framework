@@ -40,7 +40,12 @@ export function getRequestErrorMessage(
         // "pagination.pageSize: Page size exceeds the configured maximum."
         const details = error.details.flatMap(detail =>
             typeof detail === "object" && detail.path && detail.message ? [`${detail.path}: ${detail.message}`] : []);
-        return [error.message || fallback, ...new Set(details)].join(" ");
+        const safeMessage = error.code === "INVALID_SQL_RUNTIME_FILTER"
+            ? "The SQL Resource could not combine these runtime filters."
+            : error.code === "INVALID_SQL_RUNTIME_FIELD"
+                ? "The SQL Resource does not allow one of the requested filter fields."
+                : error.message || fallback;
+        return [safeMessage, ...new Set(details)].join(" ");
     }
 
     if (error instanceof Error) {

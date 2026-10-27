@@ -12,7 +12,7 @@ import {
     isRequestAbort,
 } from "../../api/request";
 import { useDashboard } from "../../engine/DashboardContext";
-import { buildFilters } from "../../engine/FilterQueryBuilder";
+import { buildFilters, composeRequestFilters } from "../../engine/FilterQueryBuilder";
 import { mapWidgetFilters, type WidgetFilterFields } from "../../engine/DashboardEngine/filterFields";
 import { createRequestCacheKey, getCachedResponse, getOrCreateInFlightRequest, setCachedResponse } from "../../engine/RequestCache";
 import { ExportFileError, exportExcel, exportRowsCSV, fetchAllRowsForExport } from "../../engine/ExportEngine";
@@ -149,6 +149,7 @@ function TableWidgetContent({
     const [exporting, setExporting] = useState(false);
     const [exportProgress, setExportProgress] = useState("");
     const [exportError, setExportError] = useState("");
+    const previousExportRequestKey = useRef("");
 
     // Screen requests and export-all share these, so both use the mapped fields.
     const dashboardFilters = useMemo(() => {
@@ -179,11 +180,7 @@ function TableWidgetContent({
     );
     const requestPayload = useMemo(() => ({
         ...request,
-        filters: [
-            ...(Array.isArray(request.filters) ? request.filters : []),
-            ...dashboardFilters,
-            ...widgetFilters,
-        ],
+        filters: composeRequestFilters(request.filters, dashboardFilters, widgetFilters),
         pagination: { page: currentPage, pageSize: activePageSize },
         ...(sort ? { sort: [sort] } : {}),
     }), [request, dashboardFilters, widgetFilters, currentPage, activePageSize, sort]);
@@ -191,6 +188,13 @@ function TableWidgetContent({
         () => createRequestCacheKey(`dashboard:${cacheScope}`, requestPayload),
         [cacheScope, requestPayload]
     );
+    const exportRequestKey = useMemo(() => JSON.stringify({
+        request,
+        dashboardFilters,
+        widgetFilters,
+        sort,
+        exportConfig,
+    }), [request, dashboardFilters, widgetFilters, sort, exportConfig]);
     const cachedResponse = useMemo(
         () => getCachedResponse(cacheKey),
         [cacheKey]
@@ -329,10 +333,16 @@ function TableWidgetContent({
         retryKey,
     ]);
 
-    // A running export also stops when the widget's database changes (a
-    // dashboard database switch), so it never saves the previous database.
-    const requestDatabase = (request as { database?: string }).database;
-    useEffect(() => () => exportController?.abort(), [exportController, requestDatabase]);
+    useEffect(() => {
+        const previous = previousExportRequestKey.current;
+        previousExportRequestKey.current = exportRequestKey;
+        if (previous && previous !== exportRequestKey && exportController) {
+            exportController.abort();
+            setExportError("Export canceled because the table filters, sorting, or database changed.");
+        }
+    }, [exportRequestKey, exportController]);
+
+    useEffect(() => () => exportController?.abort(), [exportController]);
 
     const resultMatchesView = resultViewKey === viewKey;
     const canShowCachedResponse = !resultMatchesView && cachedResponse !== null;
@@ -412,11 +422,7 @@ function TableWidgetContent({
             const data = await fetchAllRowsForExport({
                 ...request,
                 pagination: undefined,
-                filters: [
-                    ...(Array.isArray(request.filters) ? request.filters : []),
-                    ...dashboardFilters,
-                    ...widgetFilters,
-                ],
+                filters: composeRequestFilters(request.filters, dashboardFilters, widgetFilters),
                 ...(sort ? { sort: [sort] } : {}),
             }, {
                 signal: controller.signal,
@@ -430,6 +436,7 @@ function TableWidgetContent({
                 setExportError("Export failed: there are no matching rows to export.");
                 return;
             }
+            if (controller.signal.aborted) return;
             await exportRows(data, format);
         } catch (caughtError: unknown) {
             if (!isRequestAbort(caughtError)) {

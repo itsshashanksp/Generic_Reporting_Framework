@@ -96,7 +96,12 @@ export default function SelectFilter({
             </select>
 
             {dynamic.loading && <small role="status">Loading values…</small>}
-            {dynamic.error && <small role="alert">{dynamic.error}</small>}
+            {dynamic.error && (
+                <small role="alert">
+                    {dynamic.error}{" "}
+                    <button type="button" className="filter-retry" onClick={dynamic.retry} disabled={dynamic.loading}>Retry</button>
+                </small>
+            )}
 
         </div>
 

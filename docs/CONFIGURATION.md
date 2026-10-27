@@ -65,6 +65,8 @@ Defaults when omitted: toolbar `export`, `refresh`, and `saveReport` are all `tr
 
 In JSON Query mode, `request.sort`, `request.pagination`, and `request.filterLogic` are **rejected** in authored files. The runtime generates them from the top-level `sort`, the grid or widget paging, and the top-level `filterLogic`.
 
+Authored request filters and applied runtime filters are appended to the same flat list. With `AND`, every condition constrains the result. With `OR`, every authored and runtime condition is an alternative; authored conditions do not remain mandatory. Valid mixed-source `OR` configurations are preserved and produce a configuration warning rather than being rewritten or rejected. Grouped Boolean expressions are not supported.
+
 ### Columns
 
 ```json
@@ -96,7 +98,9 @@ Each filter requires `field`, `label`, and `type`. The optional keys are `operat
 
 - `select` and `multiselect` need non-empty `options` or `dynamicOptions`, except with the null operators. Static options are `{ label, value }`, where `value` is a string, number, or boolean. Values must be unique.
 - Serialization: friendly operators map to `=`, `<>`, `>`, `>=`, `<`, `<=`, `LIKE`, `NOT LIKE`, `BETWEEN`, `NOT BETWEEN`, `IN`, `NOT IN`, `IS NULL`, `IS NOT NULL`. The contains/starts/ends variants add `%` wildcards. Numbers are sent as numbers and booleans as booleans. Empty controls are omitted, and null filters omit `value`.
-- Dates stay as `YYYY-MM-DD` strings. A complete `between` range sends both dates. A one-sided range becomes `>=` or `<=`, unless a dashboard's `dateFilterBehavior` or `required` demands both dates. `notBetween` always needs both. No database-specific date conversion happens.
+- Dates stay as `YYYY-MM-DD` strings and no database-specific date conversion happens.
+- Date ranges must be completely empty (when optional) or contain two valid dates in chronological order. Numeric `between` and `notBetween` filters likewise require two finite numbers with the lower value not greater than the upper value. Partial, invalid, and reversed ranges are rejected before requests are sent; they are never converted to one-sided conditions.
+- A filter cannot combine `visible: false` with `required: true`. The current filter schema has no default-value property, so there would otherwise be no supported way for the user to satisfy it. Hidden optional filters remain valid.
 - In SQL Resource mode, a filter whose `field` is not a displayed column is still allowed: the loader adds a source mapping for it. Filter fields and display columns are independent.
 
 #### Dynamic options
@@ -132,6 +136,8 @@ A `select` or `multiselect` filter can load its choices from a JSON Query reques
 | `countField` | no | Numeric row key. Options are sorted by descending count, then by label |
 | `searchable` | no | Shows the option search box unless it is `false` |
 | `searchPlaceholder` | no | Defaults to `Search <label>` |
+
+If an option request fails, the control shows an accessible **Retry** action. Retry uses the current request definition and effective database, preserves current filter values, and remains covered by the normal in-flight deduplication. It is never automatic.
 
 Duplicate values are collapsed. Results are cached under the `dynamic-filter-options` scope (see [Feature behavior](FEATURES.md#request-caching)). Consumer: `components/Filters/useDynamicFilterOptions.ts`.
 

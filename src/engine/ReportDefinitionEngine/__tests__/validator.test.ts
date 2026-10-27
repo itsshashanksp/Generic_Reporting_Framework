@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getReportValidationErrors } from "../validator";
+import { getReportValidationErrors, getReportValidationWarnings } from "../validator";
 import { loadDefinition } from "../loader";
 
 const presentation = {
@@ -234,5 +234,44 @@ describe("runtime database selection", () => {
     it("does not need a configured database, because the backend registry decides the initial one", () => {
         const request = { ...json.request, database: undefined };
         expect(getReportValidationErrors({ ...json, request, databaseSelection: true })).toEqual([]);
+    });
+});
+
+describe("hidden required filters", () => {
+    const report = {
+        ...presentation,
+        request: { action: "select", source: { table: "Customers" }, fields: ["CustomerName"] },
+    };
+
+    it("allows hidden optional filters", () => {
+        expect(getReportValidationErrors({
+            ...report,
+            filters: [{ field: "Status", label: "Status", type: "text", visible: false }],
+        })).toEqual([]);
+    });
+
+    it("rejects hidden required filters because the schema has no default values", () => {
+        expect(getReportValidationErrors({
+            ...report,
+            filters: [{ field: "Status", label: "Status", type: "text", visible: false, required: true }],
+        })).toContain("Report filter at index 0 cannot be both hidden and required because filter defaults are not supported.");
+    });
+});
+
+describe("flat OR diagnostics", () => {
+    it("keeps authored and runtime OR filters valid and warns that both are alternatives", () => {
+        const report = {
+            ...presentation,
+            request: {
+                action: "select", source: { table: "Customers" }, fields: ["CustomerName"],
+                filters: [{ field: "Tenant", operator: "=", value: "A" }],
+            },
+            filters: [{ field: "Status", label: "Status", type: "text", operator: "equals" }],
+            filterLogic: "OR",
+        };
+        expect(getReportValidationErrors(report)).toEqual([]);
+        expect(getReportValidationWarnings(report)).toEqual([
+            expect.stringContaining("flat OR"),
+        ]);
     });
 });

@@ -1,5 +1,5 @@
 import type { ReportConfiguration, ReportDefinition } from "../../types/report";
-import { getReportValidationErrors } from "../ReportDefinitionEngine/validator";
+import { getReportValidationErrors, getReportValidationWarnings } from "../ReportDefinitionEngine/validator";
 import { loadDefinition } from "../ReportDefinitionEngine/loader";
 
 const reportFiles = import.meta.glob(
@@ -25,6 +25,10 @@ export function buildReportRegistry(
             console.error(`Invalid report configuration: ${source}`, validationErrors);
             recordReportError(report, validationErrors.join(" "), loadErrors);
             return;
+        }
+        const validationWarnings = getReportValidationWarnings(report);
+        if (validationWarnings.length > 0) {
+            console.warn(`Report configuration warnings: ${source}`, validationWarnings);
         }
 
         try {

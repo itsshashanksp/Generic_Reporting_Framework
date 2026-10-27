@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useParams } from "react-router-dom";
 
 import {
@@ -19,8 +19,8 @@ import { ReportToolbar } from "../components/Toolbar";
 import { useDatabaseSelection } from "../components/Toolbar/useDatabaseSelection";
 import { resolveConfiguredDatabase, useOptionalGlobalDatabase } from "../engine/DatabaseContext";
 import { useFilters } from "../engine/FilterContext";
-import { buildFilters } from "../engine/FilterQueryBuilder";
-import { isEmptyFilterValue } from "../engine/FilterEngine";
+import { buildFilters, composeRequestFilters } from "../engine/FilterQueryBuilder";
+import { getFilterValueErrors } from "../engine/FilterEngine";
 import { useGrid } from "../engine/GridContext";
 import { getReportPaginationParameters, isSavedReportsEnabled } from "../engine/ReportDefinitionEngine";
 import { getReport, getReportError } from "../engine/ReportEngine/reportLoader";
@@ -99,7 +99,25 @@ export default function ReportViewer() {
     const requestSequence = useRef(0);
     const activeController = useRef<AbortController | null>(null);
     const exportController = useRef<AbortController | null>(null);
+    const previousExportRequestKey = useRef("");
     const rows = result?.success && loadedReportId === report?.id ? result.data ?? [] : [];
+    const exportRequestKey = useMemo(() => JSON.stringify({
+        reportId: report?.id,
+        request: report?.request,
+        filters: appliedFilters,
+        sorting: currentSorting,
+        database: report?.databaseSelection ? selectedDatabase : configuredDatabase,
+        export: report?.export,
+    }), [report, appliedFilters, currentSorting, selectedDatabase, configuredDatabase]);
+
+    useEffect(() => {
+        const previous = previousExportRequestKey.current;
+        previousExportRequestKey.current = exportRequestKey;
+        if (previous && previous !== exportRequestKey && exportController.current) {
+            exportController.current.abort();
+            setExportStatus("Export canceled because the report filters, sorting, database, or report changed.");
+        }
+    }, [exportRequestKey]);
 
     const loadReport = useCallback(async (
         activeFilters: Record<string, unknown> = {},
@@ -128,10 +146,10 @@ export default function ReportViewer() {
         );
         const requestPayload = {
             ...withRuntimeDatabase(report.request, databaseRef.current),
-            filters: [
-                ...(Array.isArray(report.request.filters) ? report.request.filters : []),
-                ...buildFilters(activeFilters, report.filters ?? [], report.request.action === "sql"),
-            ],
+            filters: composeRequestFilters(
+                report.request.filters,
+                buildFilters(activeFilters, report.filters ?? [], report.request.action === "sql")
+            ),
             sort: activeSorting,
             ...pagination,
         };
@@ -241,16 +259,14 @@ export default function ReportViewer() {
     }, [report, selectedDatabase, loadReport]);
 
     const validateRequiredFilters = () => {
-        const missing = report?.filters.filter(
-            filter => filter.required && isEmptyFilterValue(filters[filter.field])
-        ) ?? [];
+        const errors = report ? getFilterValueErrors(report.filters, filters) : [];
 
-        if (missing.length === 0) {
+        if (errors.length === 0) {
             setFilterError("");
             return true;
         }
 
-        setFilterError(`Complete the required filter${missing.length > 1 ? "s" : ""}: ${missing.map(filter => filter.label).join(", ")}.`);
+        setFilterError(errors.join(" "));
         return false;
     };
 
@@ -302,6 +318,11 @@ export default function ReportViewer() {
     const handleRefresh = useCallback(() => {
         void loadReport(appliedFilters, currentPage, currentPageSize, currentSorting, true);
     }, [appliedFilters, currentPage, currentPageSize, currentSorting, loadReport]);
+
+    const handleSortChange = (sorting: SortDefinition[]) => {
+        setCurrentSorting(sorting);
+        void loadReport(appliedFilters, 1, currentPageSize, sorting);
+    };
 
     const {
         containerRef: reportPageRef,
@@ -383,12 +404,10 @@ export default function ReportViewer() {
                 {
                     ...withRuntimeDatabase(report.request, databaseRef.current),
                     pagination: undefined,
-                    filters: [
-                        ...(Array.isArray(report.request.filters)
-                            ? report.request.filters
-                            : []),
-                        ...buildFilters(appliedFilters, report.filters ?? [], report.request.action === "sql"),
-                    ],
+                    filters: composeRequestFilters(
+                        report.request.filters,
+                        buildFilters(appliedFilters, report.filters ?? [], report.request.action === "sql")
+                    ),
                     sort: currentSorting,
                 },
                 {
@@ -406,6 +425,8 @@ export default function ReportViewer() {
                 setExportStatus("There are no rows to export.");
                 return;
             }
+
+            if (controller.signal.aborted) return;
 
             if (format === "csv") {
                 try {
@@ -547,7 +568,7 @@ export default function ReportViewer() {
                                 onPageChange: page => void loadReport(appliedFilters, page, currentPageSize, currentSorting),
                                 onPageSizeChange: pageSize => void loadReport(appliedFilters, 1, pageSize, currentSorting),
                             }}
-                            onSortChange={sorting => void loadReport(appliedFilters, 1, currentPageSize, sorting)}
+                            onSortChange={handleSortChange}
                         />
                     )}
 

@@ -4,9 +4,9 @@ import { describe, expect, it } from "vitest";
 import DateRangeFilter from "../../../components/Filters/Fields/DateRangeFilter";
 import BooleanFilter from "../../../components/Filters/Fields/BooleanFilter";
 import { FilterProvider, useFilters } from "../../FilterContext";
-import { buildFilters } from "../../FilterQueryBuilder";
+import { buildFilters, composeRequestFilters } from "../../FilterQueryBuilder";
 import { loadDefinition } from "../../ReportDefinitionEngine";
-import { isEmptyFilterValue } from "../filterValue";
+import { getFilterValueError, isEmptyFilterValue } from "../filterValue";
 import type { FilterDefinition } from "../../../types/filter";
 
 const definition: FilterDefinition = {
@@ -32,8 +32,8 @@ function BooleanStateProbe() {
 
 describe("date-range runtime filtering", () => {
     it.each([
-        [["2026-09-01", ""], false, [{ field: "StDate", operator: ">=", value: "2026-09-01" }]],
-        [["", "2026-09-05"], false, [{ field: "StDate", operator: "<=", value: "2026-09-05" }]],
+        [["2026-09-01", ""], false, []],
+        [["", "2026-09-05"], false, []],
         [["2026-09-01", "2026-09-05"], false, [{ field: "StDate", operator: "BETWEEN", value: ["2026-09-01", "2026-09-05"] }]],
         [["", ""], true, []],
     ])("maps endpoints %j on the same StDate field", (value, empty, expected) => {
@@ -146,5 +146,52 @@ describe("date-range runtime filtering", () => {
 
         fireEvent.change(screen.getByLabelText("Active"), { target: { value: "false" } });
         expect(screen.getByTestId("boolean-state").textContent).toBe("false");
+    });
+
+    it.each([
+        [undefined, true],
+        [["", ""], true],
+        [["2026-09-01", ""], true],
+        [["", "2026-09-05"], true],
+        [["2026-02-30", "2026-03-01"], true],
+        [["2026-09-05", "2026-09-01"], true],
+        [["2026-09-01", "2026-09-05"], false],
+    ])("validates required date range %j", (value, invalid) => {
+        expect(Boolean(getFilterValueError(definition, value))).toBe(invalid);
+    });
+
+    it("allows an empty optional date range but rejects either partial endpoint", () => {
+        const optional = { ...definition, required: false };
+        expect(getFilterValueError(optional, ["", ""])).toBeNull();
+        expect(getFilterValueError(optional, ["2026-09-01", ""])).not.toBeNull();
+        expect(getFilterValueError(optional, ["", "2026-09-05"])).not.toBeNull();
+    });
+
+    it.each([
+        [["", ""], false, false],
+        [["", ""], true, true],
+        [["0", "10"], true, false],
+        [["10", ""], false, true],
+        [["", "10"], false, true],
+        [["20", "10"], false, true],
+        [["bad", "10"], false, true],
+        [["1e309", "10"], false, true],
+        [["10", "20"], false, false],
+    ])("validates numeric range %j (required=%s)", (value, required, invalid) => {
+        const numeric: FilterDefinition = {
+            field: "Amount", label: "Amount", type: "number", operator: "between", required,
+        };
+        expect(Boolean(getFilterValueError(numeric, value))).toBe(invalid);
+    });
+
+    it("composes authored, dashboard, and widget conditions without changing order or duplicates", () => {
+        const authored = [{ field: "Tenant", operator: "=", value: "A" }];
+        const dashboard = [{ field: "Status", operator: "=", value: "Open" }];
+        const widget = [{ field: "Status", operator: "<>", value: "Closed" }];
+        expect(composeRequestFilters(authored, dashboard, widget)).toEqual([
+            ...authored,
+            ...dashboard,
+            ...widget,
+        ]);
     });
 });

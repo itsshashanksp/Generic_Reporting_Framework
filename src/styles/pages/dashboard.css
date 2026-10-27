@@ -55,11 +55,21 @@
     min-height: 0;
     overflow: visible;
     box-sizing: border-box;
+    container-name: dashboard-widget;
+    container-type: inline-size;
     padding: 16px;
     border: 1px solid #e2e8f0;
     border-radius: 9px;
     background: #fff;
     box-shadow: 0 1px 2px rgb(15 23 42 / 5%);
+}
+
+/* A configured height remains the closed size. An in-flow runtime filter panel
+   temporarily makes the card content-sized, while retaining that height as its
+   minimum, so the grid row grows instead of allowing content to overlap it. */
+.dashboard-widget:has(.widget-filter-panel) {
+    height: auto !important;
+    min-height: var(--dashboard-widget-height, 0);
 }
 
 .dashboard-widget.dashboard-widget--table {

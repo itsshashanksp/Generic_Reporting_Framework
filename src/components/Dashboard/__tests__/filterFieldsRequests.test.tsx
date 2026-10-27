@@ -90,20 +90,17 @@ describe("dashboard filterFields requests", () => {
 
     afterEach(() => vi.restoreAllMocks());
 
-    it.each([
-        ["a full range", ["2021-04-01", "2022-03-31"], "BETWEEN", ["2021-04-01", "2022-03-31"]],
-        ["a start-only range", ["2021-04-01", ""], ">=", "2021-04-01"],
-        ["an end-only range", ["", "2022-03-31"], "<=", "2022-03-31"],
-    ])("sends GIN_Date for purchases and Bill_Date for sales with %s", async (_name, range, operator, value) => {
+    it("sends GIN_Date for purchases and Bill_Date for sales with a full range", async () => {
+        const range = ["2021-04-01", "2022-03-31"];
         await renderBillWidgets(range);
         await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(6));
 
         for (const resource of PURCHASES) {
-            expect(lastSent(resource).filters).toEqual([{ field: "GIN_Date", type: "daterange", operator, value }]);
+            expect(lastSent(resource).filters).toEqual([{ field: "GIN_Date", type: "daterange", operator: "BETWEEN", value: range }]);
             expect(lastSent(resource).execution?.filters).toEqual({ GIN_Date: { placement: "source" } });
             expect(JSON.stringify(lastSent(resource))).not.toContain("Bill_Date");
         }
-        expect(lastSent(SALES).filters).toEqual([{ field: "Bill_Date", type: "daterange", operator, value }]);
+        expect(lastSent(SALES).filters).toEqual([{ field: "Bill_Date", type: "daterange", operator: "BETWEEN", value: range }]);
         expect(lastSent(SALES).execution?.filters).toEqual({ Bill_Date: { placement: "source" } });
         expect(recordApplied).toHaveBeenLastCalledWith({ Bill_Date: range });
     });

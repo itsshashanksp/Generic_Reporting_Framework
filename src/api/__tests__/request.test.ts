@@ -59,6 +59,17 @@ describe("request error classification", () => {
         }), FALLBACK)).toBe("Invalid credentials.");
     });
 
+    it("explains SQL Resource placement and field rejections without exposing backend internals", () => {
+        expect(getRequestErrorMessage(new ApiClientError("Runtime filters with OR must use one SQL location.", 400, {
+            code: "INVALID_SQL_RUNTIME_FILTER",
+            details: [{ path: "filterLogic", message: "OR cannot span output, CTE, WHERE, and HAVING locations." }],
+        }))).toBe("The SQL Resource could not combine these runtime filters. filterLogic: OR cannot span output, CTE, WHERE, and HAVING locations.");
+        expect(getRequestErrorMessage(new ApiClientError("Source field is unavailable or ambiguous: Secret", 400, {
+            code: "INVALID_SQL_RUNTIME_FIELD",
+            details: [{ path: "filter", message: "The configured field is unavailable or ambiguous." }],
+        }))).toBe("The SQL Resource does not allow one of the requested filter fields. filter: The configured field is unavailable or ambiguous.");
+    });
+
     it("shows the friendly message of a local export file failure", () => {
         const error = new ExportFileError("The Excel file could not be created.", { cause: new TypeError("internal") });
         expect(getRequestErrorMessage(error, FALLBACK)).toBe("The Excel file could not be created.");

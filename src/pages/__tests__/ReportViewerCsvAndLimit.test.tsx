@@ -11,7 +11,10 @@ import ReportViewer from "../ReportViewer";
 
 const { executeRequestMock, gridApi } = vi.hoisted(() => ({
     executeRequestMock: vi.fn(),
-    gridApi: { current: null as null | { exportDataAsCsv: ReturnType<typeof vi.fn> } },
+    gridApi: { current: null as null | {
+        exportDataAsCsv: ReturnType<typeof vi.fn>;
+        getColumnState: ReturnType<typeof vi.fn>;
+    } },
 }));
 
 vi.mock("../../api/request", async importOriginal => ({
@@ -89,7 +92,7 @@ function chooseExport(option: string) {
 describe("ReportViewer CSV export and export-all limits", () => {
     beforeEach(() => {
         clearRequestCache();
-        gridApi.current = { exportDataAsCsv: vi.fn() };
+        gridApi.current = { exportDataAsCsv: vi.fn(), getColumnState: vi.fn(() => []) };
         executeRequestMock.mockReset().mockResolvedValue(response([{ Item_Code: "A1", Item_Desc: "Alpha", Item_MRP: 100 }]));
     });
 
@@ -208,5 +211,25 @@ describe("ReportViewer CSV export and export-all limits", () => {
         await waitFor(() => expect(downloads).toEqual(["item-report.xlsx"]));
         await new Promise(resolve => setTimeout(resolve, 150));
         expect(screen.queryByRole("status")).toBeNull();
+    });
+
+    it("cancels an all-rows export when report filters are applied", async () => {
+        mockBrowserDownloads();
+        await renderItemReport();
+        executeRequestMock.mockImplementation((_request, options?: RequestInit) => new Promise((_resolve, reject) => {
+            options?.signal?.addEventListener("abort", () => {
+                const error = new Error("Aborted");
+                error.name = "AbortError";
+                reject(error);
+            }, { once: true });
+        }));
+
+        chooseExport("All rows — CSV");
+        fireEvent.click(screen.getByRole("button", { name: "Open search and filters" }));
+        fireEvent.change(screen.getByLabelText("Item Code"), { target: { value: "100" } });
+        fireEvent.click(screen.getByRole("button", { name: "Search" }));
+
+        await screen.findByText(/Export canceled because the report filters/);
+        expect(downloads).toEqual([]);
     });
 });

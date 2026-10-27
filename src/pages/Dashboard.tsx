@@ -16,7 +16,7 @@ import { useDatabaseSelection } from "../components/Toolbar/useDatabaseSelection
 import { useOptionalGlobalDatabase } from "../engine/DatabaseContext";
 
 import { useFilters } from "../engine/FilterContext";
-import { isRequiredFilterIncomplete } from "../engine/FilterEngine";
+import { getFilterValueErrors, isRequiredFilterIncomplete } from "../engine/FilterEngine";
 import {
     useDashboard,
     DashboardProvider,
@@ -170,14 +170,17 @@ function DashboardContent({
     }, [dashboard.id, clearFilters]);
 
     const handleSearch = () => {
-        const missing = (dashboard.filters ?? []).filter(
-            filter => isRequiredFilterIncomplete(filter, filters[filter.field])
-        );
+        const valueErrors = getFilterValueErrors(dashboard.filters ?? [], filters);
 
-        if (missing.length > 0) {
-            setFilterError(`Complete the required filter${missing.length > 1 ? "s" : ""}: ${missing.map(describeRequiredFilter).join(", ")}.`);
-            // Remove results for an earlier range rather than show them as current.
-            applyFilters({});
+        if (valueErrors.length > 0) {
+            setFilterError(valueErrors.join(" "));
+            // Required-filter failures close the result gate. Optional invalid
+            // drafts leave the previously applied result state untouched.
+            if ((dashboard.filters ?? []).some(
+                filter => filter.required && isRequiredFilterIncomplete(filter, filters[filter.field])
+            )) {
+                applyFilters({});
+            }
             return false;
         }
 
@@ -419,6 +422,11 @@ function DashboardContent({
                                                 : "auto",
 
                                         height:
+                                            widget.height !== undefined
+                                                ? `${widget.height}px`
+                                                : "auto",
+
+                                        "--dashboard-widget-height":
                                             widget.height !== undefined
                                                 ? `${widget.height}px`
                                                 : "auto",

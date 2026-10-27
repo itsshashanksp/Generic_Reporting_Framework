@@ -101,15 +101,19 @@ An optional `runtimeFilters` array on a dashboard widget adds independent contro
 
 The widget header shows **Filter** only when at least one local filter is visible. Editing is draft-only; **Apply** reloads that widget, and **Reset** clears only that widget. Dashboard Search and Clear do not alter widget-local values. An active marker appears after local values are applied.
 
+Date and numeric range controls must be empty or complete, valid, and ordered before Apply succeeds. When a widget's effective database changes, its draft values, applied values, open panel, and validation error are cleared; dynamic options and data then load in the new database context. A widget pinned to an explicit database keeps its local filters when the dashboard selector changes because its effective database did not change.
+
 Dashboard and widget filters are appended to existing authored request filters:
 
 ```text
 authored request filters + mapped dashboard filters + widget runtime filters
 ```
 
-They use the request's existing flat `filterLogic`; grouped scope-specific AND/OR logic is not supported. Configuration is rejected when a widget runtime filter targets the same effective field as a dashboard filter (after `filterFields` mapping) or an authored request filter. Conditions are never silently overwritten.
+They use the request's existing flat `filterLogic`; grouped scope-specific AND/OR logic is not supported. Repeated effective fields are retained as separate backend conditions and produce an actionable configuration warning rather than being overwritten. With `OR`, authored, dashboard, and widget conditions are all alternatives—not separate mandatory scopes—so mixed-source OR also produces a warning.
 
 For SQL Resources, fields remain logical runtime identifiers and must be permitted by the backend resource contract. The frontend never constructs SQL. A backend rejection is shown only in the owning widget.
+
+The frontend does not receive complete SQL placement metadata. It therefore cannot predict whether an SQL Resource's `OR` filters span output, CTE, WHERE, or HAVING locations. The backend remains authoritative and rejects unsupported multi-placement OR requests; the owning report/widget shows a filtered, actionable error without exposing SQL. JSON Query behavior is unaffected.
 
 Dynamic option requests inherit the owning widget's effective database—explicit widget database, dashboard selection, or global fallback—unless the option request explicitly names its own database. Existing authorization and database access scopes still apply.
 
@@ -163,6 +167,7 @@ A dashboard can let users switch the database its widgets read from:
 - **Opting in an existing dashboard:** remove the per-widget `database` from the widgets that should follow. The Item Dashboard does this and starts on the authorized global default when configured, otherwise the registry default. Bill still pins `loyal-ibms` on every widget. Sales, Purchases, and Receipts name none, so their widgets would inherit right away.
 - The **Database** dropdown sits beside **Refresh**. Its options are the enabled rows from `metadata.databases` (see [Feature behavior](FEATURES.md#database-selector)).
 - **Switching:** every inheriting widget reruns on the chosen database, keeping the applied filters. Table widgets return to page 1. Refresh, auto-refresh, table paging, sorting, and **All rows** export then use the chosen database. A running table export is cancelled when the database changes, so it never saves the previous database's rows. Late results from before a switch are ignored, and cache entries are per database.
+- A running **All rows** export is also cancelled if applied dashboard/widget filters or table sorting change. Draft-only filter edits do not cancel it. Current-page export remains an immediate export of the rows already displayed.
 - The selection is resolved again when the dashboard is opened again. Shared `dynamicOptions` requests inherit it unless they explicitly pin their own database.
 
 Example: [`examples/dashboards/database-selector-dashboard.json`](../examples/dashboards/database-selector-dashboard.json). Covered by mocked tests (`src/pages/__tests__/DashboardDatabaseSelector.test.tsx`); not yet run against a live backend.

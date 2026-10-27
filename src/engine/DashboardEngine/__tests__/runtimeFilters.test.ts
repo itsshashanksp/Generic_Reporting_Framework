@@ -25,27 +25,51 @@ describe("dashboard widget runtimeFilters validation", () => {
         expect(errors.some(error => error.includes("field must be a field name"))).toBe(true);
     });
 
-    it("rejects conflicts with mapped dashboard fields", () => {
-        const errors = validateDashboard(dashboard([
+    it("warns when a runtime filter repeats a mapped dashboard field", () => {
+        const result = validateDashboard(dashboard([
             widget({ runtimeFilters: [filter("WidgetDate")], filterFields: { BillDate: "WidgetDate" } }),
-        ], [filter("BillDate")])).errors;
-        expect(errors.some(error => error.includes("conflicts with a dashboard filter"))).toBe(true);
+        ], [filter("BillDate")]));
+        expect(result.valid).toBe(true);
+        expect(result.warnings.some(warning => warning.includes("repeats a dashboard filter"))).toBe(true);
     });
 
-    it("rejects conflicts with authored request filters", () => {
+    it("warns when a runtime filter repeats an authored request filter", () => {
         const result = loadDashboardConfiguration(dashboard([widget({
             request: {
                 action: "select", source: { table: "Orders" }, fields: ["Status"],
                 filters: [{ field: "Status", operator: "=", value: "Open" }],
             },
         })]));
-        expect(result.status).toBe("invalid");
-        expect(result.validation.errors.some(error => error.includes("conflicts with an authored request filter"))).toBe(true);
+        expect(result.status).toBe("valid");
+        expect(result.validation.warnings.some(warning => warning.includes("repeats an authored request filter"))).toBe(true);
+    });
+
+    it("keeps flat OR valid but reports its cross-source semantics", () => {
+        const result = loadDashboardConfiguration(dashboard([widget({
+            filterLogic: "OR",
+            request: {
+                action: "select", source: { table: "Orders" }, fields: ["Status"],
+                filters: [{ field: "Tenant", operator: "=", value: "A" }],
+            },
+        })], [filter("Region")]));
+        expect(result.status).toBe("valid");
+        expect(result.validation.warnings.some(warning => warning.includes("flat OR"))).toBe(true);
     });
 
     it("keeps dashboards without runtimeFilters valid", () => {
         const { runtimeFilters: _ignored, ...plain } = widget();
         void _ignored;
         expect(validateDashboard(dashboard([plain])).errors).toEqual([]);
+    });
+
+    it("allows hidden optional filters and rejects hidden required dashboard and widget filters", () => {
+        const optionalShared = { ...filter("OptionalShared"), visible: false };
+        const optionalWidget = { ...filter("OptionalWidget"), visible: false };
+        expect(validateDashboard(dashboard([widget({ runtimeFilters: [optionalWidget] })], [optionalShared])).errors).toEqual([]);
+
+        const requiredShared = { ...filter("RequiredShared"), visible: false, required: true };
+        const requiredWidget = { ...filter("RequiredWidget"), visible: false, required: true };
+        const errors = validateDashboard(dashboard([widget({ runtimeFilters: [requiredWidget] })], [requiredShared])).errors;
+        expect(errors.filter(error => error.includes("cannot be both hidden and required")).length).toBeGreaterThanOrEqual(2);
     });
 });

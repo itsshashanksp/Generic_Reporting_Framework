@@ -26,6 +26,16 @@ export function validateReport(report: unknown): boolean {
     return getReportValidationErrors(report).length === 0;
 }
 
+export function getReportValidationWarnings(report: unknown): string[] {
+    if (!isRecord(report) || report.filterLogic !== "OR") return [];
+    const authored = isRecord(report.request) && Array.isArray(report.request.filters)
+        ? report.request.filters.length : 0;
+    const runtime = Array.isArray(report.filters) ? report.filters.length : 0;
+    return authored > 0 && runtime > 0
+        ? ["Report uses flat OR across authored and runtime filters; every condition is an alternative, not a mandatory constraint."]
+        : [];
+}
+
 export interface ReportValidationOptions {
     columnsRequired?: boolean;
 }
@@ -207,6 +217,9 @@ function validateFilters(value: unknown, errors: string[], sqlResource: boolean)
         }
         optionalBoolean(entry.visible, `${label} visible`, errors);
         optionalBoolean(entry.required, `${label} required`, errors);
+        if (entry.visible === false && entry.required === true) {
+            errors.push(`${label} cannot be both hidden and required because filter defaults are not supported.`);
+        }
         optionalString(entry.placeholder, `${label} placeholder`, errors);
         if (entry.placeholder !== undefined && entry.type !== "text" && entry.type !== "number") errors.push(`${label} placeholder is not supported for type ${String(entry.type)}.`);
         if (entry.options !== undefined && entry.type !== "select" && entry.type !== "multiselect") errors.push(`${label} options are not supported for type ${String(entry.type)}.`);

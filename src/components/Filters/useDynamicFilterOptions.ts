@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { executeRequest, getRequestErrorMessage, isRequestAbort } from "../../api/request";
 import {
@@ -12,6 +12,7 @@ import type { DynamicFilterOptions, FilterOption } from "../../types/filter";
 type ScalarOption = string | number | boolean;
 
 export function useDynamicFilterOptions(configuration?: DynamicFilterOptions, database?: string) {
+    const [retryKey, setRetryKey] = useState(0);
     const request = useMemo(() => {
         if (!configuration || database === "") return null;
         return database !== undefined && configuration.request.database === undefined
@@ -56,15 +57,25 @@ export function useDynamicFilterOptions(configuration?: DynamicFilterOptions, da
         });
 
         return () => controller.abort();
-    }, [cacheKey, cachedResponse, configuration, request]);
+    }, [cacheKey, cachedResponse, configuration, request, retryKey]);
+
+    const retry = useCallback(() => {
+        setState(previous => ({
+            key: cacheKey,
+            options: previous.key === cacheKey ? previous.options : [],
+            loading: true,
+            error: "",
+        }));
+        setRetryKey(previous => previous + 1);
+    }, [cacheKey]);
 
     if (cachedOptions) {
-        return { options: cachedOptions, loading: false, error: "" };
+        return { options: cachedOptions, loading: false, error: "", retry };
     }
 
     return state.key === cacheKey
-        ? state
-        : { options: [], loading: Boolean(configuration && request), error: "" };
+        ? { ...state, retry }
+        : { options: [], loading: Boolean(configuration && request), error: "", retry };
 }
 
 function mapOptions(

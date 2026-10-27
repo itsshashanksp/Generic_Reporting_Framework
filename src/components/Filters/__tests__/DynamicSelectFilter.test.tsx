@@ -121,4 +121,36 @@ describe("dynamic select filters", () => {
             expect.objectContaining({ signal: expect.any(AbortSignal) })
         );
     });
+
+    it("retries a failed request with the current database and preserves the selected value", async () => {
+        executeRequestMock
+            .mockRejectedValueOnce(new Error("Options unavailable"))
+            .mockResolvedValueOnce({ success: true, message: "ok", data: [{ Category: "A", Frequency: 1 }] });
+        render(
+            <FilterProvider>
+                <SelectFilter field="Category" label="Category" dynamicOptions={dynamicOptions} database="abc" />
+                <StateProbe />
+            </FilterProvider>
+        );
+
+        expect((await screen.findByRole("alert")).textContent).toContain("Options unavailable");
+        fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+        await screen.findByRole("option", { name: "A (1)" });
+        fireEvent.change(screen.getByLabelText("Category"), { target: { value: "string:A" } });
+
+        expect(screen.getByTestId("filter-state").textContent).toBe("A");
+        expect(executeRequestMock).toHaveBeenCalledTimes(2);
+        expect(executeRequestMock).toHaveBeenLastCalledWith(
+            { ...dynamicOptions.request, database: "abc" },
+            expect.objectContaining({ signal: expect.any(AbortSignal) })
+        );
+    });
+
+    it("does not retry automatically after a failure", async () => {
+        executeRequestMock.mockRejectedValue(new Error("Options unavailable"));
+        render(<FilterProvider><SelectFilter field="Category" label="Category" dynamicOptions={dynamicOptions} /></FilterProvider>);
+        await screen.findByRole("button", { name: "Retry" });
+        await new Promise(resolve => setTimeout(resolve, 25));
+        expect(executeRequestMock).toHaveBeenCalledTimes(1);
+    });
 });

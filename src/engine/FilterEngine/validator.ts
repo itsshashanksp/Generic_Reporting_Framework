@@ -132,6 +132,10 @@ export function validateFilters(
             throw new Error(`Filter required must be a boolean for '${filter.field}'.`);
         }
 
+        if (filter.required === true && filter.visible === false) {
+            throw new Error(`Filter '${filter.field}' cannot be both hidden and required because filter defaults are not supported.`);
+        }
+
         if (filter.placeholder !== undefined && typeof filter.placeholder !== "string") {
             throw new Error(`Filter placeholder must be a string for '${filter.field}'.`);
         }

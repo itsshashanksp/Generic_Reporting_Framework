@@ -519,7 +519,7 @@ function validateWidget(
         validateFilterFields(widget, widgetLabel, sharedFilters, errors)
     ).filters;
     validateFilters(widget.runtimeFilters, errors, `${widgetLabel} runtime`);
-    validateRuntimeFilterConflicts(widget, widgetLabel, widgetSharedFilters, errors);
+    addRuntimeFilterDiagnostics(widget, widgetLabel, widgetSharedFilters, warnings);
 
     const hasReportId = widget.reportId !== undefined;
     const hasWidgetId = widget.widgetId !== undefined;
@@ -732,11 +732,11 @@ function validateFilterFields(
         : undefined;
 }
 
-function validateRuntimeFilterConflicts(
+function addRuntimeFilterDiagnostics(
     widget: Record<string, unknown>,
     widgetLabel: string,
     sharedFilters: FilterDefinition[],
-    errors: string[]
+    warnings: string[]
 ) {
     if (!Array.isArray(widget.runtimeFilters)) return;
     const sharedFields = new Set(sharedFilters.map(filter => filter.field.toLowerCase()));
@@ -752,12 +752,20 @@ function validateRuntimeFilterConflicts(
         if (!isRecord(filter) || typeof filter.field !== "string") return;
         const field = filter.field.toLowerCase();
         if (sharedFields.has(field)) {
-            errors.push(`${widgetLabel} runtime filter "${filter.field}" conflicts with a dashboard filter targeting the same field.`);
+            warnings.push(`${widgetLabel} runtime filter "${filter.field}" repeats a dashboard filter targeting the same effective field; both conditions are sent.`);
         }
         if (staticFields.has(field)) {
-            errors.push(`${widgetLabel} runtime filter "${filter.field}" conflicts with an authored request filter targeting the same field.`);
+            warnings.push(`${widgetLabel} runtime filter "${filter.field}" repeats an authored request filter targeting the same field; both conditions are sent.`);
         }
     });
+
+    if (widget.filterLogic === "OR") {
+        const sourceCount = [staticFields.size, sharedFilters.length, widget.runtimeFilters.length]
+            .filter(count => count > 0).length;
+        if (sourceCount > 1) {
+            warnings.push(`${widgetLabel} uses flat OR across authored, dashboard, or widget filters; every condition is an alternative, not a mandatory constraint.`);
+        }
+    }
 }
 
 function mergeFilterDefinitions(widgetFilters: unknown, sharedFilters: FilterDefinition[]) {

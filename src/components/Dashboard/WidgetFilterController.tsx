@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Filter } from "lucide-react";
 
 import { FilterProvider, useFilters, type FilterValues } from "../../engine/FilterContext";
-import { isEmptyFilterValue, isRequiredFilterIncomplete } from "../../engine/FilterEngine";
+import { getFilterValueErrors, isEmptyFilterValue } from "../../engine/FilterEngine";
 import type { FilterDefinition } from "../../types/filter";
 import FilterRenderer from "../Filters/FilterRenderer";
 
@@ -49,6 +49,7 @@ function WidgetFilterControllerContent({
     const [error, setError] = useState("");
     const panelId = useId();
     const panelRef = useRef<HTMLDivElement>(null);
+    const previousDatabase = useRef(database);
     const visibleFilters = definitions.filter(filter => filter.visible !== false);
     const active = Object.values(appliedValues).some(value => !isEmptyFilterValue(value));
 
@@ -61,6 +62,15 @@ function WidgetFilterControllerContent({
         return () => document.removeEventListener("keydown", close);
     }, [open]);
 
+    useEffect(() => {
+        if (previousDatabase.current === database) return;
+        previousDatabase.current = database;
+        clearFilters();
+        setAppliedValues({});
+        setError("");
+        setOpen(false);
+    }, [database, clearFilters]);
+
     const toggle = () => {
         setOpen(previous => !previous);
         if (!open) {
@@ -71,9 +81,9 @@ function WidgetFilterControllerContent({
     };
 
     const apply = () => {
-        const missing = definitions.filter(filter => isRequiredFilterIncomplete(filter, filters[filter.field]));
-        if (missing.length > 0) {
-            setError(`Complete the required filter${missing.length > 1 ? "s" : ""}: ${missing.map(filter => filter.label).join(", ")}.`);
+        const valueErrors = getFilterValueErrors(definitions, filters);
+        if (valueErrors.length > 0) {
+            setError(valueErrors.join(" "));
             return;
         }
         setError("");
