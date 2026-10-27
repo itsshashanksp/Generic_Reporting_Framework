@@ -13,7 +13,7 @@ import ExportMenu, { type ExportMenuOption } from "../Common/ExportMenu";
 import Loading from "../Common/Loading";
 import DashboardWidgetFrame from "./DashboardWidgetFrame";
 import WidgetFilterController, { type WidgetFilterControls } from "./WidgetFilterController";
-import { applyChartTopN, mapChartData } from "./chartData";
+import { applyChartTopN, formatChartNumber, formatChartTooltipValue, getVisiblePieLabelIndexes, mapChartData, type ChartDatum } from "./chartData";
 import { useDashboardWidgetRequest } from "./useDashboardWidgetRequest";
 
 const EMPTY_FILTER_DEFINITIONS: FilterDefinition[] = [];
@@ -24,6 +24,37 @@ const axisDomain = [
     (value: number) => Math.min(0, value),
     (value: number) => Math.max(0, value),
 ] as const;
+
+interface PieLabelProps {
+    cx?: number;
+    cy?: number;
+    outerRadius?: number;
+    midAngle?: number;
+    index?: number;
+    value?: unknown;
+    points?: Array<{ x: number; y: number }>;
+}
+
+function isVisiblePieLabel(props: PieLabelProps, data: ChartDatum[]) {
+    return typeof props.index === "number"
+        && getVisiblePieLabelIndexes(data, Number(props.outerRadius) || 0).has(props.index);
+}
+
+function renderPieLabel(props: PieLabelProps, data: ChartDatum[]) {
+    if (!isVisiblePieLabel(props, data)) return null;
+    const cx = Number(props.cx) || 0;
+    const cy = Number(props.cy) || 0;
+    const radius = (Number(props.outerRadius) || 0) + 16;
+    const radians = -(Number(props.midAngle) || 0) * Math.PI / 180;
+    const x = cx + Math.cos(radians) * radius;
+    const y = cy + Math.sin(radians) * radius;
+    return <text x={x} y={y} dy="0.35em" textAnchor={x >= cx ? "start" : "end"} className="dashboard-chart-external-label">{formatChartNumber(props.value)}</text>;
+}
+
+function renderPieLabelLine(props: PieLabelProps, data: ChartDatum[]) {
+    if (!isVisiblePieLabel(props, data) || !props.points?.length) return <g />;
+    return <polyline points={props.points.map(point => `${point.x},${point.y}`).join(" ")} className="dashboard-chart-label-line" />;
+}
 
 interface ChartWidgetProps {
     title: string;
@@ -102,7 +133,7 @@ function ChartWidgetContent({
             disabled: loading || !sourceData.length || ((format === "png" || format === "svg") && (pieHasNegative || !hasNumericData)),
         }))
         : [];
-    const tooltip = showTooltip && <Tooltip contentStyle={{ border: `1px solid ${GRID_COLOR}`, borderRadius: 8, boxShadow: "0 8px 24px rgb(15 23 42 / 12%)" }} />;
+    const tooltip = showTooltip && <Tooltip formatter={value => formatChartTooltipValue(value)} contentStyle={{ border: `1px solid ${GRID_COLOR}`, borderRadius: 8, boxShadow: "0 8px 24px rgb(15 23 42 / 12%)" }} />;
 
     return (
         <DashboardWidgetFrame
@@ -127,33 +158,33 @@ function ChartWidgetContent({
                             <LineChart data={data} margin={{ top: 12, right: 18, bottom: 12, left: 4 }}>
                                 {grid && <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" vertical={false} />}
                                 <XAxis dataKey="name" stroke={AXIS_COLOR} tickLine={false} axisLine={false} minTickGap={18} />
-                                <YAxis stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={axisDomain} />
+                                <YAxis stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={axisDomain} tickFormatter={formatChartNumber} width={58} />
                                 {tooltip}{legend && <Legend wrapperStyle={{ paddingTop: 10 }} />}
                                 <Line type={chartOptions?.smooth ? "monotone" : "linear"} dataKey="value" name={yField} stroke={CHART_COLORS[0]} strokeWidth={2.5} dot={chartOptions?.showPoints !== false ? { r: 3 } : false} activeDot={{ r: 5 }} connectNulls={false} label={labels} />
                             </LineChart>
                         ) : chartType === "pie" ? (
                             <PieChart margin={{ top: 8, right: 8, bottom: legend ? 30 : 8, left: 8 }}>
-                                <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius="70%" innerRadius={chartOptions?.appearance === "donut" ? "46%" : 0} paddingAngle={chartOptions?.appearance === "donut" ? 2 : 0} label={labels} labelLine={labels}>
+                                <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius="68%" innerRadius={chartOptions?.appearance === "donut" ? "46%" : 0} paddingAngle={chartOptions?.appearance === "donut" ? 2 : 0} label={labels ? props => renderPieLabel(props, data) : false} labelLine={labels ? props => renderPieLabelLine(props, data) : false}>
                                     {data.map((entry, index) => <Cell key={`${entry.name}-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} stroke="#fff" strokeWidth={2} />)}
-                                    {chartOptions?.appearance === "donut" && chartOptions.showCenterTotal && <Label value={data.reduce((sum, item) => sum + (item.value ?? 0), 0).toLocaleString()} position="center" className="dashboard-chart-center-total" />}
+                                    {chartOptions?.appearance === "donut" && chartOptions.showCenterTotal && <Label value={formatChartNumber(data.reduce((sum, item) => sum + (item.value ?? 0), 0))} position="center" className="dashboard-chart-center-total" />}
                                 </Pie>
                                 {tooltip}{legend && <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: 10 }} formatter={value => <span title={String(value)}>{String(value)}</span>} />}
                             </PieChart>
                         ) : chartOptions?.orientation === "horizontal" ? (
                             <BarChart data={data} layout="vertical" margin={{ top: 8, right: 20, bottom: 12, left: 8 }}>
                                 {grid && <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" horizontal={false} />}
-                                <XAxis type="number" stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={axisDomain} />
-                                <YAxis type="category" dataKey="name" width={110} stroke={AXIS_COLOR} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
+                                <XAxis type="number" stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={axisDomain} tickFormatter={formatChartNumber} minTickGap={18} />
+                                <YAxis type="category" dataKey="name" width={110} stroke={AXIS_COLOR} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} interval={0} />
                                 {tooltip}{legend && <Legend />}
-                                <Bar dataKey="value" name={yField} fill={CHART_COLORS[0]} radius={[0, 4, 4, 0]} label={labels} />
+                                <Bar dataKey="value" name={yField} fill={CHART_COLORS[0]} radius={[0, 4, 4, 0]} label={labels ? { formatter: formatChartNumber, position: "right" } : false} />
                             </BarChart>
                         ) : (
                             <BarChart data={data} margin={{ top: 12, right: 18, bottom: 12, left: 4 }}>
                                 {grid && <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" vertical={false} />}
                                 <XAxis dataKey="name" stroke={AXIS_COLOR} tickLine={false} axisLine={false} minTickGap={16} />
-                                <YAxis stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={axisDomain} />
+                                <YAxis stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={axisDomain} tickFormatter={formatChartNumber} width={58} />
                                 {tooltip}{legend && <Legend />}
-                                <Bar dataKey="value" name={yField} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} label={labels} />
+                                <Bar dataKey="value" name={yField} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} label={labels ? { formatter: formatChartNumber, position: "top" } : false} />
                             </BarChart>
                         )}
                     </ResponsiveContainer>

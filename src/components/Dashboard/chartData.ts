@@ -5,6 +5,64 @@ export interface ChartDatum {
     value: number | null;
 }
 
+const compactNumber = new Intl.NumberFormat("en", {
+    notation: "compact",
+    maximumFractionDigits: 2,
+});
+
+const tooltipNumber = new Intl.NumberFormat("en", {
+    maximumFractionDigits: 3,
+});
+
+export function formatChartNumber(value: unknown): string {
+    if (value === null || value === undefined || value === "") return "—";
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return "—";
+    if (Object.is(numeric, -0)) return "0";
+    return compactNumber.format(numeric);
+}
+
+export function formatChartTooltipValue(value: unknown): string {
+    if (value === null || value === undefined || value === "") return "—";
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return String(value);
+    if (Object.is(numeric, -0)) return "0";
+    return tooltipNumber.format(numeric);
+}
+
+/**
+ * Chooses external pie labels using the rendered radius. Candidates need
+ * enough arc length for a label and enough vertical separation on their side
+ * of the pie. Larger slices win collisions, so narrow containers suppress
+ * lower-priority labels instead of drawing an unreadable cluster.
+ */
+export function getVisiblePieLabelIndexes(data: ChartDatum[], outerRadius: number): Set<number> {
+    const values = data.map(item => Math.max(0, item.value ?? 0));
+    const total = values.reduce((sum, value) => sum + value, 0);
+    if (!(total > 0) || !(outerRadius > 0)) return new Set();
+
+    let angle = 90;
+    const labelRadius = outerRadius + 16;
+    const candidates = values.flatMap((value, index) => {
+        const sweep = value / total * 360;
+        const midAngle = angle - sweep / 2;
+        angle -= sweep;
+        const arcLength = value / total * 2 * Math.PI * outerRadius;
+        if (arcLength < 18) return [];
+        const radians = -midAngle * Math.PI / 180;
+        return [{ index, value, side: Math.cos(radians) >= 0 ? "right" : "left", y: Math.sin(radians) * labelRadius }];
+    }).sort((left, right) => right.value - left.value || left.index - right.index);
+
+    const selected: typeof candidates = [];
+    const maximumLabels = Math.max(2, Math.floor(outerRadius * 2 / 22));
+    for (const candidate of candidates) {
+        if (selected.length >= maximumLabels) break;
+        if (selected.some(item => item.side === candidate.side && Math.abs(item.y - candidate.y) < 18)) continue;
+        selected.push(candidate);
+    }
+    return new Set(selected.map(item => item.index));
+}
+
 export function mapChartData(rows: Record<string, unknown>[], xField: string, yField: string): ChartDatum[] {
     return rows.map(row => {
         const raw = row[yField];

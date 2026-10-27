@@ -28,9 +28,12 @@ vi.mock("recharts", () => {
         BarChart: ({ children, layout, data }: { children: ReactNode; layout?: string; data: unknown[] }) => <svg data-testid="bar-chart" data-layout={layout ?? "horizontal"} data-count={data.length}>{children}</svg>,
         LineChart: ({ children, data }: { children: ReactNode; data: unknown[] }) => <svg data-testid="line-chart" data-count={data.length}>{children}</svg>,
         PieChart: ({ children }: { children: ReactNode }) => <svg data-testid="pie-chart">{children}</svg>,
-        Pie: ({ children, innerRadius }: { children: ReactNode; innerRadius?: string | number }) => <g data-testid="pie" data-inner-radius={innerRadius}>{children}</g>,
+        Pie: ({ children, innerRadius, data, label }: { children: ReactNode; innerRadius?: string | number; data: Array<{ value: number }>; label?: false | ((props: Record<string, unknown>) => ReactNode) }) => <g data-testid="pie" data-inner-radius={innerRadius}>{children}{typeof label === "function" && data.map((item, index) => <g data-testid="pie-external-label" key={index}>{label({ index, value: item.value, cx: 100, cy: 100, outerRadius: 100, midAngle: 90 - index * 40 })}</g>)}</g>,
         Bar: passthrough, Line: passthrough, Cell: () => null, Label: ({ value }: { value: string }) => <text>{value}</text>,
-        CartesianGrid: () => null, Legend: () => null, Tooltip: () => null, XAxis: () => null, YAxis: () => null,
+        CartesianGrid: () => null, Legend: () => null,
+        Tooltip: ({ formatter }: { formatter?: (value: unknown) => string }) => <text data-testid="tooltip-value">{formatter?.(12908199.939999992)}</text>,
+        XAxis: ({ tickFormatter }: { tickFormatter?: (value: unknown) => string }) => <text data-testid="x-axis-value">{tickFormatter?.(12908199.939999992)}</text>,
+        YAxis: ({ tickFormatter }: { tickFormatter?: (value: unknown) => string }) => <text data-testid="y-axis-value">{tickFormatter?.(12908199.939999992)}</text>,
     };
 });
 
@@ -58,6 +61,33 @@ describe("modern chart widget", () => {
 
         rerender(<DashboardProvider><ChartWidget title="Sales" request={request} xField="Category" yField="Amount" chartType="line" chartOptions={{ smooth: true, showPoints: true }} /></DashboardProvider>);
         expect(await screen.findByTestId("line-chart")).toBeTruthy();
+    });
+
+    it("formats donut totals, external labels, tooltips, and horizontal axes", async () => {
+        mocks.executeRequest.mockResolvedValue(response([
+            { Category: "Large", Amount: 12908199.939999992 },
+            { Category: "Medium", Amount: 4235826.41 },
+            ...Array.from({ length: 10 }, (_, index) => ({ Category: `Tiny ${index}`, Amount: 1 })),
+        ]));
+        const view = render(<DashboardProvider><ChartWidget title="Values" request={request} xField="Category" yField="Amount" chartType="pie" showTooltip chartOptions={{ appearance: "donut", showLabels: true, showCenterTotal: true }} /></DashboardProvider>);
+        expect(await screen.findByText("17.14M")).toBeTruthy();
+        expect(screen.getAllByTestId("pie-external-label").filter(label => label.textContent).length).toBeLessThan(12);
+        expect(screen.getByTestId("tooltip-value").textContent).toBe("12,908,199.94");
+
+        view.rerender(<DashboardProvider><ChartWidget title="Values" request={request} xField="Category" yField="Amount" chartType="bar" showTooltip chartOptions={{ orientation: "horizontal" }} /></DashboardProvider>);
+        expect((await screen.findByTestId("x-axis-value")).textContent).toBe("12.91M");
+    });
+
+    it("honors both label flags and center-total visibility", async () => {
+        mocks.executeRequest.mockResolvedValue(response([{ Category: "A", Amount: 1000 }]));
+        const view = render(<DashboardProvider><ChartWidget title="Labels" request={request} xField="Category" yField="Amount" chartType="pie" chartOptions={{ appearance: "donut", showLabels: false, showCenterTotal: false }} /></DashboardProvider>);
+        await screen.findByTestId("pie");
+        expect(screen.queryByTestId("pie-external-label")).toBeNull();
+        expect(screen.queryByText("1K")).toBeNull();
+
+        view.rerender(<DashboardProvider><ChartWidget title="Labels" request={request} xField="Category" yField="Amount" chartType="pie" chartOptions={{ appearance: "donut", showDataLabels: true, showCenterTotal: true }} /></DashboardProvider>);
+        expect((await screen.findAllByText("1K")).length).toBe(2);
+        expect(screen.getByTestId("pie-external-label").textContent).toBe("1K");
     });
 
     it("explains negative and zero-only pie data without misrepresenting it", async () => {

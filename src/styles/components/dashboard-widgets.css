@@ -177,7 +177,9 @@
 
 .dashboard-widget-content__chart .recharts-legend-wrapper {
     max-width: 100%;
-    overflow: hidden;
+    max-height: 72px;
+    overflow-x: hidden;
+    overflow-y: auto;
     color: #475569;
     font-size: 12px;
     text-overflow: ellipsis;
@@ -186,10 +188,9 @@
 .dashboard-widget-content__chart .recharts-legend-item-text {
     display: inline-block;
     max-width: min(180px, 32cqw);
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow-wrap: anywhere;
     vertical-align: bottom;
-    white-space: nowrap;
+    white-space: normal;
 }
 
 .dashboard-widget-content__chart .recharts-tooltip-wrapper {
@@ -200,6 +201,19 @@
     fill: #0f172a;
     font-size: 20px;
     font-weight: 700;
+}
+
+.dashboard-chart-external-label {
+    fill: #475569;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
+.dashboard-chart-label-line {
+    fill: none;
+    stroke: #94a3b8;
+    stroke-width: 1;
 }
 
 .dashboard-stat-value {
