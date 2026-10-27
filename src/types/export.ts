@@ -1,6 +1,8 @@
 export type ExportFormat =
     | "csv"
-    | "excel";
+    | "excel"
+    | "png"
+    | "svg";
 
 export interface ExportConfig {
     enabled: boolean;

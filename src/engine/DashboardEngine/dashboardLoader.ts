@@ -234,10 +234,20 @@ export function resolveDashboardWidgetDefinition(
             ...(widget.filterLogic !== undefined ? { filterLogic: widget.filterLogic } : {}),
             ...(widget.grid !== undefined ? { grid: widget.grid } : {}),
             ...(widget.toolbar !== undefined ? { toolbar: widget.toolbar } : {}),
-            ...(widget.export !== undefined ? { export: widget.export } : {}),
+            // Chart export is presentation owned and supports PNG/SVG. The
+            // internal report definition exists only to normalize its data
+            // request, whose export schema is intentionally CSV/Excel-only.
+            ...(widget.type !== "chart" && widget.export !== undefined
+                ? { export: widget.export }
+                : {}),
         } as ReportConfiguration;
 
-        return loadDefinition(configuration, { columnsRequired: false });
+        try {
+            return loadDefinition(configuration, { columnsRequired: false });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Invalid data definition.";
+            throw new Error(`Unable to resolve dashboard widget "${widget.id}": ${message}`, { cause: error });
+        }
     }
 
     if (widget.widgetId) {

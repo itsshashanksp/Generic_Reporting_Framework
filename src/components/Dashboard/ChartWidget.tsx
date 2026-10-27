@@ -1,32 +1,29 @@
-import { useMemo } from "react";
-import {
-    Bar,
-    BarChart,
-    CartesianGrid,
-    Cell,
-    Legend,
-    Line,
-    LineChart,
-    Pie,
-    PieChart,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis,
-} from "recharts";
+import { useMemo, useRef, useState } from "react";
+import { Bar, BarChart, CartesianGrid, Cell, Label, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-import type { FilterDefinition } from "../../types/filter";
+import { getRequestErrorMessage } from "../../api/request";
+import { exportChartPNG, exportChartSVG, exportExcel, exportRowsCSV } from "../../engine/ExportEngine";
 import type { WidgetFilterFields } from "../../engine/DashboardEngine/filterFields";
-import type { WidgetRequest } from "../../types/widget";
+import type { ExportConfig } from "../../types/export";
+import type { FilterDefinition } from "../../types/filter";
+import type { ChartOptions, WidgetRequest } from "../../types/widget";
 import Empty from "../Common/Empty";
 import ErrorState from "../Common/Error";
+import ExportMenu, { type ExportMenuOption } from "../Common/ExportMenu";
 import Loading from "../Common/Loading";
 import DashboardWidgetFrame from "./DashboardWidgetFrame";
-import { useDashboardWidgetRequest } from "./useDashboardWidgetRequest";
 import WidgetFilterController, { type WidgetFilterControls } from "./WidgetFilterController";
+import { applyChartTopN, mapChartData } from "./chartData";
+import { useDashboardWidgetRequest } from "./useDashboardWidgetRequest";
 
 const EMPTY_FILTER_DEFINITIONS: FilterDefinition[] = [];
-const CHART_COLORS = ["#2563eb", "#0d9488", "#7c3aed", "#ea580c", "#db2777"];
+const CHART_COLORS = ["#3274d9", "#2f9e8f", "#8b5cf6", "#e07a32", "#d94f8a", "#5b8def", "#73a857", "#c49a32"];
+const AXIS_COLOR = "#64748b";
+const GRID_COLOR = "#e2e8f0";
+const axisDomain = [
+    (value: number) => Math.min(0, value),
+    (value: number) => Math.max(0, value),
+] as const;
 
 interface ChartWidgetProps {
     title: string;
@@ -35,133 +32,128 @@ interface ChartWidgetProps {
     xField: string;
     yField: string;
     chartType?: "bar" | "line" | "pie";
+    chartOptions?: ChartOptions;
     showLegend?: boolean;
     showTooltip?: boolean;
     showGrid?: boolean;
     showLabels?: boolean;
+    exportConfig?: ExportConfig;
     filterDefinitions?: FilterDefinition[];
-    /** Renames shared dashboard filter fields for this widget (see DashboardWidget). */
     filterFields?: WidgetFilterFields;
     cacheScope?: string;
     runtimeFilters?: FilterDefinition[];
+    runtimeFilterDisplay?: "inline" | "dialog";
 }
 
-export default function ChartWidget({
-    runtimeFilters = EMPTY_FILTER_DEFINITIONS,
-    ...props
-}: ChartWidgetProps) {
+export default function ChartWidget({ runtimeFilters = EMPTY_FILTER_DEFINITIONS, ...props }: ChartWidgetProps) {
     return (
-        <WidgetFilterController filters={runtimeFilters} database={props.request.database} widgetTitle={props.title}>
+        <WidgetFilterController filters={runtimeFilters} database={props.request.database} widgetTitle={props.title} display={props.runtimeFilterDisplay}>
             {controls => <ChartWidgetContent {...props} runtimeFilters={runtimeFilters} widgetFilterControls={controls} />}
         </WidgetFilterController>
     );
 }
 
 function ChartWidgetContent({
-    title,
-    description,
-    request,
-    xField,
-    yField,
-    chartType = "bar",
-    showLegend = false,
-    showTooltip = true,
-    showGrid = true,
-    showLabels = false,
-    filterDefinitions = EMPTY_FILTER_DEFINITIONS,
-    filterFields,
-    cacheScope,
-    runtimeFilters = EMPTY_FILTER_DEFINITIONS,
-    widgetFilterControls,
+    title, description, request, xField, yField, chartType = "bar", chartOptions,
+    showLegend = false, showTooltip = true, showGrid = true, showLabels = false,
+    exportConfig, filterDefinitions = EMPTY_FILTER_DEFINITIONS, filterFields, cacheScope,
+    runtimeFilters = EMPTY_FILTER_DEFINITIONS, widgetFilterControls,
 }: ChartWidgetProps & { widgetFilterControls: WidgetFilterControls }) {
     const { response, loading, error, retry } = useDashboardWidgetRequest(
-        request,
-        filterDefinitions,
-        cacheScope,
-        filterFields,
-        runtimeFilters,
-        widgetFilterControls.appliedValues
+        request, filterDefinitions, cacheScope, filterFields, runtimeFilters, widgetFilterControls.appliedValues
     );
-    const data = useMemo(
-        () => response?.data?.map(row => {
-            const numericValue = Number(row[yField] ?? 0);
+    const chartRef = useRef<HTMLDivElement>(null);
+    const [exporting, setExporting] = useState(false);
+    const [exportError, setExportError] = useState("");
+    const sourceData = useMemo(() => mapChartData(response?.data ?? [], xField, yField), [response, xField, yField]);
+    const data = useMemo(() => applyChartTopN(sourceData, chartOptions), [sourceData, chartOptions]);
+    const hasNumericData = data.some(item => item.value !== null);
+    const pieHasNegative = chartType === "pie" && data.some(item => (item.value ?? 0) < 0);
+    const pieHasPositive = data.some(item => (item.value ?? 0) > 0);
+    const legend = chartOptions?.showLegend ?? showLegend;
+    const labels = chartOptions?.showLabels ?? chartOptions?.showDataLabels ?? showLabels;
+    const grid = chartOptions?.showGrid ?? showGrid;
+    const filename = exportConfig?.filename?.trim() || title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "chart";
+    const sourceRows = useMemo(() => sourceData.map(item => ({ [xField]: item.name, [yField]: item.value })), [sourceData, xField, yField]);
 
-            return {
-                name: String(row[xField] ?? ""),
-                value: Number.isFinite(numericValue) ? numericValue : 0,
-            };
-        }) ?? [],
-        [response, xField, yField]
-    );
+    const runExport = async (format: "png" | "svg" | "csv" | "excel") => {
+        if (exporting || !chartRef.current) return;
+        setExporting(true);
+        setExportError("");
+        try {
+            if (format === "png") await exportChartPNG(chartRef.current, `${filename}.png`);
+            else if (format === "svg") exportChartSVG(chartRef.current, `${filename}.svg`);
+            else if (format === "csv") exportRowsCSV(sourceRows, `${filename}.csv`);
+            else await exportExcel(sourceRows, `${filename}.xlsx`);
+        } catch (cause: unknown) {
+            setExportError(getRequestErrorMessage(cause, `Unable to export ${format.toUpperCase()}.`));
+        } finally {
+            setExporting(false);
+        }
+    };
+    const topNActive = Boolean(chartOptions?.topN && sourceData.length > chartOptions.topN);
+    const exportOptions: ExportMenuOption[] = exportConfig?.enabled
+        ? exportConfig.formats.map(format => ({
+            id: format,
+            label: format === "csv" || format === "excel"
+                ? `${topNActive ? "Complete filtered source" : "Chart data"} — ${format === "csv" ? "CSV" : "Excel"}`
+                : `Displayed chart — ${format.toUpperCase()}`,
+            onSelect: () => void runExport(format),
+            disabled: loading || !sourceData.length || ((format === "png" || format === "svg") && (pieHasNegative || !hasNumericData)),
+        }))
+        : [];
+    const tooltip = showTooltip && <Tooltip contentStyle={{ border: `1px solid ${GRID_COLOR}`, borderRadius: 8, boxShadow: "0 8px 24px rgb(15 23 42 / 12%)" }} />;
 
     return (
         <DashboardWidgetFrame
             title={title}
             description={description}
-            refreshing={loading && data.length > 0}
-            actions={widgetFilterControls.button}
+            refreshing={loading && sourceData.length > 0}
+            actions={<>{widgetFilterControls.button}<ExportMenu options={exportOptions} disabled={loading || !sourceData.length} busy={exporting} menuLabel={`${title} export options`} /></>}
             filterPanel={widgetFilterControls.panel}
         >
-            {loading && data.length === 0 && <Loading label="Loading chart…" compact />}
-            {!loading && error && data.length === 0 && (
-                <ErrorState title="Unable to load chart" message={error} onRetry={retry} compact />
-            )}
-            {!loading && error && data.length > 0 && (
-                <div className="dashboard-widget-inline-error" role="alert">
-                    <span>Refresh failed.</span>
-                    <button type="button" className="app-button" onClick={retry}>Retry</button>
-                </div>
-            )}
-            {!loading && !error && data.length === 0 && (
-                <Empty title="No chart data" message="The current filters returned no data." compact />
-            )}
-            {data.length > 0 && (
-                <div className="dashboard-widget-content__chart">
+            {loading && sourceData.length === 0 && <Loading label="Loading chart…" compact />}
+            {!loading && error && sourceData.length === 0 && <ErrorState title="Unable to load chart" message={error} onRetry={retry} compact />}
+            {!loading && error && sourceData.length > 0 && <div className="dashboard-widget-inline-error" role="alert"><span>Refresh failed.</span><button type="button" className="app-button" onClick={retry}>Retry</button></div>}
+            {exportError && <div className="dashboard-widget-inline-error" role="alert"><span>{exportError}</span><button type="button" className="app-button" onClick={() => setExportError("")}>Dismiss</button></div>}
+            {!loading && !error && sourceData.length === 0 && <Empty title="No chart data" message="The current filters returned no data." compact />}
+            {!loading && sourceData.length > 0 && !hasNumericData && <Empty title="No numeric chart data" message={`The ${yField} values are missing or nonnumeric.`} compact />}
+            {!loading && pieHasNegative && <Empty title="Pie chart cannot display negative values" message="Use a bar or line chart for signed values. CSV and Excel exports preserve the raw signed data." compact />}
+            {!loading && chartType === "pie" && hasNumericData && !pieHasNegative && !pieHasPositive && <Empty title="No positive pie values" message="All displayed values are zero, so no proportional slices can be drawn." compact />}
+            {sourceData.length > 0 && hasNumericData && !pieHasNegative && (chartType !== "pie" || pieHasPositive) && (
+                <div ref={chartRef} className={`dashboard-widget-content__chart dashboard-widget-content__chart--${chartType}`} role="img" aria-label={`${title} ${chartType} chart`}>
                     <ResponsiveContainer width="100%" height="100%">
                         {chartType === "line" ? (
-                            <LineChart data={data}>
-                                {showGrid && <CartesianGrid strokeDasharray="3 3" />}
-                                <XAxis dataKey="name" />
-                                <YAxis />
-                                {showTooltip && <Tooltip />}
-                                {showLegend && <Legend />}
-                                <Line
-                                    type="monotone"
-                                    dataKey="value"
-                                    stroke={CHART_COLORS[0]}
-                                    strokeWidth={2}
-                                    label={showLabels}
-                                />
+                            <LineChart data={data} margin={{ top: 12, right: 18, bottom: 12, left: 4 }}>
+                                {grid && <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" vertical={false} />}
+                                <XAxis dataKey="name" stroke={AXIS_COLOR} tickLine={false} axisLine={false} minTickGap={18} />
+                                <YAxis stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={axisDomain} />
+                                {tooltip}{legend && <Legend wrapperStyle={{ paddingTop: 10 }} />}
+                                <Line type={chartOptions?.smooth ? "monotone" : "linear"} dataKey="value" name={yField} stroke={CHART_COLORS[0]} strokeWidth={2.5} dot={chartOptions?.showPoints !== false ? { r: 3 } : false} activeDot={{ r: 5 }} connectNulls={false} label={labels} />
                             </LineChart>
                         ) : chartType === "pie" ? (
-                            <PieChart>
-                                <Pie
-                                    data={data}
-                                    dataKey="value"
-                                    nameKey="name"
-                                    cx="50%"
-                                    cy="50%"
-                                    outerRadius="70%"
-                                    label={showLabels}
-                                >
-                                    {data.map((entry, index) => (
-                                        <Cell
-                                            key={`${entry.name}-${index}`}
-                                            fill={CHART_COLORS[index % CHART_COLORS.length]}
-                                        />
-                                    ))}
+                            <PieChart margin={{ top: 8, right: 8, bottom: legend ? 30 : 8, left: 8 }}>
+                                <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius="70%" innerRadius={chartOptions?.appearance === "donut" ? "46%" : 0} paddingAngle={chartOptions?.appearance === "donut" ? 2 : 0} label={labels} labelLine={labels}>
+                                    {data.map((entry, index) => <Cell key={`${entry.name}-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} stroke="#fff" strokeWidth={2} />)}
+                                    {chartOptions?.appearance === "donut" && chartOptions.showCenterTotal && <Label value={data.reduce((sum, item) => sum + (item.value ?? 0), 0).toLocaleString()} position="center" className="dashboard-chart-center-total" />}
                                 </Pie>
-                                {showTooltip && <Tooltip />}
-                                {showLegend && <Legend />}
+                                {tooltip}{legend && <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: 10 }} formatter={value => <span title={String(value)}>{String(value)}</span>} />}
                             </PieChart>
+                        ) : chartOptions?.orientation === "horizontal" ? (
+                            <BarChart data={data} layout="vertical" margin={{ top: 8, right: 20, bottom: 12, left: 8 }}>
+                                {grid && <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" horizontal={false} />}
+                                <XAxis type="number" stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={axisDomain} />
+                                <YAxis type="category" dataKey="name" width={110} stroke={AXIS_COLOR} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
+                                {tooltip}{legend && <Legend />}
+                                <Bar dataKey="value" name={yField} fill={CHART_COLORS[0]} radius={[0, 4, 4, 0]} label={labels} />
+                            </BarChart>
                         ) : (
-                            <BarChart data={data}>
-                                {showGrid && <CartesianGrid strokeDasharray="3 3" />}
-                                <XAxis dataKey="name" />
-                                <YAxis />
-                                {showTooltip && <Tooltip />}
-                                {showLegend && <Legend />}
-                                <Bar dataKey="value" fill={CHART_COLORS[0]} label={showLabels} />
+                            <BarChart data={data} margin={{ top: 12, right: 18, bottom: 12, left: 4 }}>
+                                {grid && <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" vertical={false} />}
+                                <XAxis dataKey="name" stroke={AXIS_COLOR} tickLine={false} axisLine={false} minTickGap={16} />
+                                <YAxis stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={axisDomain} />
+                                {tooltip}{legend && <Legend />}
+                                <Bar dataKey="value" name={yField} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} label={labels} />
                             </BarChart>
                         )}
                     </ResponsiveContainer>

@@ -430,14 +430,14 @@ function validateWidget(
 
 
     const commonKeys = [
-        "id", "type", "title", "description", "width", "height", "visible", "position", "filterFields", "runtimeFilters",
+        "id", "type", "title", "description", "width", "height", "visible", "position", "filterFields", "runtimeFilters", "runtimeFilterDisplay",
     ];
     const definitionKeys = ["queryDefinition", "columns", "filters", "sort", "filterLogic", "grid", "toolbar"];
     const typeKeys: Record<string, string[]> = {
         report: ["request", "reportId", "widgetId", ...definitionKeys],
         stat: ["request", "reportId", "widgetId", "format", "valueField", ...definitionKeys],
-        table: ["request", "reportId", "widgetId", "pageSize", "pageSizeOptions", "export", ...definitionKeys],
-        chart: ["request", "reportId", "widgetId", "xField", "yField", "chartType", "showLegend", "showTooltip", "showGrid", "showLabels", ...definitionKeys],
+        table: ["request", "reportId", "widgetId", "pageSize", "pageSizeOptions", "pagination", "export", ...definitionKeys],
+        chart: ["request", "reportId", "widgetId", "xField", "yField", "chartType", "chartOptions", "showLegend", "showTooltip", "showGrid", "showLabels", "export", ...definitionKeys],
     };
     rejectUnknownProperties(
         widget,
@@ -519,6 +519,9 @@ function validateWidget(
         validateFilterFields(widget, widgetLabel, sharedFilters, errors)
     ).filters;
     validateFilters(widget.runtimeFilters, errors, `${widgetLabel} runtime`);
+    if (widget.runtimeFilterDisplay !== undefined && widget.runtimeFilterDisplay !== "inline" && widget.runtimeFilterDisplay !== "dialog") {
+        errors.push(`${widgetLabel} runtimeFilterDisplay must be inline or dialog.`);
+    }
     addRuntimeFilterDiagnostics(widget, widgetLabel, widgetSharedFilters, warnings);
 
     const hasReportId = widget.reportId !== undefined;
@@ -543,7 +546,9 @@ function validateWidget(
                 filterLogic: widget.filterLogic,
                 grid: widget.grid,
                 toolbar: widget.toolbar,
-                export: widget.export,
+                // Chart graphic formats are presentation-only and validated
+                // below; the shared report definition accepts tabular formats.
+                export: widget.type === "chart" ? undefined : widget.export,
             },
             { columnsRequired: false }
         );
@@ -580,13 +585,15 @@ function validateWidget(
                 filterLogic: widget.filterLogic,
                 grid: widget.grid,
                 toolbar: widget.toolbar,
-                export: widget.export,
+                export: widget.type === "chart" ? undefined : widget.export,
             },
             { columnsRequired: false }
         ).forEach(error => errors.push(`${widgetLabel} inline definition: ${error}`));
     }
 
     if (widget.type === "chart") {
+        validateChartOptions(widget.chartOptions, `Chart widget "${String(widget.id ?? "")}" chartOptions`, errors);
+        validateChartExport(widget.export, `Chart widget "${String(widget.id ?? "")}" export`, errors);
         if (!isNonEmptyString(widget.xField)) {
             errors.push(
                 `Chart widget "${String(widget.id ?? "")}" requires xField.`
@@ -655,6 +662,7 @@ function validateWidget(
     }
 
     if (widget.type === "table") {
+        validateWidgetPagination(widget.pagination, `Table widget "${String(widget.id ?? "")}" pagination`, errors);
         validateExportConfig(
             widget.export,
             `Table widget "${String(widget.id ?? "")}" export`,
@@ -677,6 +685,58 @@ function validateWidget(
             errors.push(
                 `Stat widget "${String(widget.id ?? "")}" has invalid format.`
             );
+        }
+    }
+}
+
+function validateChartOptions(value: unknown, label: string, errors: string[]) {
+    if (value === undefined) return;
+    if (!isRecord(value)) return errors.push(`${label} must be an object.`);
+    const keys = ["appearance", "orientation", "showLegend", "showLabels", "showDataLabels", "showCenterTotal", "showGrid", "smooth", "showPoints", "topN", "showOthers", "othersLabel"];
+    rejectUnknownProperties(value, keys, label, errors);
+    if (value.appearance !== undefined && value.appearance !== "pie" && value.appearance !== "donut") errors.push(`${label} appearance must be pie or donut.`);
+    if (value.orientation !== undefined && value.orientation !== "vertical" && value.orientation !== "horizontal") errors.push(`${label} orientation must be vertical or horizontal.`);
+    for (const field of ["showLegend", "showLabels", "showDataLabels", "showCenterTotal", "showGrid", "smooth", "showPoints", "showOthers"]) {
+        if (value[field] !== undefined && typeof value[field] !== "boolean") errors.push(`${label} ${field} must be a boolean.`);
+    }
+    if (value.topN !== undefined) validatePositiveInteger(value.topN, `${label} topN`, errors);
+    if (typeof value.topN === "number" && value.topN > 100) errors.push(`${label} topN must be at most 100.`);
+    validateOptionalString(value.othersLabel, `${label} othersLabel`, errors);
+}
+
+function validateChartExport(value: unknown, label: string, errors: string[]) {
+    if (value === undefined) return;
+    if (!isRecord(value)) return errors.push(`${label} must be an object.`);
+    rejectUnknownProperties(value, ["enabled", "formats", "filename"], label, errors);
+    if (typeof value.enabled !== "boolean") errors.push(`${label} enabled must be a boolean.`);
+    const allowed = ["png", "svg", "csv", "excel"];
+    if (!Array.isArray(value.formats) || value.formats.length === 0 || value.formats.some(format => !allowed.includes(String(format)))) {
+        errors.push(`${label} formats must contain png, svg, csv, or excel.`);
+    } else if (new Set(value.formats).size !== value.formats.length) {
+        errors.push(`${label} formats must not contain duplicates.`);
+    }
+    validateOptionalString(value.filename, `${label} filename`, errors);
+}
+
+function validateWidgetPagination(value: unknown, label: string, errors: string[]) {
+    if (value === undefined) return;
+    if (!isRecord(value)) {
+        errors.push(`${label} must be an object.`);
+        return;
+    }
+    rejectUnknownProperties(value, ["style", "pageSize", "pageSizeOptions", "showTotalRecords", "showPageNumbers", "showFirstLast"], label, errors);
+    if (value.style !== undefined && value.style !== "modern") errors.push(`${label} style must be modern.`);
+    if (value.pageSize !== undefined) validatePositiveInteger(value.pageSize, `${label} pageSize`, errors);
+    for (const field of ["showTotalRecords", "showPageNumbers", "showFirstLast"]) {
+        if (value[field] !== undefined && typeof value[field] !== "boolean") errors.push(`${label} ${field} must be a boolean.`);
+    }
+    if (value.pageSizeOptions !== undefined) {
+        if (!Array.isArray(value.pageSizeOptions) || value.pageSizeOptions.length === 0) {
+            errors.push(`${label} pageSizeOptions must be a non-empty array.`);
+        } else {
+            value.pageSizeOptions.forEach((option, index) => validatePositiveInteger(option, `${label} pageSizeOptions[${index}]`, errors));
+            if (value.pageSizeOptions.length > 20) errors.push(`${label} pageSizeOptions must contain at most 20 values.`);
+            if (new Set(value.pageSizeOptions).size !== value.pageSizeOptions.length) errors.push(`${label} pageSizeOptions must not contain duplicates.`);
         }
     }
 }

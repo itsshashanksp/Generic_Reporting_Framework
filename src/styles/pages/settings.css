@@ -1,8 +1,8 @@
 .settings-page {
     display: grid;
+    width: 100%;
+    min-width: 0;
     gap: 24px;
-    max-width: 980px;
-    margin: 0 auto;
 }
 
 .settings-header h1 {
@@ -27,14 +27,14 @@
 
 .settings-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
-    align-items: stretch;
+    align-items: start;
 }
 
 .settings-option,
 .settings-empty {
-    padding: clamp(20px, 4vw, 28px);
+    padding: clamp(18px, 2.5vw, 24px);
     border: 1px solid #e2e8f0;
     border-radius: 12px;
     background: #fff;
@@ -44,7 +44,6 @@
 .settings-option {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: 1fr;
     gap: 14px 16px;
     min-width: 0;
 }
@@ -87,7 +86,6 @@
 
 .settings-database-form {
     display: flex;
-    flex: 1;
     flex-direction: column;
     gap: 12px;
     margin-top: 16px;
@@ -121,8 +119,8 @@
     min-width: 0;
     align-items: center;
     gap: 12px;
-    margin-top: auto;
-    padding-top: 18px;
+    margin-top: 2px;
+    padding-top: 8px;
 }
 
 .settings-option__action .app-button,
@@ -195,10 +193,6 @@
 }
 
 @media (max-width: 760px) {
-    .settings-grid {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
     .settings-option__action {
         flex-wrap: wrap;
     }

@@ -20,7 +20,7 @@ import { ExportFileError, exportExcel, exportRowsCSV, fetchAllRowsForExport } fr
 import type { ExportConfig, ExportFormat } from "../../types/export";
 import type { FilterDefinition } from "../../types/filter";
 import type { ColumnDefinition } from "../../types/column";
-import type { GridConfig } from "../../types/report";
+import type { GridConfig, PaginationPresentationConfig } from "../../types/report";
 import type { WidgetRequest } from "../../types/widget";
 import ExportMenu, { type ExportMenuOption } from "../Common/ExportMenu";
 import Loading from "../Common/Loading";
@@ -38,6 +38,7 @@ interface TableWidgetProps {
     description?: string;
     pageSize?: number;
     pageSizeOptions?: number[];
+    pagination?: PaginationPresentationConfig;
     request: WidgetRequest;
     columns?: ColumnDefinition[];
     filterDefinitions?: FilterDefinition[];
@@ -46,6 +47,7 @@ interface TableWidgetProps {
     cacheScope?: string;
     exportConfig?: ExportConfig;
     runtimeFilters?: FilterDefinition[];
+    runtimeFilterDisplay?: "inline" | "dialog";
 }
 
 type SortDirection = "ASC" | "DESC";
@@ -100,7 +102,7 @@ export default function TableWidget({
     ...props
 }: TableWidgetProps) {
     return (
-        <WidgetFilterController filters={runtimeFilters} database={props.request.database} widgetTitle={props.title}>
+        <WidgetFilterController filters={runtimeFilters} database={props.request.database} widgetTitle={props.title} display={props.runtimeFilterDisplay}>
             {controls => <TableWidgetContent {...props} runtimeFilters={runtimeFilters} widgetFilterControls={controls} />}
         </WidgetFilterController>
     );
@@ -111,6 +113,7 @@ function TableWidgetContent({
     description,
     pageSize,
     pageSizeOptions,
+    pagination,
     request,
     columns: configuredColumns,
     filterDefinitions = EMPTY_FILTER_DEFINITIONS,
@@ -122,7 +125,7 @@ function TableWidgetContent({
 }: TableWidgetProps & { widgetFilterControls: WidgetFilterControls }) {
     const { refreshKey, appliedFilters } = useDashboard();
 
-    const configuredPageSize = normalizePageSize(pageSize);
+    const configuredPageSize = normalizePageSize(pagination?.pageSize ?? pageSize);
     const [pageSizeState, setPageSizeState] = useState<PageSizeState>({
         configured: configuredPageSize,
         value: configuredPageSize,
@@ -201,21 +204,25 @@ function TableWidgetContent({
     );
 
     const sizeOptions = useMemo(() => {
-        const configured = pageSizeOptions?.filter(
+        const configured = (pagination?.pageSizeOptions ?? pageSizeOptions)?.filter(
             option => Number.isInteger(option) && option > 0
         ) ?? DEFAULT_PAGE_SIZE_OPTIONS;
 
         return [...new Set([...configured, activePageSize])]
             .sort((a, b) => a - b);
-    }, [pageSizeOptions, activePageSize]);
+    }, [pagination?.pageSizeOptions, pageSizeOptions, activePageSize]);
     const gridConfig = useMemo<GridConfig>(() => ({
         pagination: {
             enabled: true,
             pageSize: activePageSize,
             pageSizeOptions: sizeOptions,
+            style: "modern",
+            showTotalRecords: pagination?.showTotalRecords ?? true,
+            showPageNumbers: pagination?.showPageNumbers ?? true,
+            showFirstLast: pagination?.showFirstLast ?? false,
         },
         rowSelection: "multiple",
-    }), [activePageSize, sizeOptions]);
+    }), [activePageSize, sizeOptions, pagination?.showTotalRecords, pagination?.showPageNumbers, pagination?.showFirstLast]);
 
     useEffect(() => {
         const forceRefresh = previousRefreshKey.current !== refreshKey

@@ -76,11 +76,16 @@
     min-height: 0;
     flex: 1 1 auto;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .report-table-frame__body > .universal-grid:not(.universal-grid--natural-height) {
     height: 100%;
     padding: 16px;
+}
+
+.report-table-frame__body > .universal-grid--natural-height {
+    flex: 1 1 auto;
 }
 
 .report-table-frame__loading {

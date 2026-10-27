@@ -279,10 +279,18 @@ function validateGrid(value: unknown, errors: string[]) {
     if (value.pagination !== undefined) {
         if (!isRecord(value.pagination)) errors.push("Report grid pagination must be an object.");
         else {
-            rejectUnknown(value.pagination, ["enabled", "pageSize", "pageSizeOptions"], "Report grid pagination", errors);
+            rejectUnknown(value.pagination, ["enabled", "pageSize", "pageSizeOptions", "style", "showTotalRecords", "showPageNumbers", "showFirstLast"], "Report grid pagination", errors);
             optionalBoolean(value.pagination.enabled, "Report grid pagination enabled", errors);
             positiveInteger(value.pagination.pageSize, "Report grid pagination pageSize", errors);
             positiveIntegerArray(value.pagination.pageSizeOptions, "Report grid pagination pageSizeOptions", errors);
+            if (value.pagination.style !== undefined && value.pagination.style !== "modern") errors.push("Report grid pagination style must be modern.");
+            optionalBoolean(value.pagination.showTotalRecords, "Report grid pagination showTotalRecords", errors);
+            optionalBoolean(value.pagination.showPageNumbers, "Report grid pagination showPageNumbers", errors);
+            optionalBoolean(value.pagination.showFirstLast, "Report grid pagination showFirstLast", errors);
+            if (Array.isArray(value.pagination.pageSizeOptions)) {
+                if (value.pagination.pageSizeOptions.length > 20) errors.push("Report grid pagination pageSizeOptions must contain at most 20 values.");
+                if (new Set(value.pagination.pageSizeOptions).size !== value.pagination.pageSizeOptions.length) errors.push("Report grid pagination pageSizeOptions must not contain duplicates.");
+            }
         }
     }
     if (value.rowSelection !== undefined && value.rowSelection !== "single" && value.rowSelection !== "multiple") errors.push("Report grid rowSelection must be single or multiple.");

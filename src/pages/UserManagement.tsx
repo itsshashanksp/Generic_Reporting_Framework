@@ -22,6 +22,7 @@ import {
 import ErrorState from "../components/Common/Error";
 import Loading from "../components/Common/Loading";
 import AccessibleDialog from "../components/Common/AccessibleDialog";
+import ActionMenu, { type ActionMenuItem } from "../components/Common/ActionMenu";
 import {
   frontendCapabilities,
   getAssignableFrontendRoles,
@@ -356,6 +357,64 @@ export default function UserManagement({
                       : "Read Only";
                   const applicationAdmin =
                     user.frontendRole === "application-administrator";
+                  const actions: ActionMenuItem[] = backendManaged
+                    ? []
+                    : [
+                        ...(isSuperAdmin && applicationAdmin && user.frontendAccess
+                          ? [{
+                              id: "demote",
+                              label: "Demote",
+                              disabled: busy,
+                              onSelect: () => void runMutation(user.username, () =>
+                                assignFrontendAuthorization(user.username, true, null)),
+                            }]
+                          : []),
+                        ...(isSuperAdmin && !applicationAdmin
+                          ? [{
+                              id: "make-admin",
+                              label: "Make Admin",
+                              disabled: busy,
+                              onSelect: () => void runMutation(user.username, () =>
+                                assignFrontendAuthorization(user.username, true, "application-administrator")),
+                            }]
+                          : []),
+                        {
+                          id: "edit",
+                          label: "Edit User",
+                          disabled: busy,
+                          onSelect: () => openProfileEditor(user),
+                        },
+                        ...(!current
+                          ? [{
+                              id: "toggle-enabled",
+                              label: user.enabled ? "Disable" : "Enable",
+                              disabled: busy,
+                              onSelect: () => void runMutation(user.username, () =>
+                                user.enabled ? disableUser(user.username) : enableUser(user.username)),
+                            }]
+                          : []),
+                        {
+                          id: "password",
+                          label: "Change Password",
+                          disabled: busy,
+                          onSelect: () => {
+                            setPasswordTarget(user.username);
+                            setNewPassword("");
+                            setNewPasswordConfirmation("");
+                            setModalError("");
+                            setModal("password");
+                          },
+                        },
+                        ...(!current
+                          ? [{
+                              id: "delete",
+                              label: "Delete",
+                              disabled: busy,
+                              destructive: true,
+                              onSelect: () => void runMutation(user.username, () => deleteUser(user.username)),
+                            }]
+                          : []),
+                      ];
                   return (
                     <tr key={user.username}>
                       <td data-label="Name" className="user-profile-cell">
@@ -392,106 +451,15 @@ export default function UserManagement({
                         {new Date(user.createdAt).toLocaleDateString()}
                       </td>
                       <td data-label="Actions" className="user-actions-cell">
-                        <div className="user-actions">
-                          {backendManaged ? (
-                            <span className="user-protected">
-                              Backend Managed
-                            </span>
-                          ) : (
-                            <>
-                              {isSuperAdmin &&
-                                applicationAdmin &&
-                                user.frontendAccess && (
-                                  <button
-                                    className="app-button"
-                                    type="button"
-                                    disabled={busy}
-                                    onClick={() =>
-                                      void runMutation(user.username, () =>
-                                        assignFrontendAuthorization(
-                                          user.username,
-                                          true,
-                                          null,
-                                        ),
-                                      )
-                                    }
-                                  >
-                                    Demote
-                                  </button>
-                                )}
-                              {isSuperAdmin && !applicationAdmin && (
-                                <button
-                                  className="app-button"
-                                  type="button"
-                                  disabled={busy}
-                                  onClick={() =>
-                                    void runMutation(user.username, () =>
-                                      assignFrontendAuthorization(
-                                        user.username,
-                                        true,
-                                        "application-administrator",
-                                      ),
-                                    )
-                                  }
-                                >
-                                  Make Admin
-                                </button>
-                              )}
-                              <button
-                                className="app-button"
-                                type="button"
-                                disabled={busy}
-                                onClick={() => openProfileEditor(user)}
-                              >
-                                Edit User
-                              </button>
-                              {!current && (
-                                <button
-                                  className="app-button"
-                                  type="button"
-                                  disabled={busy}
-                                  onClick={() =>
-                                    void runMutation(user.username, () =>
-                                      user.enabled
-                                        ? disableUser(user.username)
-                                        : enableUser(user.username),
-                                    )
-                                  }
-                                >
-                                  {user.enabled ? "Disable" : "Enable"}
-                                </button>
-                              )}
-                              <button
-                                className="app-button"
-                                type="button"
-                                disabled={busy}
-                                onClick={() => {
-                                  setPasswordTarget(user.username);
-                                  setNewPassword("");
-                                  setNewPasswordConfirmation("");
-                                  setModalError("");
-                                  setModal("password");
-                                }}
-                              >
-                                Change Password
-                              </button>
-                              {!current && (
-                                <button
-                                  className="app-button user-action--danger"
-                                  type="button"
-                                  disabled={busy}
-                                  onClick={() =>
-                                    void runMutation(user.username, () =>
-                                      deleteUser(user.username),
-                                    )
-                                  }
-                                >
-                                  Delete
-                                </button>
-                              )}
-                            </>
-                          )}
-                        </div>
+                        {backendManaged ? (
+                          <span className="user-protected">Backend Managed</span>
+                        ) : (
+                          <ActionMenu
+                            label={`Actions for ${user.username}`}
+                            items={actions}
+                            disabled={busy}
+                          />
+                        )}
                       </td>
                     </tr>
                   );

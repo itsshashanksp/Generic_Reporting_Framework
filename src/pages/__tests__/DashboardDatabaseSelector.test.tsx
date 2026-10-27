@@ -54,12 +54,12 @@ vi.mock("../../engine/DashboardEngine", async importOriginal => {
         filters: [{ field: "Category", label: "Category", type: "text" }],
         widgets: [
             {
-                id: "total", type: "stat", title: "Total", width: 4,
+                id: "total", type: "stat", title: "Total", width: 4, height: 175, position: { x: 0, y: 1 },
                 queryDefinition: { format: "sql", resource: "widgets/total-sales" },
                 valueField: "TotalSales", format: "number",
             },
             {
-                id: "monthly", type: "table", title: "Monthly", width: 8,
+                id: "monthly", type: "table", title: "Monthly", width: 8, position: { x: 4, y: 1 },
                 queryDefinition: { format: "sql", resource: "widgets/sales-month-wise" },
                 columns: [{ field: "Month", header: "Month" }, { field: "Sales", header: "Sales", dataType: "number" }],
                 sort: [{ field: "Month", direction: "DESC" }],
@@ -143,6 +143,24 @@ describe("Dashboard database selector", () => {
         expect(lastFor("widgets/sales-month-wise").database).toBe("abc");
         expect(lastFor("widgets/item-stock-value-by-category").database).toBe("loyal-ibms");
         expect(screen.getByText("111")).toBeTruthy();
+    });
+
+    it("preserves explicit dimensions and positions while leaving omitted heights content-sized", async () => {
+        executeRequestMock.mockReset().mockImplementation(backend());
+        await renderDashboard();
+        await screen.findByText("abc-month");
+
+        const total = screen.getByRole("heading", { name: "Total" }).closest(".dashboard-widget") as HTMLElement;
+        const monthly = screen.getByRole("heading", { name: "Monthly" }).closest(".dashboard-widget") as HTMLElement;
+        expect(total.style.height).toBe("175px");
+        expect(total.style.gridColumn).toBe("1 / span 4");
+        expect(total.style.gridRow).toBe("1");
+        expect(total.dataset.fixedHeight).toBe("true");
+        expect(monthly.style.height).toBe("auto");
+        expect(monthly.style.gridColumn).toBe("5 / span 8");
+        expect(monthly.style.gridRow).toBe("1");
+        expect(monthly.dataset.fixedHeight).toBeUndefined();
+        expect(monthly.querySelector(":scope > .report-table-frame")).not.toBeNull();
     });
 
     it("reruns every inheriting widget on the selected database and leaves a widget's own database alone", async () => {

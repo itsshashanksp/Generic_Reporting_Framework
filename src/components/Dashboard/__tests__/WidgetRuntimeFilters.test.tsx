@@ -55,7 +55,7 @@ describe("widget runtime filters", () => {
             success: true, message: "OK",
             data: input.source?.table === "Statuses" ? [{ Status: "Open" }] : [{ Total: 1 }],
         }));
-        render(<DashboardProvider><StatWidget title="Orders" request={{ ...request, database: "archive" }} valueField="Total" runtimeFilters={dynamic} /></DashboardProvider>);
+        render(<DashboardProvider><StatWidget title="Orders" request={{ ...request, database: "archive" }} valueField="Total" runtimeFilters={dynamic} runtimeFilterDisplay="dialog" /></DashboardProvider>);
         fireEvent.click(await screen.findByRole("button", { name: "Filter Orders" }));
         await waitFor(() => expect(executeRequestMock.mock.calls.some(call => call[0].source?.table === "Statuses")).toBe(true));
         const optionRequest = executeRequestMock.mock.calls.map(call => call[0]).find(input => input.source?.table === "Statuses");
@@ -65,7 +65,7 @@ describe("widget runtime filters", () => {
     it("resets local filters only when the effective database changes", async () => {
         const view = render(
             <DashboardProvider>
-                <StatWidget title="Orders" request={{ ...request, database: "archive" }} valueField="Total" runtimeFilters={runtimeFilters} />
+                <StatWidget title="Orders" request={{ ...request, database: "archive" }} valueField="Total" runtimeFilters={runtimeFilters} runtimeFilterDisplay="dialog" />
             </DashboardProvider>
         );
         await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(1));
@@ -76,14 +76,14 @@ describe("widget runtime filters", () => {
 
         view.rerender(
             <DashboardProvider>
-                <StatWidget title="Orders" request={{ ...request, database: "archive" }} valueField="Total" runtimeFilters={runtimeFilters} />
+                <StatWidget title="Orders" request={{ ...request, database: "archive" }} valueField="Total" runtimeFilters={runtimeFilters} runtimeFilterDisplay="dialog" />
             </DashboardProvider>
         );
         expect(screen.getByRole("button", { name: "Filter Orders" }).textContent).toContain("•");
 
         view.rerender(
             <DashboardProvider>
-                <StatWidget title="Orders" request={{ ...request, database: "current" }} valueField="Total" runtimeFilters={runtimeFilters} />
+                <StatWidget title="Orders" request={{ ...request, database: "current" }} valueField="Total" runtimeFilters={runtimeFilters} runtimeFilterDisplay="dialog" />
             </DashboardProvider>
         );
         await waitFor(() => expect(screen.getByRole("button", { name: "Filter Orders" }).textContent).not.toContain("•"));
@@ -116,6 +116,53 @@ describe("widget runtime filters", () => {
         expect(container.querySelector(".widget-filter-panel")).toBeNull();
     });
 
+    it("uses a modal dialog without changing inline-mode defaults and discards canceled drafts", async () => {
+        render(
+            <DashboardProvider>
+                <StatWidget title="Orders" request={request} valueField="Total" runtimeFilters={runtimeFilters} runtimeFilterDisplay="dialog" />
+            </DashboardProvider>
+        );
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(1));
+        const trigger = screen.getByRole("button", { name: "Filter Orders" });
+        fireEvent.click(trigger);
+        const dialog = screen.getByRole("dialog", { name: "Filter Orders" });
+        expect(document.body.contains(dialog)).toBe(true);
+        fireEvent.change(screen.getByLabelText("Status"), { target: { value: "Draft" } });
+        fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+        expect(screen.queryByRole("dialog", { name: "Filter Orders" })).toBeNull();
+
+        fireEvent.click(trigger);
+        expect((screen.getByLabelText("Status") as HTMLInputElement).value).toBe("");
+        fireEvent.change(screen.getByLabelText("Status"), { target: { value: "Open" } });
+        fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(2));
+        expect(executeRequestMock.mock.calls[1][0].filters).toEqual([{ field: "Status", operator: "=", value: "Open" }]);
+
+        fireEvent.click(trigger);
+        fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+        expect(trigger.textContent).not.toContain("•");
+    });
+
+    it("closes dialog filters with Escape, restores focus, and traps Tab navigation", async () => {
+        render(
+            <DashboardProvider>
+                <StatWidget title="Orders" request={request} valueField="Total" runtimeFilters={runtimeFilters} runtimeFilterDisplay="dialog" />
+            </DashboardProvider>
+        );
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(1));
+        const trigger = screen.getByRole("button", { name: "Filter Orders" });
+        fireEvent.click(trigger);
+        const dialog = screen.getByRole("dialog", { name: "Filter Orders" });
+        const close = screen.getByRole("button", { name: "Close" });
+        const cancel = screen.getByRole("button", { name: "Cancel" });
+        cancel.focus();
+        fireEvent.keyDown(dialog, { key: "Tab" });
+        expect(document.activeElement).toBe(close);
+        fireEvent(dialog, new Event("cancel", { bubbles: true, cancelable: true }));
+        await waitFor(() => expect(screen.queryByRole("dialog", { name: "Filter Orders" })).toBeNull());
+        await waitFor(() => expect(document.activeElement).toBe(trigger));
+    });
+
     it.each([
         [
             { field: "CreatedAt", label: "Created", type: "daterange" as const, operator: "between" as const },
@@ -130,7 +177,7 @@ describe("widget runtime filters", () => {
     ])("does not request data for an incomplete $type range", async (definition, inputLabel, value) => {
         render(
             <DashboardProvider>
-                <StatWidget title="Orders" request={request} valueField="Total" runtimeFilters={[definition]} />
+                <StatWidget title="Orders" request={request} valueField="Total" runtimeFilters={[definition]} runtimeFilterDisplay="dialog" />
             </DashboardProvider>
         );
         await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(1));

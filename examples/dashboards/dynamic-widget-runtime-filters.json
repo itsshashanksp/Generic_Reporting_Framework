@@ -24,7 +24,7 @@
           "searchPlaceholder": "Search customers"
         }
       }],
-      "pageSize": 10
+      "pagination": { "pageSize": 10, "pageSizeOptions": [10, 25, 50], "showTotalRecords": true, "showPageNumbers": true }
     },
     {
       "id": "orders-by-dynamic-status",

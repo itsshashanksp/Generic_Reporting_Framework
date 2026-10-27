@@ -24,6 +24,7 @@ interface StatWidgetProps {
     filterFields?: WidgetFilterFields;
     cacheScope?: string;
     runtimeFilters?: FilterDefinition[];
+    runtimeFilterDisplay?: "inline" | "dialog";
 }
 
 function formatValue(
@@ -62,7 +63,7 @@ export default function StatWidget({
     ...props
 }: StatWidgetProps) {
     return (
-        <WidgetFilterController filters={runtimeFilters} database={props.request.database} widgetTitle={props.title}>
+        <WidgetFilterController filters={runtimeFilters} database={props.request.database} widgetTitle={props.title} display={props.runtimeFilterDisplay}>
             {controls => <StatWidgetContent {...props} runtimeFilters={runtimeFilters} widgetFilterControls={controls} />}
         </WidgetFilterController>
     );

@@ -22,6 +22,7 @@ interface ReportWidgetProps {
     filterFields?: WidgetFilterFields;
     cacheScope?: string;
     runtimeFilters?: FilterDefinition[];
+    runtimeFilterDisplay?: "inline" | "dialog";
 }
 
 export default function ReportWidget({
@@ -30,7 +31,7 @@ export default function ReportWidget({
 }: ReportWidgetProps) {
     const report = props.definition ?? (props.reportId ? getReport(props.reportId) : undefined) ?? null;
     return (
-        <WidgetFilterController filters={runtimeFilters} database={report?.request.database} widgetTitle={props.title}>
+        <WidgetFilterController filters={runtimeFilters} database={report?.request.database} widgetTitle={props.title} display={props.runtimeFilterDisplay}>
             {controls => <ReportWidgetContent {...props} runtimeFilters={runtimeFilters} widgetFilterControls={controls} />}
         </WidgetFilterController>
     );

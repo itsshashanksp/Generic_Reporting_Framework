@@ -402,6 +402,7 @@ function DashboardContent({
                                 <div
                                     key={widgetContextKey}
                                     className={`dashboard-widget${widget.type === "table" || widget.type === "report" ? " dashboard-widget--table" : ""}`}
+                                    data-fixed-height={widget.height !== undefined ? "true" : undefined}
                                     style={{
                                         /*
                                          * Use configured X
@@ -422,11 +423,6 @@ function DashboardContent({
                                                 : "auto",
 
                                         height:
-                                            widget.height !== undefined
-                                                ? `${widget.height}px`
-                                                : "auto",
-
-                                        "--dashboard-widget-height":
                                             widget.height !== undefined
                                                 ? `${widget.height}px`
                                                 : "auto",
@@ -454,6 +450,7 @@ function DashboardContent({
                                                 }
                                                 filterFields={widget.filterFields}
                                                 runtimeFilters={widget.runtimeFilters}
+                                                runtimeFilterDisplay={widget.runtimeFilterDisplay}
                                                 cacheScope={`${dashboard.id}:${widget.id}`}
                                             />
                                         )}
@@ -479,6 +476,7 @@ function DashboardContent({
                                                 }
                                                 filterFields={widget.filterFields}
                                                 runtimeFilters={widget.runtimeFilters}
+                                                runtimeFilterDisplay={widget.runtimeFilterDisplay}
                                                 cacheScope={`${dashboard.id}:${widget.id}`}
                                             />
                                         )}
@@ -498,6 +496,7 @@ function DashboardContent({
                                                 pageSizeOptions={
                                                     widget.pageSizeOptions
                                                 }
+                                                pagination={widget.pagination}
                                                 request={
                                                     widgetRequest
                                                 }
@@ -509,6 +508,7 @@ function DashboardContent({
                                                 }
                                                 filterFields={widget.filterFields}
                                                 runtimeFilters={widget.runtimeFilters}
+                                                runtimeFilterDisplay={widget.runtimeFilterDisplay}
                                                 cacheScope={`${dashboard.id}:${widget.id}`}
                                                 exportConfig={widget.export}
                                             />
@@ -537,6 +537,7 @@ function DashboardContent({
                                                 chartType={
                                                     widget.chartType
                                                 }
+                                                chartOptions={widget.chartOptions}
                                                 showLegend={
                                                     widget.showLegend
                                                 }
@@ -554,6 +555,8 @@ function DashboardContent({
                                                 }
                                                 filterFields={widget.filterFields}
                                                 runtimeFilters={widget.runtimeFilters}
+                                                runtimeFilterDisplay={widget.runtimeFilterDisplay}
+                                                exportConfig={widget.export}
                                                 cacheScope={`${dashboard.id}:${widget.id}`}
                                             />
                                         )}

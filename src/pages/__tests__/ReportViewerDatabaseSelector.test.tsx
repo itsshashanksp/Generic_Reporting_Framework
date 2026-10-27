@@ -354,13 +354,14 @@ describe("ReportViewer database selector", () => {
         expect(databaseSelect().value).toBe("abc");
     });
 
-    it("renders one selector next to the toolbar actions for desktop and mobile layouts", async () => {
+    it("renders one selector in the report header and keeps it out of the result toolbar", async () => {
         executeRequestMock.mockReset().mockImplementation(backend());
         await renderReport();
         const toolbar = screen.getByRole("toolbar", { name: "Report actions" });
 
-        expect(within(toolbar).getAllByLabelText("Database")).toHaveLength(1);
-        expect(databaseSelect().closest(".report-toolbar__actions")).toBeNull();
+        expect(within(toolbar).queryByLabelText("Database")).toBeNull();
+        expect(databaseSelect().closest(".report-page__header")).not.toBeNull();
+        expect(screen.getAllByLabelText("Database")).toHaveLength(1);
     });
 
     it("leaves reports without databaseSelection unchanged", async () => {

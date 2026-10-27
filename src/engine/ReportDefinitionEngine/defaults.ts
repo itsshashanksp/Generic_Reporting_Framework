@@ -17,6 +17,10 @@ grid: {
         enabled: true,
         pageSize: 10,
         pageSizeOptions: [10, 25, 50, 100],
+        style: "modern",
+        showTotalRecords: true,
+        showPageNumbers: true,
+        showFirstLast: false,
     },
 
     rowSelection: "single",

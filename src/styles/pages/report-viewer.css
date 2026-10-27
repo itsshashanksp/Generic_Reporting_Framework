@@ -29,6 +29,14 @@
     color: #64748b;
 }
 
+.report-page__header-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 .report-section {
     border: 1px solid #e2e8f0;
     border-radius: 9px;
@@ -87,6 +95,10 @@
     .report-page__header {
         flex-direction: column;
         gap: 14px;
+    }
+
+    .report-page__header-actions {
+        width: 100%;
     }
 
     .report-inline-error {

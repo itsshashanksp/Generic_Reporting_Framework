@@ -85,7 +85,37 @@ Validation rejects a mapping unless:
 
 ## Widget-level runtime filters
 
-An optional `runtimeFilters` array on a dashboard widget adds independent controls inside that widget. It uses the same filter definitions, types, operators, static options, and `dynamicOptions` as report and dashboard filters. It works with inline JSON Queries, inline SQL Resources, `widgetId`, and `reportId` widgets.
+An optional `runtimeFilters` array on a dashboard widget adds independent controls for that widget. It uses the same filter definitions, types, operators, static options, and `dynamicOptions` as report and dashboard filters. It works with inline JSON Queries, inline SQL Resources, `widgetId`, and `reportId` widgets.
+
+`runtimeFilterDisplay` is optional. The default `"inline"` preserves the established in-card panel. `"dialog"` uses the same filter context, renderer, validation, dynamic options, and request composition in an accessible modal. Opening starts from applied values; Apply validates and commits, Reset clears and commits, while Cancel, Close, and Escape discard the current draft. Database changes retain the existing behavior of clearing widget-local filters.
+
+Table widgets also accept an optional `pagination` object with `style: "modern"`, `pageSize`, `pageSizeOptions`, `showTotalRecords`, `showPageNumbers`, and `showFirstLast`. Its page-size fields override legacy `pageSize` and `pageSizeOptions`; omitted settings retain legacy values and defaults. Paging remains server-side.
+
+Chart widgets retain `bar`, `line`, and `pie` types and may add `chartOptions`. Donut appearance, horizontal bars, line smoothing/points, responsive legends, Top-N/Others, and chart exports are documented in [Configuration](CONFIGURATION.md). Graphic exports (`png`, `svg`) represent the displayed chart; tabular exports (`csv`, `excel`) contain the complete filtered source chart rows.
+
+```json
+{
+  "id": "category-value",
+  "type": "chart",
+  "title": "Value by Category",
+  "chartType": "bar",
+  "xField": "Category",
+  "yField": "Value",
+  "queryDefinition": { "format": "sql", "resource": "widgets/category-value" },
+  "chartOptions": {
+    "orientation": "horizontal",
+    "showGrid": true,
+    "topN": 10,
+    "showOthers": true,
+    "othersLabel": "Others"
+  },
+  "export": {
+    "enabled": true,
+    "formats": ["png", "svg", "csv", "excel"],
+    "filename": "category-value"
+  }
+}
+```
 
 ```json
 {
@@ -93,6 +123,15 @@ An optional `runtimeFilters` array on a dashboard widget adds independent contro
   "type": "table",
   "title": "Open Orders",
   "queryDefinition": { "format": "sql", "resource": "widgets/open-orders" },
+  "pagination": {
+    "style": "modern",
+    "pageSize": 25,
+    "pageSizeOptions": [10, 25, 50, 100],
+    "showTotalRecords": true,
+    "showPageNumbers": true,
+    "showFirstLast": false
+  },
+  "runtimeFilterDisplay": "dialog",
   "runtimeFilters": [
     { "field": "Customer", "label": "Customer", "type": "text", "operator": "contains" }
   ]

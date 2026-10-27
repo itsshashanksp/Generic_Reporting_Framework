@@ -35,6 +35,17 @@
     color: #64748b;
     font-size: 14px;
     font-weight: 600;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+}
+
+.dashboard-widget-content--stat .dashboard-widget-content__header {
+    margin-bottom: 6px;
+}
+
+.dashboard-widget-content--stat .dashboard-widget-content__header > div:first-child {
+    flex: 1 1 auto;
 }
 
 .dashboard-widget-content__header p {
@@ -60,9 +71,9 @@
 }
 
 .widget-filter-button {
-    min-height: 32px;
-    padding: 5px 9px;
-    font-size: 12px;
+    min-height: 36px;
+    padding: 7px 11px;
+    font-size: 13px;
 }
 
 .widget-filter-button svg {
@@ -80,11 +91,11 @@
     width: 100%;
     min-width: 0;
     margin-bottom: 12px;
-    padding: 12px;
+    padding: 14px;
     overflow-wrap: anywhere;
-    border: 1px solid #bfdbfe;
-    border-radius: 7px;
-    background: #f8fbff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
     box-sizing: border-box;
 }
 
@@ -98,12 +109,31 @@
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e2e8f0;
 }
 
-.dashboard-widget:has(.widget-filter-panel) .dashboard-widget-content,
-.dashboard-widget:has(.widget-filter-panel) .report-table-frame {
-    height: auto;
-    overflow: visible;
+.widget-filter-dialog {
+    width: min(720px, calc(100vw - 32px));
+}
+
+.widget-filter-dialog .widget-filter-panel {
+    margin: 0;
+    padding: 20px;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+}
+
+.widget-filter-dialog .widget-filter-panel__actions {
+    padding-top: 0;
+    border-top: 0;
+}
+
+.dashboard-table .report-table-frame__body > .widget-filter-panel,
+.dashboard-report .report-table-frame__body > .widget-filter-panel {
+    width: auto;
+    margin: 14px 16px 0;
 }
 
 .dashboard-widget-content__body {
@@ -125,8 +155,51 @@
 .dashboard-widget-content__chart {
     min-height: 260px;
     overflow: hidden;
-    padding: 4px 2px 0;
-    border-radius: 6px;
+    padding: 12px 8px 4px;
+    border: 1px solid #eef2f7;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #fff 0%, #fbfdff 100%);
+}
+
+.dashboard-widget-content__chart .recharts-text {
+    fill: #64748b;
+    font-size: 11px;
+}
+
+.dashboard-widget-content__chart .recharts-cartesian-grid line {
+    stroke-opacity: 0.72;
+}
+
+.dashboard-widget-content__chart .recharts-curve,
+.dashboard-widget-content__chart .recharts-rectangle {
+    transition: opacity 120ms ease;
+}
+
+.dashboard-widget-content__chart .recharts-legend-wrapper {
+    max-width: 100%;
+    overflow: hidden;
+    color: #475569;
+    font-size: 12px;
+    text-overflow: ellipsis;
+}
+
+.dashboard-widget-content__chart .recharts-legend-item-text {
+    display: inline-block;
+    max-width: min(180px, 32cqw);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: bottom;
+    white-space: nowrap;
+}
+
+.dashboard-widget-content__chart .recharts-tooltip-wrapper {
+    max-width: min(280px, 82cqw);
+}
+
+.dashboard-chart-center-total {
+    fill: #0f172a;
+    font-size: 20px;
+    font-weight: 700;
 }
 
 .dashboard-stat-value {
@@ -177,6 +250,15 @@
         flex-direction: column;
     }
 
+    .dashboard-widget-content--stat .dashboard-widget-content__header {
+        align-items: flex-start;
+        flex-direction: row;
+    }
+
+    .dashboard-widget-content--stat .dashboard-widget-content__actions {
+        justify-content: flex-end;
+    }
+
     .dashboard-widget-content__actions,
     .widget-filter-panel__actions {
         justify-content: flex-start;
@@ -191,6 +273,15 @@
     .dashboard-widget-content__header {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .dashboard-widget-content--stat .dashboard-widget-content__header {
+        align-items: flex-start;
+        flex-direction: row;
+    }
+
+    .dashboard-widget-content--stat .dashboard-widget-content__actions {
+        justify-content: flex-end;
     }
 
     .dashboard-widget-content__header h2,
@@ -217,5 +308,15 @@
 
     .widget-filter-panel__actions .app-button {
         flex: 1 1 120px;
+    }
+
+    .dashboard-widget-content__chart {
+        min-height: 230px;
+        padding-right: 0;
+        padding-left: 0;
+    }
+
+    .dashboard-widget-content__chart .recharts-legend-item-text {
+        max-width: 105px;
     }
 }

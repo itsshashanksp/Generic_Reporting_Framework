@@ -40,7 +40,7 @@
     { "field": "OrderId", "direction": "ASC" }
   ],
   "grid": {
-    "pagination": { "enabled": true, "pageSize": 25, "pageSizeOptions": [10, 25, 50, 100] },
+    "pagination": { "enabled": true, "pageSize": 25, "pageSizeOptions": [10, 25, 50, 100], "style": "modern", "showTotalRecords": true, "showPageNumbers": true, "showFirstLast": true },
     "rowSelection": "multiple",
     "grouping": { "enabled": true, "groups": [{ "field": "Status", "header": "Status" }], "aggregates": [{ "field": "Amount", "function": "SUM", "alias": "TotalAmount", "header": "Total Amount" }] }
   },

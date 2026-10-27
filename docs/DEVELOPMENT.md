@@ -48,7 +48,11 @@ Prettier is installed as a dev dependency, but it has no script or configuration
 
 **Add a reusable widget.** Create `src/config/widgets/<name>.json` and reference it with `widgetId`.
 
-After any configuration change, run `npm test`. The configuration tests load the checked-in definitions, so a mistake in a file shows up there, and on the page as a configuration error. Remember that the JSON is bundled: deployed sites change only after a rebuild.
+After any configuration change, run `npm test`. The configuration tests always
+validate the tracked public examples and also discover and validate local,
+Git-ignored `src/config` definitions when they are present. Inline dashboard
+widgets are resolved through the runtime loader as well as schema-validated.
+Remember that the JSON is bundled: deployed sites change only after a rebuild.
 
 **Change a schema.** Update the TypeScript contract (`src/types/`), the validator, the loader/defaults, the focused tests, the example files, and the documentation together. Accepted schema and wired-up UI behavior can differ; document both.
 

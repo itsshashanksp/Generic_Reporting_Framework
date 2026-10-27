@@ -16,6 +16,7 @@ import { formatValueForDisplay } from "../../engine/ValueFormatter";
 import type { GridConfig, SortDefinition } from "../../types/report";
 import type { ColumnDefinition } from "../../types/column";
 import MobileReportView from "./MobileReportView";
+import Pagination from "./Pagination";
 
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
@@ -30,7 +31,7 @@ interface Props {
     serverPagination?: {
         page: number;
         pageSize: number;
-        totalRows: number;
+        totalRows?: number | null;
         disabled?: boolean;
         onPageChange: (page: number) => void;
         onPageSizeChange: (pageSize: number) => void;
@@ -127,6 +128,7 @@ export default function GenericGrid({
                     ),
                     valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value, "number"),
                     dataType: "number" as const,
+                    cellClass: "universal-grid__cell--numeric",
                     comparator: (left: unknown, right: unknown) => compareGridValues(left, right, "number"),
                     ...getInitialSortState(aggregate.alias ?? `${aggregate.function}_${aggregate.field}`),
                 })),
@@ -149,6 +151,7 @@ export default function GenericGrid({
                     ),
                     valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value, column.dataType),
                     dataType: column.dataType,
+                    cellClass: column.dataType === "number" ? "universal-grid__cell--numeric" : undefined,
                     comparator: (left: unknown, right: unknown) => compareGridValues(left, right, column.dataType),
                     ...getInitialSortState(column.field),
                 }));
@@ -204,16 +207,6 @@ export default function GenericGrid({
                 },
             }
             : null;
-    const totalPages = pagination
-        ? Math.max(1, Math.ceil(pagination.totalRows / pagination.pageSize))
-        : 1;
-    const rangeStart = pagination && pagination.totalRows > 0
-        ? (pagination.page - 1) * pagination.pageSize + 1
-        : 0;
-    const rangeEnd = pagination
-        ? Math.min(rangeStart + displayedMobileRows.length - 1, pagination.totalRows)
-        : 0;
-
     const applyMobileSort = (field: string, direction: "asc" | "desc") => {
         const nextSort = field ? { field, direction } : null;
         setMobileSort(nextSort);
@@ -314,34 +307,18 @@ export default function GenericGrid({
             />
 
             {pagination && gridConfig.pagination.enabled && (
-                <footer className={`universal-grid__pagination${serverPagination ? "" : " universal-grid__pagination--client"}`} aria-label="Grid pagination">
-                    <span className="universal-grid__range">
-                        Showing {rangeStart}–{Math.max(rangeStart, rangeEnd)} of {pagination.totalRows}
-                    </span>
-                    <label className="universal-grid__page-size">
-                        <span>Rows per page</span>
-                        <select
-                            aria-label="Rows per page"
-                            value={pagination.pageSize}
-                            disabled={pagination.disabled}
-                            onChange={event => pagination.onPageSizeChange(Number(event.target.value))}
-                        >
-                            {[...new Set([
-                                ...(gridConfig.pagination.pageSizeOptions ?? []),
-                                pagination.pageSize,
-                            ])].sort((left, right) => left - right).map(option => (
-                                <option key={option} value={option}>{option}</option>
-                            ))}
-                        </select>
-                    </label>
-                    <div className="universal-grid__page-buttons" role="group" aria-label="Page navigation">
-                        <button type="button" className="universal-grid__page-button--first" aria-label="First page" title="First page" disabled={pagination.disabled || pagination.page <= 1} onClick={() => pagination.onPageChange(1)}>«</button>
-                        <button type="button" className="universal-grid__page-button--previous" aria-label="Previous page" title="Previous page" disabled={pagination.disabled || pagination.page <= 1} onClick={() => pagination.onPageChange(pagination.page - 1)}>‹</button>
-                        <span className="universal-grid__page-indicator">Page <strong>{pagination.page}</strong> of {totalPages}</span>
-                        <button type="button" className="universal-grid__page-button--next" aria-label="Next page" title="Next page" disabled={pagination.disabled || pagination.page >= totalPages} onClick={() => pagination.onPageChange(pagination.page + 1)}>›</button>
-                        <button type="button" className="universal-grid__page-button--last" aria-label="Last page" title="Last page" disabled={pagination.disabled || pagination.page >= totalPages} onClick={() => pagination.onPageChange(totalPages)}>»</button>
-                    </div>
-                </footer>
+                <Pagination
+                    page={pagination.page}
+                    pageSize={pagination.pageSize}
+                    pageSizeOptions={gridConfig.pagination.pageSizeOptions}
+                    totalRows={pagination.totalRows}
+                    rowsOnPage={displayedMobileRows.length}
+                    disabled={pagination.disabled}
+                    config={gridConfig.pagination}
+                    onPageChange={pagination.onPageChange}
+                    onPageSizeChange={pagination.onPageSizeChange}
+                    className={serverPagination ? "" : "universal-grid__pagination--client"}
+                />
             )}
         </div>
 

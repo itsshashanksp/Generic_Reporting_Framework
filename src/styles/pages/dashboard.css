@@ -64,19 +64,30 @@
     box-shadow: 0 1px 2px rgb(15 23 42 / 5%);
 }
 
-/* A configured height remains the closed size. An in-flow runtime filter panel
-   temporarily makes the card content-sized, while retaining that height as its
-   minimum, so the grid row grows instead of allowing content to overlap it. */
-.dashboard-widget:has(.widget-filter-panel) {
-    height: auto !important;
-    min-height: var(--dashboard-widget-height, 0);
-}
-
 .dashboard-widget.dashboard-widget--table {
+    display: flex;
     padding: 0;
     border: 0;
     background: transparent;
     box-shadow: none;
+}
+
+.dashboard-widget--table > .report-table-frame {
+    height: 100%;
+}
+
+.dashboard-widget--table .report-table-frame__body > .universal-grid {
+    flex: 1 1 auto;
+}
+
+.dashboard-widget[data-fixed-height="true"] {
+    overflow: hidden;
+}
+
+.dashboard-widget[data-fixed-height="true"]:has(.widget-filter-panel) .dashboard-widget-content,
+.dashboard-widget[data-fixed-height="true"]:has(.widget-filter-panel) .report-table-frame__body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .dashboard-configuration-error {
@@ -150,6 +161,10 @@
         ) !important;
         grid-row: auto !important;
         height: auto !important;
+    }
+
+    .dashboard-widget--table > .report-table-frame {
+        height: auto;
     }
 }
 

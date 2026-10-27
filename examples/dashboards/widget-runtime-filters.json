@@ -18,7 +18,7 @@
         { "field": "Amount", "header": "Amount", "dataType": "number" }
       ],
       "runtimeFilters": [{ "field": "Status", "label": "Order Status", "type": "select", "operator": "equals", "options": [{ "label": "Open", "value": "OPEN" }, { "label": "Closed", "value": "CLOSED" }] }],
-      "pageSize": 10
+      "pagination": { "pageSize": 10, "pageSizeOptions": [10, 25, 50], "showTotalRecords": true, "showPageNumbers": true }
     },
     {
       "id": "filtered-customers",
@@ -44,7 +44,7 @@
         { "field": "Status", "header": "Status" }
       ],
       "runtimeFilters": [{ "field": "Status", "label": "Shipment Status", "type": "select", "operator": "equals", "options": [{ "label": "Pending", "value": "PENDING" }, { "label": "Shipped", "value": "SHIPPED" }, { "label": "Delivered", "value": "DELIVERED" }] }],
-      "pageSize": 10
+      "pagination": { "pageSize": 10, "pageSizeOptions": [10, 25, 50], "showTotalRecords": true, "showPageNumbers": true }
     }
   ]
 }

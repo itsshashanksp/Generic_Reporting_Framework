@@ -141,6 +141,34 @@ describe("dashboard widgets", () => {
         expect(genericGridProps.mock.calls.at(-1)?.[0].height).toBe(466);
     });
 
+    it("gives modern pagination page size precedence over legacy widget settings", async () => {
+        executeRequestMock.mockResolvedValue({
+            success: true,
+            message: "ok",
+            data: [{ Item_Code: "A1" }],
+            meta: { page: 1, pageSize: 25, totalRows: 1, rowsReturned: 1, executionTime: 1 },
+        });
+        render(
+            <DashboardProvider>
+                <TableWidget
+                    title="Items"
+                    request={request}
+                    pageSize={10}
+                    pageSizeOptions={[10, 50]}
+                    pagination={{ pageSize: 25, pageSizeOptions: [25, 100], showFirstLast: true }}
+                />
+            </DashboardProvider>
+        );
+
+        await waitFor(() => expect(executeRequestMock).toHaveBeenCalledTimes(1));
+        expect(executeRequestMock.mock.calls[0][0].pagination).toEqual({ page: 1, pageSize: 25 });
+        expect(genericGridProps.mock.calls.at(-1)?.[0].gridConfig.pagination).toMatchObject({
+            pageSize: 25,
+            pageSizeOptions: [25, 100],
+            showFirstLast: true,
+        });
+    });
+
     it("passes configured sort into dashboard table grid state and its initial request", async () => {
         executeRequestMock.mockResolvedValue({
             success: true,

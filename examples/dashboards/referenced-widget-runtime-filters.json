@@ -11,7 +11,7 @@
       "widgetId": "customer-summary-widget",
       "width": 6,
       "runtimeFilters": [{ "field": "CustomerName", "label": "Customer Name", "type": "text", "operator": "contains" }],
-      "pageSize": 10
+      "pagination": { "pageSize": 10, "pageSizeOptions": [10, 25, 50], "showTotalRecords": true, "showPageNumbers": true }
     },
     {
       "id": "referenced-orders-report",

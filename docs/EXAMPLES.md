@@ -14,7 +14,7 @@ IDs, update menu references, and rebuild.
 | `dashboards/minimal-dashboard.json` | Smallest useful stat dashboard |
 | `dashboards/date-filtered-dashboard.json` | Required shared date range, field mapping, table/stat/chart widgets |
 | `dashboards/database-selector-dashboard.json` | Database inheritance and an explicitly pinned widget |
-| `dashboards/widget-catalog-dashboard.json` | Report/reusable/inline widgets; number/currency/decimal; bar/line/pie |
+| `dashboards/widget-catalog-dashboard.json` | Report/reusable/inline widgets; modern table paging; number/currency/decimal; horizontal bar, line and donut; Top-N/Others; all chart exports |
 | `dashboards/widget-runtime-filters.json` | Independent table/chart widget filters over orders, customers and shipments |
 | `dashboards/combined-dashboard-widget-filters.json` | Shared dashboard date filtering combined with widget-local filters |
 | `dashboards/dynamic-widget-runtime-filters.json` | Widget-local dropdowns populated by JSON Query `dynamicOptions` |
@@ -40,6 +40,12 @@ Examples pass the real frontend validators but are not claimed to execute
 against a live database. Test-only historical fixtures live under
 `tests/fixtures/`; Vitest uses them to exercise the real Vite glob loaders.
 Production and development builds never load that directory.
+
+The catalog is the recommended feature-discovery template. It deliberately
+shows optional presentation objects only on compatible widget types:
+`pagination` on a table, `runtimeFilterDisplay` on a filtered stat, and
+`chartOptions` plus PNG/SVG/CSV/Excel export on charts. Smaller examples may
+omit those objects and continue to receive documented defaults.
 
 ## Widget-level runtime filters
 

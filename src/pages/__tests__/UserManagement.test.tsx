@@ -116,6 +116,10 @@ function rowFor(username: string) {
     screen.getByRole("row", { name: new RegExp(username.replace(".", "\\.")) }),
   );
 }
+function openActions(username: string) {
+  fireEvent.click(rowFor(username).getByRole("button", { name: `Actions for ${username}` }));
+  return within(screen.getByRole("menu", { name: `Actions for ${username}` }));
+}
 
 describe("User Management", () => {
   beforeEach(() => {
@@ -174,8 +178,8 @@ describe("User Management", () => {
     ).toBe(true);
     expect(
       rowFor(longUser.username)
-        .getByRole("button", { name: "Edit User" })
-        .closest(".user-actions"),
+        .getByRole("button", { name: `Actions for ${longUser.username}` })
+        .classList.contains("action-menu__trigger"),
     ).toBeTruthy();
   });
 
@@ -248,9 +252,7 @@ describe("User Management", () => {
     expect(screen.getByRole("dialog")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("dialog")).toBeNull();
-    fireEvent.click(
-      rowFor("Operator").getByRole("button", { name: "Edit User" }),
-    );
+    fireEvent.click(openActions("Operator").getByRole("menuitem", { name: "Edit User" }));
     fireEvent.click(
       within(screen.getByRole("dialog")).getByRole("button", { name: "Close" }),
     );
@@ -295,16 +297,36 @@ describe("User Management", () => {
     renderPage();
     await screen.findByText("Operator");
     const row = rowFor("Application.Admin");
-    expect(row.getByRole("button", { name: "Edit User" })).toBeTruthy();
-    expect(row.getByRole("button", { name: "Change Password" })).toBeTruthy();
+    expect(row.getByRole("button", { name: "Actions for Application.Admin" })).toBeTruthy();
+    const menu = openActions("Application.Admin");
+    expect(menu.getByRole("menuitem", { name: "Edit User" })).toBeTruthy();
+    expect(menu.getByRole("menuitem", { name: "Change Password" })).toBeTruthy();
     for (const action of [
       "Disable",
       "Delete",
       "Remove Frontend Access",
       "Demote",
     ])
-      expect(row.queryByRole("button", { name: action })).toBeNull();
-    expect(row.queryByText("Protected Admin")).toBeNull();
+      expect(menu.queryByRole("menuitem", { name: action })).toBeNull();
+    expect(rowFor("Application.Admin").queryByText("Protected Admin")).toBeNull();
+  });
+
+  it("supports keyboard navigation, Escape, and outside-click dismissal for actions", async () => {
+    renderPage();
+    await screen.findByText("Operator");
+    const trigger = rowFor("Operator").getByRole("button", { name: "Actions for Operator" });
+    fireEvent.click(trigger);
+    const menu = screen.getByRole("menu", { name: "Actions for Operator" });
+    const first = within(menu).getAllByRole("menuitem")[0];
+    expect(document.activeElement).toBe(first);
+    fireEvent.keyDown(menu, { key: "ArrowDown" });
+    expect(document.activeElement).toBe(within(menu).getAllByRole("menuitem")[1]);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("menu", { name: "Actions for Operator" })).toBeNull();
+
+    fireEvent.click(trigger);
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole("menu", { name: "Actions for Operator" })).toBeNull();
   });
 
   it("allows an Admin to manage another Admin without offering Demote", async () => {
@@ -316,23 +338,21 @@ describe("User Management", () => {
     };
     renderPage();
     await screen.findByText("Operator");
-    const row = rowFor("Application.Admin");
+    const menu = openActions("Application.Admin");
     for (const action of ["Edit User", "Change Password", "Disable", "Delete"])
-      expect(row.getByRole("button", { name: action })).toBeTruthy();
-    expect(row.queryByRole("button", { name: "Demote" })).toBeNull();
+      expect(menu.getByRole("menuitem", { name: action })).toBeTruthy();
+    expect(menu.queryByRole("menuitem", { name: "Demote" })).toBeNull();
     expect(
-      row.queryByRole("button", { name: "Remove Frontend Access" }),
+      menu.queryByRole("menuitem", { name: "Remove Frontend Access" }),
     ).toBeNull();
-    expect(row.queryByText("Protected Admin")).toBeNull();
+    expect(rowFor("Application.Admin").queryByText("Protected Admin")).toBeNull();
   });
 
   it("offers Demote to a Super Admin managing an Admin", async () => {
     serviceMocks.assignFrontendAuthorization.mockResolvedValue(users[1]);
     renderPage();
     await screen.findByText("Operator");
-    fireEvent.click(
-      rowFor("Application.Admin").getByRole("button", { name: "Demote" }),
-    );
+    fireEvent.click(openActions("Application.Admin").getByRole("menuitem", { name: "Demote" }));
     await waitFor(() =>
       expect(serviceMocks.assignFrontendAuthorization).toHaveBeenCalledWith(
         "Application.Admin",
@@ -391,9 +411,7 @@ describe("User Management", () => {
     serviceMocks.updateUserProfile.mockResolvedValue(users[2]);
     renderPage();
     await screen.findByText("Operator");
-    fireEvent.click(
-      rowFor("Operator").getByRole("button", { name: "Edit User" }),
-    );
+    fireEvent.click(openActions("Operator").getByRole("menuitem", { name: "Edit User" }));
     const form = screen.getByRole("dialog");
     fireEvent.change(within(form).getByLabelText(/Name/), {
       target: { value: "Updated Operator" },
@@ -425,15 +443,11 @@ describe("User Management", () => {
     serviceMocks.changeUserPassword.mockResolvedValue(users[2]);
     renderPage();
     await screen.findByText("Operator");
-    fireEvent.click(
-      rowFor("Operator").getByRole("button", { name: "Disable" }),
-    );
+    fireEvent.click(openActions("Operator").getByRole("menuitem", { name: "Disable" }));
     await waitFor(() =>
       expect(serviceMocks.disableUser).toHaveBeenCalledWith("Operator"),
     );
-    fireEvent.click(
-      rowFor("Operator").getByRole("button", { name: "Change Password" }),
-    );
+    fireEvent.click(openActions("Operator").getByRole("menuitem", { name: "Change Password" }));
     const card = screen.getByRole("dialog");
     fireEvent.change(within(card).getByLabelText(/New Password/), {
       target: { value: "replacement-password" },

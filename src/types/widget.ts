@@ -5,6 +5,7 @@ import type { FilterDefinition } from "./filter";
 import type {
     ReportPresentationDefinition,
     ReportQueryDefinitionReference,
+    PaginationPresentationConfig,
 } from "./report";
 
 export type WidgetType =
@@ -22,6 +23,21 @@ export type ChartType =
     | "bar"
     | "line"
     | "pie";
+
+export interface ChartOptions {
+    appearance?: "pie" | "donut";
+    orientation?: "vertical" | "horizontal";
+    showLegend?: boolean;
+    showLabels?: boolean;
+    showDataLabels?: boolean;
+    showCenterTotal?: boolean;
+    showGrid?: boolean;
+    smooth?: boolean;
+    showPoints?: boolean;
+    topN?: number;
+    showOthers?: boolean;
+    othersLabel?: string;
+}
 
 export type WidgetRequest = DataRequest;
 
@@ -58,6 +74,8 @@ export interface DashboardWidgetPresentation {
 
     chartType?: ChartType;
 
+    chartOptions?: ChartOptions;
+
     showLegend?: boolean;
     showTooltip?: boolean;
     showGrid?: boolean;
@@ -74,6 +92,9 @@ export interface DashboardWidgetPresentation {
     /** Optional choices shown by a table widget's server-side page-size control. */
     pageSizeOptions?: number[];
 
+    /** Modern table pagination. Its pageSize overrides the legacy pageSize. */
+    pagination?: PaginationPresentationConfig;
+
     export?: ExportConfig;
 
     visible?: boolean;
@@ -87,6 +108,9 @@ export interface DashboardWidgetPresentation {
 
     /** Runtime controls whose values apply only to this dashboard widget. */
     runtimeFilters?: FilterDefinition[];
+
+    /** Widget-local runtime filter presentation; omitted preserves inline mode. */
+    runtimeFilterDisplay?: "inline" | "dialog";
 
     position?: {
         x: number;

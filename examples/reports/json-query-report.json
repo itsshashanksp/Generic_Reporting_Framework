@@ -19,7 +19,7 @@
       "valueField": "Status", "countField": "Frequency", "searchable": true
     } }
   ],
-  "grid": { "pagination": { "enabled": true, "pageSize": 25, "pageSizeOptions": [10, 25, 50] }, "rowSelection": "single" },
+  "grid": { "pagination": { "enabled": true, "pageSize": 25, "pageSizeOptions": [10, 25, 50], "style": "modern", "showTotalRecords": true, "showPageNumbers": true, "showFirstLast": true }, "rowSelection": "single" },
   "toolbar": { "export": true, "refresh": true, "saveReport": true },
   "export": { "enabled": true, "formats": ["csv", "excel"], "filename": "orders", "exportCurrentView": true, "exportAll": true }
 }

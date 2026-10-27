@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
 
 export default function AccessibleDialog({
   title,
@@ -13,6 +13,23 @@ export default function AccessibleDialog({
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+
+  const trapFocus = (event: KeyboardEvent<HTMLDialogElement>) => {
+    if (event.key !== "Tab") return;
+    const focusable = [...event.currentTarget.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+    )].filter(element => !element.hasAttribute("hidden"));
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
 
   useEffect(() => {
     const element = dialog.current;
@@ -37,6 +54,7 @@ export default function AccessibleDialog({
       ref={dialog}
       className={`app-dialog ${className}`.trim()}
       aria-labelledby={titleId}
+      onKeyDown={trapFocus}
       onCancel={(event) => {
         event.preventDefault();
         onClose();

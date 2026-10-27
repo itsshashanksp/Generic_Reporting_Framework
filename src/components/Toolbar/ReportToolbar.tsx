@@ -9,20 +9,14 @@ import {
     exportExcel,
 } from "../../engine/ExportEngine";
 import type { ToolbarConfig } from "../../types/report";
+import type { ExportConfig } from "../../types/export";
 import { isSavedReportsEnabled } from "../../engine/ReportDefinitionEngine";
-import DatabaseSelect, { type DatabaseSelectProps } from "./DatabaseSelect";
 
 interface ReportToolbarProps {
 
     config: ToolbarConfig;
 
-    exportConfig?: {
-        enabled: boolean;
-        formats: ("csv" | "excel")[];
-        filename?: string;
-        exportAll?: boolean;
-        exportCurrentView?: boolean;
-    };
+    exportConfig?: ExportConfig;
 
     rows?: Record<string, unknown>[];
 
@@ -35,8 +29,6 @@ interface ReportToolbarProps {
 
     onSaveReport?: () => void;
     onRefresh?: () => void;
-    /** Runtime database switch; omitted for reports without `databaseSelection`. */
-    databaseSelector?: DatabaseSelectProps;
     isRefreshing?: boolean;
     isExporting?: boolean;
 }
@@ -50,7 +42,6 @@ export default function ReportToolbar({
     onExportMessage,
     onSaveReport,
     onRefresh,
-    databaseSelector,
     isRefreshing = false,
     isExporting = false,
 }: ReportToolbarProps) {
@@ -140,8 +131,6 @@ export default function ReportToolbar({
             role="toolbar"
             aria-label="Report actions"
         >
-
-            {databaseSelector && <DatabaseSelect {...databaseSelector} />}
 
             <div className="report-toolbar__actions report-toolbar__actions--desktop">
 

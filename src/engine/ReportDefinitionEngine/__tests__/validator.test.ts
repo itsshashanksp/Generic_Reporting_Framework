@@ -11,6 +11,59 @@ const presentation = {
 };
 
 describe("report request contract alignment", () => {
+    it("accepts CSV/Excel report exports and rejects chart or empty format lists", () => {
+        const report = {
+            ...presentation,
+            queryDefinition: { format: "sql", resource: "reports/customer" },
+        };
+        expect(getReportValidationErrors({
+            ...report,
+            export: { enabled: true, formats: ["csv", "excel"] },
+        })).toEqual([]);
+        expect(getReportValidationErrors({
+            ...report,
+            export: { enabled: true, formats: ["png", "svg"] },
+        })).toContain("Report export formats must be a non-empty array containing csv or excel.");
+        expect(getReportValidationErrors({
+            ...report,
+            export: { enabled: true, formats: [] },
+        })).toContain("Report export formats must be a non-empty array containing csv or excel.");
+    });
+
+    it("accepts and normalizes modern pagination presentation settings", () => {
+        const report = loadDefinition({
+            ...presentation,
+            queryDefinition: { format: "sql", resource: "reports/customer" },
+            grid: {
+                pagination: {
+                    enabled: true,
+                    style: "modern",
+                    pageSize: 25,
+                    pageSizeOptions: [10, 25, 50, 100],
+                    showTotalRecords: true,
+                    showPageNumbers: true,
+                    showFirstLast: false,
+                },
+                rowSelection: "single",
+            },
+        });
+        expect(report.grid.pagination).toMatchObject({ pageSize: 25, showPageNumbers: true, showFirstLast: false });
+    });
+
+    it("rejects invalid modern pagination settings", () => {
+        const errors = getReportValidationErrors({
+            ...presentation,
+            queryDefinition: { format: "sql", resource: "reports/customer" },
+            grid: { pagination: { style: "compact", pageSize: 0, pageSizeOptions: [10, 10], showPageNumbers: "yes" } },
+        });
+        expect(errors).toEqual(expect.arrayContaining([
+            "Report grid pagination style must be modern.",
+            "Report grid pagination pageSize must be a positive integer.",
+            "Report grid pagination pageSizeOptions must not contain duplicates.",
+            "Report grid pagination showPageNumbers must be a boolean.",
+        ]));
+    });
+
     it("derives the SQL API envelope from normalized presentation configuration", () => {
         const report = loadDefinition({
             ...presentation,

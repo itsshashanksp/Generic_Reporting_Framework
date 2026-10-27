@@ -1,0 +1,40 @@
+.action-menu__trigger {
+    min-width: 88px;
+    white-space: nowrap;
+}
+
+.action-menu__items {
+    position: fixed;
+    z-index: 80;
+    display: grid;
+    width: max-content;
+    min-width: 190px;
+    max-width: min(260px, calc(100vw - 16px));
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 12px 28px rgb(15 23 42 / 16%);
+}
+
+.action-menu__items button {
+    width: 100%;
+    min-height: 38px;
+    padding: 9px 12px;
+    border: 0;
+    border-bottom: 1px solid #f1f5f9;
+    background: transparent;
+    color: #1e293b;
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.action-menu__items button:last-child { border-bottom: 0; }
+.action-menu__items button:hover,
+.action-menu__items button:focus-visible { outline: none; background: #eff6ff; color: #1d4ed8; }
+.action-menu__items button:disabled { color: #94a3b8; cursor: not-allowed; }
+.action-menu__items .action-menu__item--danger { color: #b91c1c; }
+.action-menu__items .action-menu__item--danger:hover,
+.action-menu__items .action-menu__item--danger:focus-visible { background: #fef2f2; color: #991b1b; }

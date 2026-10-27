@@ -41,6 +41,20 @@ Other settings that live in source rather than in the environment:
 
 Recommended key order (it is not enforced): reports use `id`, `title`, `description`, `request` or `queryDefinition`, `columns`, `sort`, `filters`, `filterLogic`, `grid`, `toolbar`, `export`; dashboards use `id`, `title`, `description`, `layout`, `autoRefresh`, `dateFilterBehavior`, `filters`, `widgets`.
 
+### Authoring and validation workflow
+
+The TypeScript types document the supported shape, while the runtime validators
+are the authoritative strict authoring schema. They reject unknown keys,
+missing core properties, invalid enum values, misplaced widget-only options,
+and invalid conditional objects without making optional features mandatory.
+This preserves older valid definitions while still catching newly authored
+mistakes. Run `npm test -- --run src/config/__tests__/exampleLibrary.test.ts`
+to validate every public example and every local `src/config` report,
+dashboard, and reusable widget present in the checkout. The same definitions
+are validated again by their production loaders. A separate JSON Schema is not
+maintained because it would duplicate these executable validators and their
+cross-reference checks.
+
 ## Report definition
 
 Validated by `getReportValidationErrors` in `engine/ReportDefinitionEngine/validator.ts`. Defaults come from `ReportDefinitionEngine/defaults.ts` and `ColumnEngine/defaults.ts`.
@@ -61,7 +75,9 @@ Validated by `getReportValidationErrors` in `engine/ReportDefinitionEngine/valid
 | `export` | no | object | Export formats and scope |
 | `databaseSelection` | no | `true` | Uses the authorized backend database list for runtime switching ([details](#runtime-database-selection)) |
 
-Defaults when omitted: toolbar `export`, `refresh`, and `saveReport` are all `true`; `grid.pagination` is `{ enabled: true, pageSize: 10, pageSizeOptions: [10, 25, 50, 100] }`; `grid.rowSelection` is `"single"`; each column is `visible: true`, `sortable: true`, `width: 150`.
+Defaults when omitted: toolbar `export`, `refresh`, and `saveReport` are all `true`; `grid.pagination` is `{ enabled: true, style: "modern", pageSize: 10, pageSizeOptions: [10, 25, 50, 100], showTotalRecords: true, showPageNumbers: true, showFirstLast: false }`; `grid.rowSelection` is `"single"`; each column is `visible: true`, `sortable: true`, `width: 150`.
+
+Modern pagination remains server-side for report and dashboard table requests. `showTotalRecords` displays the backend-provided exact total only; the frontend does not calculate or fabricate a total. `showPageNumbers: false` retains Previous/Next navigation without numbered buttons, and `showFirstLast` controls the optional First/Last buttons. Page-size options must be unique positive integers (at most 20).
 
 In JSON Query mode, `request.sort`, `request.pagination`, and `request.filterLogic` are **rejected** in authored files. The runtime generates them from the top-level `sort`, the grid or widget paging, and the top-level `filterLogic`.
 
@@ -213,12 +229,21 @@ Every widget requires a unique `id`, a `type` (`report`, `stat`, `table`, `chart
 | `request` / `queryDefinition` / `widgetId` | `stat`/`table`/`chart` | Exactly one source in total, counting `reportId` |
 | `columns`, `sort`, `grid`, `toolbar`, `filters` | inline `stat`/`table`/`chart` | Same shapes as in reports. Dashboard-level filters are the active controls |
 | `valueField`, `format` | `stat` | `valueField` defaults to the first key of the first row. `format`: `number`, `decimal`, or `currency` (`en-IN` locale, INR; decimal and currency use two fraction digits) |
-| `pageSize`, `pageSizeOptions`, `export` | `table` | Defaults `10` and `[10, 25, 50, 100]`. Columns are inferred from the first row when omitted |
-| `chartType`, `xField`, `yField`, `showLegend`, `showTooltip`, `showGrid`, `showLabels` | `chart` | `chartType` is `bar` (default), `line`, or `pie`. `xField` and `yField` are required. Defaults: legend `false`, tooltip `true`, grid `true`, labels `false` |
+| `pageSize`, `pageSizeOptions`, `pagination`, `export` | `table` | Legacy defaults are `10` and `[10, 25, 50, 100]`. Optional `pagination` supports `style: "modern"`, `pageSize`, `pageSizeOptions`, `showTotalRecords`, `showPageNumbers`, and `showFirstLast`. `pagination.pageSize` and `pagination.pageSizeOptions` take precedence over the legacy sibling properties. Columns are inferred from the first row when omitted |
+| `runtimeFilterDisplay` | all | Optional `"inline"` (default) or `"dialog"`. Dialog edits are drafts until Apply; Cancel, Close, or Escape discards unapplied edits |
+| `chartType`, `xField`, `yField`, `chartOptions`, `showLegend`, `showTooltip`, `showGrid`, `showLabels`, `export` | `chart` | `chartType` remains `bar` (default), `line`, or `pie`. `xField` and `yField` retain their category/value meaning. `chartOptions` controls modern presentation and Top-N behavior; legacy display flags remain supported |
+
+Chart `chartOptions` supports `appearance: "pie" | "donut"`, `orientation: "vertical" | "horizontal"`, `showLegend`, `showLabels`, `showDataLabels`, `showCenterTotal`, `showGrid`, `smooth`, `showPoints`, `topN` (1–100), `showOthers`, and `othersLabel`. Options apply only where meaningful: appearance/center total to pie, orientation to bar, and smooth/points to line.
+
+Top-N aggregates duplicate category names, ranks signed aggregate values descending, and resolves ties by first appearance. Null/empty categories use `Uncategorized`; missing numeric values do not contribute. When enabled, `Others` is the signed sum of remaining categories, so positive and negative values may offset. The query response is never mutated and backend paging/filtering is unchanged.
+
+Pie/donut charts do not render negative values as positive slices. When any displayed value is negative, the widget explains that a signed bar or line chart is required. All-zero pie data also produces a clear empty visualization. Bar and line charts preserve signed values and include zero in their numeric domain. Missing line values remain gaps and are not interpolated.
+
+Chart export accepts `png`, `svg`, `csv`, and `excel`. PNG and SVG export the displayed chart, including presentation transformations. CSV and Excel export the complete filtered source chart rows using the configured `xField` and `yField`, even when Top-N/Others is displayed. Existing spreadsheet formula-injection protection and typed Excel numeric cells are reused. No additional backend request is made.
 
 ### Reusable widget files
 
-A file in `src/config/widgets/*.json` has `id`, `title`, one query source, and `filters` (use `[]`). Optional keys are `description`, `columns` (optional here, unlike in reports), `sort`, `filterLogic`, `grid`, `toolbar`, and `export`. It is loaded by the same report-definition pipeline with `columnsRequired: false`. Example: [`examples/widgets/item-stock-value-by-category.json`](../examples/widgets/item-stock-value-by-category.json).
+A file in `src/config/widgets/*.json` has `id`, `title`, one query source, and `filters` (use `[]`). Optional keys are `description`, `columns` (optional here, unlike in reports), `sort`, `filterLogic`, `grid`, `toolbar`, and `export`. It is loaded by the same report-definition pipeline with `columnsRequired: false`. Example: [`examples/widgets/customer-summary.json`](../examples/widgets/customer-summary.json).
 
 ## Menu
 

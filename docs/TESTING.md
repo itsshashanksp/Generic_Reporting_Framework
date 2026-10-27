@@ -13,7 +13,8 @@ npm run build
 
 Use `npm test -- --watch` while developing, or `npm test -- <path-or-name>` to run a subset. `npm run typecheck` checks both the application project (`tsconfig.app.json`) and the Node/tooling project (`tsconfig.node.json`). The root `tsconfig.json` only lists project references, so a bare `tsc --noEmit` checks no files. `tooling/typecheckConfig.test.ts` enforces this, and also checks that the README, CONTRIBUTING, and these guides document `npm run typecheck`.
 
-Last local run (2026-10-16, `de6df7d` plus the uncommitted database-selector changes, with column personalization removed): 54 test files and 543 tests passed; lint, typecheck, and build passed. The build warns that the chunk exceeds 500 kB.
+Current Phase 3.5 baseline: 64 test files and 637 tests pass; lint, typecheck,
+and build pass. The build continues to warn that the main chunk exceeds 500 kB.
 
 ## What is covered
 
@@ -21,7 +22,7 @@ Tests live in `__tests__` directories next to the code they cover, and in `tooli
 
 | Area | Examples |
 | --- | --- |
-| Configuration | `src/config/__tests__/configurationSeparation.test.ts` loads the checked-in definitions and enforces the SQL/JSON separation |
+| Configuration | The configuration tests validate tracked examples, local `src/config` JSON when present, runtime widget resolution, and SQL/JSON responsibility separation |
 | Definitions and requests | Report/dashboard validators and loaders, both query modes, database selection, filter serialization, `filterFields`, `dateFilterBehavior` |
 | API | Envelope validation, error details, CSRF actions and rotation (`src/api/__tests__`) |
 | Auth and setup | Session parsing, login flow, route protection, expiry, cross-tab sync, user-switch remount, user management |
@@ -29,9 +30,13 @@ Tests live in `__tests__` directories next to the code they cover, and in `tooli
 | Export and cache | CSV formula neutralization, Excel, batched all-row fetch, limits, request cache |
 | Tooling | Production API-URL rule, typecheck configuration, dependency usage |
 
-Configuration tests matter most, because Vite glob discovery loads the production definitions. If configuration and tests disagree during a migration, report the mismatch rather than weakening the validation.
-
-The example files in `examples/` are not covered by the suite. They were checked once with the validators (see [Examples](EXAMPLES.md#example-files)). Re-check them whenever a schema changes.
+Configuration tests matter most, because Vite glob discovery loads deployment
+definitions. `exampleLibrary.test.ts` validates every tracked example with its
+appropriate validator. It additionally loads local `src/config` reports,
+dashboards, and reusable widgets when those ignored files exist, then resolves
+inline dashboard definitions through the runtime loader. If configuration and
+tests disagree during a migration, report the mismatch rather than weakening
+validation.
 
 ## Browser checks
 

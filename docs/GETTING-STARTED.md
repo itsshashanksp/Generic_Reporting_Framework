@@ -45,7 +45,12 @@ Open the URL Vite prints (by default `http://localhost:5173`). You should see on
 | "User setup is required." | The backend reports `initialized: false`. Complete setup in the Backend Admin Console |
 | "Unable to check application setup" | The backend is unreachable or returned an invalid response. See [Troubleshooting](TROUBLESHOOTING.md) |
 
-After you sign in, the app redirects to the first dashboard in `src/config/menu.json` (the Item Dashboard), and its widgets load.
+Application JSON is deployment-owned and Git-ignored, so a fresh checkout has
+no reports or dashboards until examples are copied into `src/config`. Start
+with the copy commands in [Examples](EXAMPLES.md), adapt the illustrative data
+sources, and rebuild or restart Vite. After sign-in, a configured application
+redirects to the first dashboard in `src/config/menu.json`; an empty
+configuration shows the documented “No dashboards configured” guidance.
 
 ## Run the checks
 

@@ -1,20 +1,93 @@
 import { describe, expect, it } from "vitest";
 
 import { validateDashboard } from "../../DashboardValidator";
-import { loadDashboardConfiguration } from "..";
+import { loadDashboardConfiguration, resolveDashboardWidgetDefinition } from "..";
+import type { DashboardWidget } from "../../../types/widget";
 
 const filter = (field = "Status") => ({ field, label: field, type: "text", operator: "equals" });
-const widget = (extra: Record<string, unknown> = {}) => ({
+const widget = (extra: Record<string, unknown> = {}): DashboardWidget => ({
     id: "orders", type: "stat", title: "Orders",
     request: { action: "select", source: { table: "Orders" }, fields: ["Status"] },
     runtimeFilters: [filter()],
     ...extra,
-});
+}) as DashboardWidget;
 const dashboard = (widgets: unknown[], filters: unknown[] = []) => ({ id: "runtime", title: "Runtime", filters, widgets });
 
 describe("dashboard widget runtimeFilters validation", () => {
     it("accepts the existing filter definition language", () => {
         expect(validateDashboard(dashboard([widget()])).errors).toEqual([]);
+    });
+
+    it("accepts dialog display and rejects unsupported runtime filter displays", () => {
+        expect(validateDashboard(dashboard([widget({ runtimeFilterDisplay: "dialog" })])).errors).toEqual([]);
+        expect(validateDashboard(dashboard([widget({ runtimeFilterDisplay: "drawer" })])).errors)
+            .toContain('Widget "orders" runtimeFilterDisplay must be inline or dialog.');
+    });
+
+    it("validates table pagination presentation settings", () => {
+        const table = {
+            ...widget({ type: "table", pagination: { style: "modern", pageSize: 25, pageSizeOptions: [10, 25], showFirstLast: true } }),
+        };
+        expect(validateDashboard(dashboard([table])).errors).toEqual([]);
+        const errors = validateDashboard(dashboard([{ ...table, pagination: { style: "legacy", pageSize: -1, pageSizeOptions: [10, 10] } }])).errors;
+        expect(errors).toEqual(expect.arrayContaining([
+            'Table widget "orders" pagination style must be modern.',
+            'Table widget "orders" pagination pageSize must be a positive integer.',
+            'Table widget "orders" pagination pageSizeOptions must not contain duplicates.',
+        ]));
+    });
+
+    it("validates modern chart options and chart export formats", () => {
+        const chart = widget({
+            type: "chart", xField: "Status", yField: "Total", chartType: "pie",
+            chartOptions: { appearance: "donut", showCenterTotal: true, topN: 10, showOthers: true, othersLabel: "Remaining" },
+            export: { enabled: true, formats: ["png", "svg", "csv", "excel"], filename: "status-chart" },
+        });
+        expect(validateDashboard(dashboard([chart])).errors).toEqual([]);
+        expect(() => resolveDashboardWidgetDefinition(chart)).not.toThrow();
+        expect(resolveDashboardWidgetDefinition(chart)?.export).toBeUndefined();
+
+        const errors = validateDashboard(dashboard([widget({
+            type: "chart", xField: "Status", yField: "Total",
+            chartOptions: { appearance: "ring", orientation: "diagonal", topN: 0, smooth: "yes" },
+            export: { enabled: true, formats: ["pdf", "png", "png"] },
+        })])).errors;
+        expect(errors).toEqual(expect.arrayContaining([
+            'Chart widget "orders" chartOptions appearance must be pie or donut.',
+            'Chart widget "orders" chartOptions orientation must be vertical or horizontal.',
+            'Chart widget "orders" chartOptions topN must be a positive integer.',
+            'Chart widget "orders" chartOptions smooth must be a boolean.',
+            'Chart widget "orders" export formats must contain png, svg, csv, or excel.',
+        ]));
+    });
+
+    it("keeps CSV/Excel export on table data definitions and accepts legacy pageSize", () => {
+        const table = widget({
+            type: "table",
+            pageSize: 10,
+            export: { enabled: true, formats: ["csv", "excel"], exportCurrentView: true },
+        });
+        const definition = resolveDashboardWidgetDefinition(table);
+
+        expect(definition?.export).toEqual(table.export);
+        expect(loadDashboardConfiguration(dashboard([table])).status).toBe("valid");
+    });
+
+    it("resolves registered report and reusable-widget references", () => {
+        expect(resolveDashboardWidgetDefinition({
+            id: "item-report", type: "report", title: "Item report", reportId: "item",
+        })?.id).toBe("item");
+        expect(resolveDashboardWidgetDefinition({
+            id: "stock-chart", type: "chart", title: "Stock chart",
+            widgetId: "retail-item-stock-value-by-category", xField: "Category", yField: "StockValue",
+        })?.id).toBe("retail-item-stock-value-by-category");
+    });
+
+    it("identifies the widget when internal data-definition validation fails", () => {
+        expect(() => resolveDashboardWidgetDefinition(widget({
+            type: "table",
+            export: { enabled: true, formats: [] },
+        }))).toThrow('Unable to resolve dashboard widget "orders": Invalid report configuration: Report export formats must be a non-empty array containing csv or excel.');
     });
 
     it("rejects duplicate and unsafe fields", () => {

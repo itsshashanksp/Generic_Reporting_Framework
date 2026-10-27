@@ -12,7 +12,13 @@ export interface PaginationConfig {
     enabled: boolean;
     pageSize: number;
     pageSizeOptions?: number[];
+    style?: "modern";
+    showTotalRecords?: boolean;
+    showPageNumbers?: boolean;
+    showFirstLast?: boolean;
 }
+
+export type PaginationPresentationConfig = Partial<Omit<PaginationConfig, "enabled">>;
 
 export type ReportRequest = DataRequest & { sort?: QuerySort[] };
 

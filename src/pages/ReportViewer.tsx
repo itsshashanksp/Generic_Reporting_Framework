@@ -16,6 +16,7 @@ import GenericGrid from "../components/Grid/GenericGrid";
 import ReportTableFrame from "../components/Grid/ReportTableFrame";
 import SavedReports from "../components/SavedReports/SavedReports";
 import { ReportToolbar } from "../components/Toolbar";
+import DatabaseSelect from "../components/Toolbar/DatabaseSelect";
 import { useDatabaseSelection } from "../components/Toolbar/useDatabaseSelection";
 import { resolveConfiguredDatabase, useOptionalGlobalDatabase } from "../engine/DatabaseContext";
 import { useFilters } from "../engine/FilterContext";
@@ -483,6 +484,16 @@ export default function ReportViewer() {
                     <h1>{report.title}</h1>
                     {report.description && <p>{report.description}</p>}
                 </div>
+                {report.databaseSelection && (
+                    <div className="report-page__header-actions">
+                        <DatabaseSelect
+                            value={selectedDatabase}
+                            options={databaseSelection.options}
+                            disabled={isExporting}
+                            onChange={handleDatabaseChange}
+                        />
+                    </div>
+                )}
             </header>
 
             {report.filters.length > 0 && (
@@ -524,12 +535,6 @@ export default function ReportViewer() {
                             config={report.toolbar}
                             exportConfig={report.export}
                             onRefresh={handleRefresh}
-                            databaseSelector={report.databaseSelection ? {
-                                value: selectedDatabase,
-                                options: databaseSelection.options,
-                                disabled: isExporting,
-                                onChange: handleDatabaseChange,
-                            } : undefined}
                             isRefreshing={isGridLoading}
                             isExporting={isExporting}
                             onExportAll={handleExportAll}

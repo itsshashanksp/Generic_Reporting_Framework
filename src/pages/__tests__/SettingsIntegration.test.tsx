@@ -58,6 +58,9 @@ describe("Settings application integration", () => {
         );
 
         expect(await screen.findByRole("heading", { name: "Settings" })).not.toBeNull();
+        const settingsGrid = document.querySelector(".settings-grid");
+        expect(settingsGrid).not.toBeNull();
+        expect(settingsGrid?.querySelectorAll(":scope > .settings-option").length).toBeGreaterThan(0);
         expect(screen.getByRole("link", { name: "Settings" })).not.toBeNull();
         fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
         expect(await screen.findByRole("heading", { name: "Sign in" })).not.toBeNull();

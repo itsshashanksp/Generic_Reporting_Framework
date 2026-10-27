@@ -149,7 +149,7 @@ describe("GenericGrid shared configuration", () => {
                 <GenericGrid
                     rows={[{ Code: "A" }]}
                     columns={columns}
-                    gridConfig={gridConfig}
+                    gridConfig={{ ...gridConfig, pagination: { ...gridConfig.pagination, showFirstLast: true } }}
                     serverPagination={{ page: 2, pageSize: 25, totalRows: 100, onPageChange, onPageSizeChange }}
                 />
             </GridProvider>
@@ -161,7 +161,7 @@ describe("GenericGrid shared configuration", () => {
         fireEvent.change(screen.getByLabelText("Rows per page"), { target: { value: "50" } });
         expect(onPageChange.mock.calls.map(call => call[0])).toEqual([1, 1, 3, 4]);
         expect(onPageSizeChange).toHaveBeenCalledWith(50);
-        expect(screen.getByText(/Page/).textContent).toContain("2");
+        expect(screen.getByRole("button", { name: "Page 2" }).getAttribute("aria-current")).toBe("page");
     });
 
     it("paginates client-side rows in the shared mobile presentation", () => {
@@ -186,7 +186,7 @@ describe("GenericGrid shared configuration", () => {
         expect(within(records).getAllByRole("option")).toHaveLength(10);
         fireEvent.click(screen.getByLabelText("Next page"));
         expect(within(records).getAllByRole("option")).toHaveLength(2);
-        expect(screen.getByText(/Page/).textContent).toContain("2");
+        expect(screen.getByRole("button", { name: "Page 2" }).getAttribute("aria-current")).toBe("page");
     });
 
     it("defines resizable and movable defaults", () => {
