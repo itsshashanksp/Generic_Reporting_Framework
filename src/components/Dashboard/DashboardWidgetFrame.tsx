@@ -5,6 +5,7 @@ interface DashboardWidgetFrameProps {
     title: string;
     description?: string;
     refreshing?: boolean;
+    busy?: boolean;
     children: ReactNode;
     variant?: "default" | "stat";
     actions?: ReactNode;
@@ -15,13 +16,14 @@ export default function DashboardWidgetFrame({
     title,
     description,
     refreshing = false,
+    busy = false,
     children,
     variant = "default",
     actions,
     filterPanel,
 }: DashboardWidgetFrameProps) {
     return (
-        <section className={`dashboard-widget-content dashboard-widget-content--${variant}`}>
+        <section className={`dashboard-widget-content dashboard-widget-content--${variant}`} aria-busy={busy}>
             <header className="dashboard-widget-content__header">
                 <div>
                     <h2>{title}</h2>

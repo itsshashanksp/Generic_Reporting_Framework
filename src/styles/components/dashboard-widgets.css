@@ -184,11 +184,6 @@
     stroke-opacity: 0.72;
 }
 
-.dashboard-widget-content__chart .recharts-curve,
-.dashboard-widget-content__chart .recharts-rectangle {
-    transition: opacity 120ms ease;
-}
-
 .dashboard-widget-content__chart .recharts-legend-wrapper {
     max-width: 100%;
     max-height: 72px;

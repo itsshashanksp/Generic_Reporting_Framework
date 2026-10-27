@@ -2,13 +2,20 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
     gap: 14px;
+    justify-content: start;
 }
 
 .filter-field {
+    width: 100%;
+    max-width: 420px;
     min-width: 0;
     margin: 0;
     padding: 0;
     border: 0;
+}
+
+.filter-field:has(.filter-range) {
+    max-width: 560px;
 }
 
 .filter-field > label,

@@ -61,6 +61,27 @@ describe("ReportViewer runtime", () => {
         });
     });
 
+    it("preserves existing rows and shows updating feedback while filtered results load", async () => {
+        renderReport();
+        await screen.findByTestId("report-grid");
+        let resolve!: (value: { success: boolean; message: string; data: Record<string, unknown>[]; meta: Record<string, number> }) => void;
+        executeRequestMock.mockReturnValueOnce(new Promise(next => { resolve = next; }));
+
+        fireEvent.change(screen.getByLabelText("Item Code"), { target: { value: "B2" } });
+        fireEvent.click(screen.getByRole("button", { name: "Search" }));
+
+        expect(screen.getByTestId("report-grid")).toBeTruthy();
+        expect((await screen.findByText("Updating results...")).closest("[role='status']")).toBeTruthy();
+        resolve({
+            success: true,
+            message: "ok",
+            data: [{ Item_Code: "B2", Item_Desc: "Beta", Item_MRP: 200 }],
+            meta: { page: 1, pageSize: 10, totalRows: 1, rowsReturned: 1, executionTime: 1 },
+        });
+        await waitFor(() => expect(screen.queryByText("Updating results...")).toBeNull());
+        expect(screen.getByTestId("report-grid")).toBeTruthy();
+    });
+
     it("sends the normalized JSON Query request with the existing runtime state", async () => {
         renderReport();
         await screen.findByTestId("report-grid");

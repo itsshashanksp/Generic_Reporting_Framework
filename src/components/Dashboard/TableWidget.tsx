@@ -23,7 +23,7 @@ import type { ColumnDefinition } from "../../types/column";
 import type { GridConfig, PaginationPresentationConfig } from "../../types/report";
 import type { WidgetRequest } from "../../types/widget";
 import ExportMenu, { type ExportMenuOption } from "../Common/ExportMenu";
-import Loading from "../Common/Loading";
+import Skeleton from "../Common/Skeleton";
 import GenericGrid from "../Grid/GenericGrid";
 import ReportTableFrame from "../Grid/ReportTableFrame";
 import { getDashboardTableViewportHeight } from "./tableViewport";
@@ -163,6 +163,7 @@ function TableWidgetContent({
         () => buildFilters(widgetFilterControls.appliedValues, runtimeFilters, request.action === "sql"),
         [widgetFilterControls.appliedValues, runtimeFilters, request.action]
     );
+    const hasActiveFilters = composeRequestFilters(request.filters, dashboardFilters, widgetFilters).length > 0;
 
     const queryKey = useMemo(
         () => JSON.stringify({
@@ -466,9 +467,12 @@ function TableWidgetContent({
                 disabled: visibleRows.length === 0,
                 onSelect: () => {
                     setExportError("");
-                    void exportRows(visibleRows, format).catch((caughtError: unknown) => {
-                        setExportError(`Export failed: ${getRequestErrorMessage(caughtError, "Unable to create the export file.")}`);
-                    });
+                    setExporting(true);
+                    void exportRows(visibleRows, format)
+                        .catch((caughtError: unknown) => {
+                            setExportError(`Export failed: ${getRequestErrorMessage(caughtError, "Unable to create the export file.")}`);
+                        })
+                        .finally(() => setExporting(false));
                 },
             }));
         }
@@ -476,6 +480,7 @@ function TableWidgetContent({
             exportConfig.formats.forEach(format => exportOptions.push({
                 id: `all-${format}`,
                 label: `All rows — ${format === "csv" ? "CSV" : "Excel"}`,
+                disabled: visibleTotalRows === 0,
                 onSelect: () => void handleExportAll(format),
             }));
         }
@@ -522,7 +527,7 @@ function TableWidgetContent({
             )}
 
             {tableState === "loading" && (
-                <Loading label="Loading table data…" compact />
+                <Skeleton kind="table" label="Loading table data…" columns={columns.length || 4} rows={Math.min(activePageSize, 6)} />
             )}
 
             {tableState === "error" && (
@@ -542,8 +547,8 @@ function TableWidgetContent({
 
             {tableState === "empty" && (
                 <div className="dashboard-table__state" role="status">
-                    <strong>No records found</strong>
-                    <span>The current filters returned no table data.</span>
+                    <strong>{hasActiveFilters ? "No matching records found" : "No data available"}</strong>
+                    <span>{hasActiveFilters ? "Try adjusting your filters." : "There is no data to display."}</span>
                 </div>
             )}
 

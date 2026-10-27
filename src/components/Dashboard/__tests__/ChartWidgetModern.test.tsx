@@ -22,14 +22,16 @@ vi.mock("../../../engine/ExportEngine", () => ({
 }));
 vi.mock("recharts", () => {
     const container = ({ children }: { children: ReactNode }) => <div data-testid="responsive-chart">{children}</div>;
-    const passthrough = ({ children }: { children?: ReactNode }) => <>{children}</>;
+    const series = ({ children, isAnimationActive }: { children?: ReactNode; isAnimationActive?: boolean }) => (
+        <g data-testid="chart-series" data-animated={String(isAnimationActive)}>{children}</g>
+    );
     return {
         ResponsiveContainer: container,
         BarChart: ({ children, layout, data }: { children: ReactNode; layout?: string; data: unknown[] }) => <svg data-testid="bar-chart" data-layout={layout ?? "horizontal"} data-count={data.length}>{children}</svg>,
         LineChart: ({ children, data }: { children: ReactNode; data: unknown[] }) => <svg data-testid="line-chart" data-count={data.length}>{children}</svg>,
         PieChart: ({ children }: { children: ReactNode }) => <svg data-testid="pie-chart">{children}</svg>,
-        Pie: ({ children, innerRadius, outerRadius, cy, data, label }: { children: ReactNode; innerRadius?: string | number; outerRadius?: string | number; cy?: string | number; data: Array<{ value: number }>; label?: false | ((props: Record<string, unknown>) => ReactNode) }) => <g data-testid="pie" data-inner-radius={innerRadius} data-outer-radius={outerRadius} data-cy={cy}>{children}{typeof label === "function" && data.map((item, index) => <g data-testid="pie-external-label" key={index}>{label({ index, value: item.value, cx: 100, cy: 100, outerRadius: 100, midAngle: 90 - index * 40 })}</g>)}</g>,
-        Bar: passthrough, Line: passthrough, Cell: () => null, Label: ({ value }: { value: string }) => <text>{value}</text>,
+        Pie: ({ children, innerRadius, outerRadius, cy, data, label, isAnimationActive }: { children: ReactNode; innerRadius?: string | number; outerRadius?: string | number; cy?: string | number; data: Array<{ value: number }>; label?: false | ((props: Record<string, unknown>) => ReactNode); isAnimationActive?: boolean }) => <g data-testid="pie" data-animated={String(isAnimationActive)} data-inner-radius={innerRadius} data-outer-radius={outerRadius} data-cy={cy}>{children}{typeof label === "function" && data.map((item, index) => <g data-testid="pie-external-label" key={index}>{label({ index, value: item.value, cx: 100, cy: 100, outerRadius: 100, midAngle: 90 - index * 40 })}</g>)}</g>,
+        Bar: series, Line: series, Cell: () => null, Label: ({ value }: { value: string }) => <text>{value}</text>,
         CartesianGrid: () => null, Legend: () => null,
         Tooltip: ({ formatter }: { formatter?: (value: unknown) => string }) => <text data-testid="tooltip-value">{formatter?.(12908199.939999992)}</text>,
         XAxis: ({ tickFormatter }: { tickFormatter?: (value: unknown) => string }) => <text data-testid="x-axis-value">{tickFormatter?.(12908199.939999992)}</text>,
@@ -54,15 +56,18 @@ describe("modern chart widget", () => {
         expect(await screen.findByTestId("pie")).toBeTruthy();
         expect(screen.getByTestId("pie").getAttribute("data-inner-radius")).toBe("50%");
         expect(screen.getByTestId("pie").getAttribute("data-outer-radius")).toBe("80%");
+        expect(screen.getByTestId("pie").getAttribute("data-animated")).toBe("false");
         expect(screen.getByText("10")).toBeTruthy();
         expect(screen.getByText("Total")).toBeTruthy();
 
         rerender(<DashboardProvider><ChartWidget title="Sales" request={request} xField="Category" yField="Amount" chartType="bar" chartOptions={{ orientation: "horizontal" }} /></DashboardProvider>);
         expect(await screen.findByTestId("bar-chart")).toBeTruthy();
         expect(screen.getByTestId("bar-chart").getAttribute("data-layout")).toBe("vertical");
+        expect(screen.getByTestId("chart-series").getAttribute("data-animated")).toBe("false");
 
         rerender(<DashboardProvider><ChartWidget title="Sales" request={request} xField="Category" yField="Amount" chartType="line" chartOptions={{ smooth: true, showPoints: true }} /></DashboardProvider>);
         expect(await screen.findByTestId("line-chart")).toBeTruthy();
+        expect(screen.getByTestId("chart-series").getAttribute("data-animated")).toBe("false");
     });
 
     it("formats donut totals, external labels, tooltips, and horizontal axes", async () => {

@@ -63,6 +63,24 @@ describe("dashboard widgets", () => {
         genericGridProps.mockClear();
     });
 
+    it("keeps the stat card visible with a skeleton until initial data arrives", async () => {
+        const pending = deferred<{ success: boolean; message: string; data: Record<string, unknown>[] }>();
+        executeRequestMock.mockReturnValue(pending.promise);
+        render(
+            <DashboardProvider>
+                <StatWidget title="Pending total" request={request} valueField="value" />
+            </DashboardProvider>
+        );
+
+        expect(screen.getByRole("heading", { name: "Pending total" })).toBeTruthy();
+        expect(screen.getByRole("status", { name: "Loading statistic…" })).toBeTruthy();
+        expect(document.querySelector(".dashboard-stat-card .skeleton__stat-value")).toBeTruthy();
+
+        await act(async () => pending.resolve({ success: true, message: "ok", data: [{ value: 42 }] }));
+        expect(await screen.findByText("42")).toBeTruthy();
+        expect(screen.queryByRole("status", { name: "Loading statistic…" })).toBeNull();
+    });
+
     it("renders dashboard tables through GenericGrid with presentation columns", async () => {
         executeRequestMock.mockResolvedValue({
             success: true,
@@ -159,7 +177,7 @@ describe("dashboard widgets", () => {
             </DashboardProvider>
         );
 
-        expect(await screen.findByText("No records found")).toBeTruthy();
+        expect(await screen.findByText("No data available")).toBeTruthy();
         expect(screen.queryByTestId("shared-generic-grid")).toBeNull();
         expect(genericGridProps).not.toHaveBeenCalled();
     });

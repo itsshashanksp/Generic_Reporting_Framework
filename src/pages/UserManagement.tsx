@@ -20,7 +20,7 @@ import {
   updateUserProfile,
 } from "../auth/authService";
 import ErrorState from "../components/Common/Error";
-import Loading from "../components/Common/Loading";
+import Skeleton from "../components/Common/Skeleton";
 import AccessibleDialog from "../components/Common/AccessibleDialog";
 import ActionMenu, { type ActionMenuItem } from "../components/Common/ActionMenu";
 import {
@@ -310,11 +310,11 @@ export default function UserManagement({
             onClick={() => void loadUsers()}
             disabled={loading}
           >
-            Refresh
+            {loading ? "Refreshing…" : "Refresh"}
           </button>
         </div>
         {loading && users.length === 0 ? (
-          <Loading label="Loading users…" />
+          <Skeleton kind="table" label="Loading users…" columns={8} rows={5} />
         ) : null}
         {!loading && error && users.length === 0 ? (
           <ErrorState

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 
 
@@ -29,11 +29,25 @@ export default function ExportMenu({
     mobileTriggerLabel,
 }: ExportMenuProps) {
     const [open, setOpen] = useState(false);
-    const [useMobilePortal, setUseMobilePortal] = useState(false);
+    const [mobile, setMobile] = useState(false);
+    const [position, setPosition] = useState<CSSProperties>({ visibility: "hidden" });
     const containerRef = useRef<HTMLDivElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLButtonElement>(null);
     const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+    useLayoutEffect(() => {
+        if (!open || mobile || !triggerRef.current || !menuRef.current) return;
+        const trigger = triggerRef.current.getBoundingClientRect();
+        const menu = menuRef.current.getBoundingClientRect();
+        const gap = 6;
+        const padding = 8;
+        const below = trigger.bottom + gap + menu.height <= window.innerHeight - padding;
+        const top = below ? trigger.bottom + gap : Math.max(padding, trigger.top - menu.height - gap);
+        const left = Math.max(padding, Math.min(trigger.right - menu.width, window.innerWidth - menu.width - padding));
+        setPosition({ position: "fixed", top, left, right: "auto", visibility: "visible" });
+        itemRefs.current.find(item => item && !item.disabled)?.focus();
+    }, [open, mobile]);
 
     useEffect(() => {
         if (!open) return;
@@ -51,12 +65,17 @@ export default function ExportMenu({
                 triggerRef.current?.focus();
             }
         };
+        const handleViewportChange = () => setOpen(false);
 
         document.addEventListener("pointerdown", handleOutside);
         document.addEventListener("keydown", handleEscape);
+        window.addEventListener("resize", handleViewportChange);
+        window.addEventListener("scroll", handleViewportChange, true);
         return () => {
             document.removeEventListener("pointerdown", handleOutside);
             document.removeEventListener("keydown", handleEscape);
+            window.removeEventListener("resize", handleViewportChange);
+            window.removeEventListener("scroll", handleViewportChange, true);
         };
     }, [open]);
 
@@ -100,7 +119,7 @@ export default function ExportMenu({
                     triggerRef.current?.focus();
                 }}
             />
-            <div ref={menuRef} className="export-menu__items" role="menu" aria-label={menuLabel} onKeyDown={handleKeyDown}>
+            <div ref={menuRef} className="export-menu__items" data-placement={mobile ? "sheet" : "viewport"} role="menu" aria-label={menuLabel} style={mobile ? undefined : position} onKeyDown={handleKeyDown}>
                 {options.map((option, index) => (
                     <button
                         key={option.id}
@@ -142,7 +161,10 @@ export default function ExportMenu({
                 aria-expanded={open}
                 disabled={disabled || busy}
                 onClick={() => {
-                    if (!open) setUseMobilePortal(window.matchMedia?.("(max-width: 720px)").matches ?? false);
+                    if (!open) {
+                        setMobile(window.matchMedia?.("(max-width: 720px)").matches ?? false);
+                        setPosition({ visibility: "hidden" });
+                    }
                     setOpen(previous => !previous);
                 }}
             >
@@ -153,9 +175,7 @@ export default function ExportMenu({
                     </>
                 )}<span aria-hidden="true"> ▾</span>
             </button>
-            {open && (useMobilePortal
-                ? createPortal(menuContent, document.body)
-                : menuContent)}
+            {open && createPortal(menuContent, document.body)}
         </div>
     );
 }

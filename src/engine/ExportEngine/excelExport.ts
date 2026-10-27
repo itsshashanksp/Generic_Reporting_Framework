@@ -1,4 +1,4 @@
-import writeXlsxFile, { type Cell, type SheetData } from "write-excel-file/browser";
+import type { Cell, SheetData } from "write-excel-file/browser";
 
 const SHEET_NAME = "Report";
 /** Date cell format used by the previous SheetJS `json_to_sheet` export. */
@@ -47,6 +47,7 @@ export async function exportExcel(
     }
 
     try {
+        const { default: writeXlsxFile } = await import("write-excel-file/browser");
         await writeXlsxFile(getExcelSheetData(rows), { sheet: SHEET_NAME }).toFile(fileName);
     } catch (cause: unknown) {
         throw new ExportFileError("The Excel file could not be created.", { cause });

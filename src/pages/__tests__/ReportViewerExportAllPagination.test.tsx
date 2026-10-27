@@ -90,7 +90,7 @@ async function renderItemReport({ empty = false } = {}) {
             </GridProvider>
         </MemoryRouter>
     );
-    if (empty) await screen.findByText("No records found");
+    if (empty) await screen.findByText("No data available");
     else await screen.findByTestId("report-grid");
 }
 
@@ -141,14 +141,13 @@ describe("ReportViewer paginated export of all rows (R3)", () => {
         expect(gridRequests[0].pagination).toEqual({ page: 1, pageSize: 10 });
     });
 
-    it("reports zero matching rows without writing a file", async () => {
+    it("disables all-row export when the known total is zero", async () => {
         executeRequestMock.mockReset().mockImplementation(backend(0));
         await renderItemReport({ empty: true });
 
-        chooseExport("All rows — CSV");
-
-        expect(await screen.findByText("There are no rows to export.")).toBeTruthy();
-        expect(exportRequests()).toHaveLength(1);
+        fireEvent.click(screen.getAllByRole("button").find(button => button.getAttribute("aria-haspopup") === "menu")!);
+        expect((screen.getByRole("menuitem", { name: "All rows — CSV" }) as HTMLButtonElement).disabled).toBe(true);
+        expect(exportRequests()).toHaveLength(0);
         expect(exportRowsCSVMock).not.toHaveBeenCalled();
     });
 

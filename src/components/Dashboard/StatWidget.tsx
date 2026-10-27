@@ -6,7 +6,7 @@ import type { WidgetFilterFields } from "../../engine/DashboardEngine/filterFiel
 import type { WidgetFormat, WidgetRequest } from "../../types/widget";
 import Empty from "../Common/Empty";
 import ErrorState from "../Common/Error";
-import Loading from "../Common/Loading";
+import Skeleton from "../Common/Skeleton";
 import DashboardWidgetFrame from "./DashboardWidgetFrame";
 import WidgetFilterController, { type WidgetFilterControls } from "./WidgetFilterController";
 import { useDashboardWidgetRequest } from "./useDashboardWidgetRequest";
@@ -117,13 +117,14 @@ function StatWidgetContent({
         <DashboardWidgetFrame
             title={title}
             description={description}
+            busy={loading}
             refreshing={loading && hasValue}
             variant="stat"
             actions={widgetFilterControls.button}
             filterPanel={widgetFilterControls.panel}
         >
             <div className="dashboard-stat-card">
-                {loading && !hasValue && <Loading label="Loading statistic…" compact />}
+                {loading && !hasValue && <Skeleton kind="stat" label="Loading statistic…" />}
                 {!loading && error && !hasValue && (
                     <ErrorState
                         title="Unable to load statistic"

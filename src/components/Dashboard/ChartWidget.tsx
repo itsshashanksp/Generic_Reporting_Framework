@@ -10,7 +10,7 @@ import type { ChartOptions, WidgetRequest } from "../../types/widget";
 import Empty from "../Common/Empty";
 import ErrorState from "../Common/Error";
 import ExportMenu, { type ExportMenuOption } from "../Common/ExportMenu";
-import Loading from "../Common/Loading";
+import Skeleton from "../Common/Skeleton";
 import DashboardWidgetFrame from "./DashboardWidgetFrame";
 import WidgetFilterController, { type WidgetFilterControls } from "./WidgetFilterController";
 import { applyChartTopN, formatChartNumber, formatChartTooltipValue, getHorizontalBarChartHeight, getHorizontalCategoryAxisWidth, getVisiblePieLabelIndexes, mapChartData, type ChartDatum } from "./chartData";
@@ -35,13 +35,29 @@ interface PieLabelProps {
     points?: Array<{ x: number; y: number }>;
 }
 
-function isVisiblePieLabel(props: PieLabelProps, data: ChartDatum[]) {
-    return typeof props.index === "number"
-        && getVisiblePieLabelIndexes(data, Number(props.outerRadius) || 0).has(props.index);
+type PieLabelVisibility = (outerRadius: number) => Set<number>;
+const pieLabelVisibilityCache = new WeakMap<ChartDatum[], Map<number, Set<number>>>();
+
+function getCachedPieLabelVisibility(data: ChartDatum[], outerRadius: number) {
+    let byRadius = pieLabelVisibilityCache.get(data);
+    if (!byRadius) {
+        byRadius = new Map();
+        pieLabelVisibilityCache.set(data, byRadius);
+    }
+    const cached = byRadius.get(outerRadius);
+    if (cached) return cached;
+    const visible = getVisiblePieLabelIndexes(data, outerRadius);
+    byRadius.set(outerRadius, visible);
+    return visible;
 }
 
-function renderPieLabel(props: PieLabelProps, data: ChartDatum[]) {
-    if (!isVisiblePieLabel(props, data)) return null;
+function isVisiblePieLabel(props: PieLabelProps, getVisibility: PieLabelVisibility) {
+    return typeof props.index === "number"
+        && getVisibility(Number(props.outerRadius) || 0).has(props.index);
+}
+
+function renderPieLabel(props: PieLabelProps, getVisibility: PieLabelVisibility) {
+    if (!isVisiblePieLabel(props, getVisibility)) return null;
     const cx = Number(props.cx) || 0;
     const cy = Number(props.cy) || 0;
     const radius = (Number(props.outerRadius) || 0) + 16;
@@ -51,8 +67,8 @@ function renderPieLabel(props: PieLabelProps, data: ChartDatum[]) {
     return <text x={x} y={y} dy="0.35em" textAnchor={x >= cx ? "start" : "end"} className="dashboard-chart-external-label">{formatChartNumber(props.value)}</text>;
 }
 
-function renderPieLabelLine(props: PieLabelProps, data: ChartDatum[]) {
-    if (!isVisiblePieLabel(props, data) || !props.points?.length) return <g />;
+function renderPieLabelLine(props: PieLabelProps, getVisibility: PieLabelVisibility) {
+    if (!isVisiblePieLabel(props, getVisibility) || !props.points?.length) return <g />;
     return <polyline points={props.points.map(point => `${point.x},${point.y}`).join(" ")} className="dashboard-chart-label-line" />;
 }
 
@@ -98,6 +114,10 @@ function ChartWidgetContent({
     const [exportError, setExportError] = useState("");
     const sourceData = useMemo(() => mapChartData(response?.data ?? [], xField, yField), [response, xField, yField]);
     const data = useMemo(() => applyChartTopN(sourceData, chartOptions), [sourceData, chartOptions]);
+    const pieLabelVisibility = useMemo<PieLabelVisibility>(
+        () => outerRadius => getCachedPieLabelVisibility(data, outerRadius),
+        [data]
+    );
     const hasNumericData = data.some(item => item.value !== null);
     const pieHasNegative = chartType === "pie" && data.some(item => (item.value ?? 0) < 0);
     const pieHasPositive = data.some(item => (item.value ?? 0) > 0);
@@ -142,11 +162,12 @@ function ChartWidgetContent({
         <DashboardWidgetFrame
             title={title}
             description={description}
+            busy={loading}
             refreshing={loading && sourceData.length > 0}
             actions={<>{widgetFilterControls.button}<ExportMenu options={exportOptions} disabled={loading || !sourceData.length} busy={exporting} menuLabel={`${title} export options`} /></>}
             filterPanel={widgetFilterControls.panel}
         >
-            {loading && sourceData.length === 0 && <Loading label="Loading chart…" compact />}
+            {loading && sourceData.length === 0 && <Skeleton kind="chart" chartType={chartType} label="Loading chart…" />}
             {!loading && error && sourceData.length === 0 && <ErrorState title="Unable to load chart" message={error} onRetry={retry} compact />}
             {!loading && error && sourceData.length > 0 && <div className="dashboard-widget-inline-error" role="alert"><span>Refresh failed.</span><button type="button" className="app-button" onClick={retry}>Retry</button></div>}
             {exportError && <div className="dashboard-widget-inline-error" role="alert"><span>{exportError}</span><button type="button" className="app-button" onClick={() => setExportError("")}>Dismiss</button></div>}
@@ -164,11 +185,11 @@ function ChartWidgetContent({
                                 <XAxis dataKey="name" stroke={AXIS_COLOR} tickLine={false} axisLine={false} minTickGap={18} />
                                 <YAxis stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={axisDomain} tickFormatter={formatChartNumber} width={58} />
                                 {tooltip}{legend && <Legend wrapperStyle={{ paddingTop: 10 }} />}
-                                <Line type={chartOptions?.smooth ? "monotone" : "linear"} dataKey="value" name={yField} stroke={CHART_COLORS[0]} strokeWidth={2.5} dot={chartOptions?.showPoints !== false ? { r: 3 } : false} activeDot={{ r: 5 }} connectNulls={false} label={labels} />
+                                <Line type={chartOptions?.smooth ? "monotone" : "linear"} dataKey="value" name={yField} stroke={CHART_COLORS[0]} strokeWidth={2.5} dot={chartOptions?.showPoints !== false ? { r: 3 } : false} activeDot={{ r: 5 }} connectNulls={false} label={labels} isAnimationActive={false} />
                             </LineChart>
                         ) : chartType === "pie" ? (
                             <PieChart margin={{ top: 4, right: 8, bottom: legend ? 24 : 4, left: 8 }}>
-                                <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy={legend ? "43%" : "50%"} outerRadius={labels ? "70%" : "80%"} innerRadius={chartOptions?.appearance === "donut" ? "50%" : 0} paddingAngle={chartOptions?.appearance === "donut" ? 2 : 0} label={labels ? props => renderPieLabel(props, data) : false} labelLine={labels ? props => renderPieLabelLine(props, data) : false}>
+                                <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy={legend ? "43%" : "50%"} outerRadius={labels ? "70%" : "80%"} innerRadius={chartOptions?.appearance === "donut" ? "50%" : 0} paddingAngle={chartOptions?.appearance === "donut" ? 2 : 0} label={labels ? props => renderPieLabel(props, pieLabelVisibility) : false} labelLine={labels ? props => renderPieLabelLine(props, pieLabelVisibility) : false} isAnimationActive={false}>
                                     {data.map((entry, index) => <Cell key={`${entry.name}-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} stroke="#fff" strokeWidth={2} />)}
                                     {chartOptions?.appearance === "donut" && chartOptions.showCenterTotal && <>
                                         <Label value={formatChartNumber(data.reduce((sum, item) => sum + (item.value ?? 0), 0))} position="center" dy={-5} className="dashboard-chart-center-total" />
@@ -183,7 +204,7 @@ function ChartWidgetContent({
                                 <XAxis type="number" stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={axisDomain} tickFormatter={formatChartNumber} minTickGap={18} />
                                 <YAxis type="category" dataKey="name" width={categoryAxisWidth} stroke={AXIS_COLOR} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} interval={0} />
                                 {tooltip}{legend && <Legend />}
-                                <Bar dataKey="value" name={yField} fill={CHART_COLORS[0]} radius={[0, 4, 4, 0]} label={labels ? { formatter: formatChartNumber, position: "right" } : false} />
+                                <Bar dataKey="value" name={yField} fill={CHART_COLORS[0]} radius={[0, 4, 4, 0]} label={labels ? { formatter: formatChartNumber, position: "right" } : false} isAnimationActive={false} />
                             </BarChart>
                         ) : (
                             <BarChart data={data} margin={{ top: 12, right: 18, bottom: 12, left: 4 }}>
@@ -191,7 +212,7 @@ function ChartWidgetContent({
                                 <XAxis dataKey="name" stroke={AXIS_COLOR} tickLine={false} axisLine={false} minTickGap={16} />
                                 <YAxis stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={axisDomain} tickFormatter={formatChartNumber} width={58} />
                                 {tooltip}{legend && <Legend />}
-                                <Bar dataKey="value" name={yField} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} label={labels ? { formatter: formatChartNumber, position: "top" } : false} />
+                                <Bar dataKey="value" name={yField} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} label={labels ? { formatter: formatChartNumber, position: "top" } : false} isAnimationActive={false} />
                             </BarChart>
                         )}
                     </ResponsiveContainer>

@@ -42,6 +42,20 @@ describe("dynamic select filters", () => {
         executeRequestMock.mockReset();
     });
 
+    it("disables the control and shows a compact skeleton while values load", async () => {
+        let resolve!: (value: { success: boolean; message: string; data: Record<string, unknown>[] }) => void;
+        executeRequestMock.mockReturnValue(new Promise(next => { resolve = next; }));
+        render(<FilterProvider><SelectFilter field="Category" label="Category" dynamicOptions={dynamicOptions} /></FilterProvider>);
+
+        expect((screen.getByLabelText("Category") as HTMLSelectElement).disabled).toBe(true);
+        expect(screen.getByRole("status", { name: "Loading Category values…" })).toBeTruthy();
+
+        resolve({ success: true, message: "ok", data: [{ Category: "Ready", Frequency: 1 }] });
+        await screen.findByRole("option", { name: "Ready (1)" });
+        expect((screen.getByLabelText("Category") as HTMLSelectElement).disabled).toBe(false);
+        expect(screen.queryByRole("status", { name: "Loading Category values…" })).toBeNull();
+    });
+
     it("loads frequency-sorted values, searches them, and uses existing filter state", async () => {
         executeRequestMock.mockResolvedValue({
             success: true,

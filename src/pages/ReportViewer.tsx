@@ -10,6 +10,7 @@ import { useAuthenticatedUsername } from "../auth";
 import Empty from "../components/Common/Empty";
 import ErrorState from "../components/Common/Error";
 import Loading from "../components/Common/Loading";
+import Skeleton from "../components/Common/Skeleton";
 import usePullToRefresh from "../components/Common/usePullToRefresh";
 import { ResponsiveFilterPanel } from "../components/Filters";
 import GenericGrid from "../components/Grid/GenericGrid";
@@ -361,6 +362,10 @@ export default function ReportViewer() {
         window.alert("Report saved successfully.");
     };
 
+    const hasActiveFilters = report
+        ? buildFilters(appliedFilters, report.filters ?? [], report.request.action === "sql").length > 0
+        : false;
+
     const handleLoadSavedReport = async (savedReport: SavedReport) => {
         if (!report) {
             return;
@@ -537,6 +542,7 @@ export default function ReportViewer() {
                             onRefresh={handleRefresh}
                             isRefreshing={isGridLoading}
                             isExporting={isExporting}
+                            allRowsAvailable={(result?.meta?.totalRows ?? result?.meta?.rowsReturned) === 0 ? false : undefined}
                             onExportAll={handleExportAll}
                             onExportMessage={setExportStatus}
                             onSaveReport={savedReportsOwner ? handleSaveReport : undefined}
@@ -581,11 +587,22 @@ export default function ReportViewer() {
                         <ErrorState message={gridError} onRetry={() => void loadReport(appliedFilters, currentPage, currentPageSize, currentSorting, true)} />
                     )}
 
-                    {!isGridLoading && !gridError && rows.length === 0 && <Empty />}
+                    {!isGridLoading && !gridError && rows.length === 0 && (
+                        <Empty
+                            title={hasActiveFilters ? "No matching records found" : "No data available"}
+                            message={hasActiveFilters ? "Try adjusting your filters." : "There is no data to display."}
+                        />
+                    )}
 
-                    {isGridLoading && (
+                    {isGridLoading && rows.length === 0 && (
                         <div className="report-table-frame__loading">
-                            <Loading label={rows.length ? "Refreshing report data…" : "Loading report data…"} compact />
+                            <Skeleton kind="table" label="Loading report data…" columns={report.columns.length || 4} />
+                        </div>
+                    )}
+                    {isGridLoading && rows.length > 0 && (
+                        <div className="report-table-frame__updating" role="status" aria-live="polite">
+                            <span className="ui-spinner" aria-hidden="true" />
+                            <span>Updating results...</span>
                         </div>
                     )}
                     </>)}

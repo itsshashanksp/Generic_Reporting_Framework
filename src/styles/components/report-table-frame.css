@@ -93,10 +93,31 @@
     z-index: 10;
     inset: 0;
     display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    overflow: auto;
+    background: #fff;
+}
+
+.report-table-frame__updating {
+    position: absolute;
+    z-index: 10;
+    inset: 0;
+    display: flex;
     align-items: center;
     justify-content: center;
-    background: rgb(255 255 255 / 72%);
-    backdrop-filter: blur(1px);
+    gap: 9px;
+    background: rgb(255 255 255 / 76%);
+    color: #475569;
+    font-size: 13px;
+    font-weight: 650;
+    cursor: progress;
+}
+
+.report-table-frame__updating .ui-spinner {
+    width: 18px;
+    height: 18px;
+    border-width: 2px;
 }
 
 @media (max-width: 720px) {

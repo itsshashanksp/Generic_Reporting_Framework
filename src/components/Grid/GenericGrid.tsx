@@ -39,6 +39,8 @@ interface Props {
     onSortChange?: (sort: Array<{ field: string; direction: "ASC" | "DESC" }>) => void;
 }
 
+const EMPTY_SORTS: SortDefinition[] = [];
+
 function formatGridValue(value: unknown, dataType?: ColumnDefinition["dataType"]): string {
     return formatValueForDisplay(value, dataType);
 }
@@ -53,7 +55,7 @@ export default function GenericGrid({
     gridConfig,
     height,
     autoHeight = false,
-    initialSort = [],
+    initialSort = EMPTY_SORTS,
     serverPagination,
     onSortChange,
 }: Props) {
@@ -171,13 +173,13 @@ export default function GenericGrid({
                 });
     }, [columns, gridConfig.grouping, initialSort, rows]);
 
-    const mobileColumns = columnDefs.map(column => ({
+    const mobileColumns = useMemo(() => columnDefs.map(column => ({
         field: column.field,
         headerName: column.headerName,
         sortable: column.sortable !== false,
         dataType: column.dataType,
         align: column.align,
-    }));
+    })), [columnDefs]);
 
     const mobileRows = useMemo(() => {
         if (!mobileSort) return rows;

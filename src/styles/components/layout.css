@@ -45,7 +45,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    transition: width 160ms ease, flex-basis 160ms ease;
+    transition: none;
     position: sticky;
     top: 0;
     height: 100vh;
@@ -163,7 +163,7 @@
     grid-template-rows: 0fr;
     opacity: 0;
     pointer-events: none;
-    transition: grid-template-rows 140ms ease, opacity 90ms ease;
+    transition: opacity 90ms ease;
 }
 
 .app-sidebar__children-shell[data-expanded="true"] {
@@ -290,7 +290,7 @@
     border-radius: 6px;
     color: #334155;
     text-decoration: none;
-    transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
+    transition: background-color 120ms ease, color 120ms ease;
 }
 
 .app-sidebar a.is-active {
@@ -409,6 +409,7 @@
         opacity: 0;
         pointer-events: none;
         transition: opacity 180ms ease;
+        will-change: opacity;
     }
 
     .app-sidebar-backdrop[data-open="true"] {
@@ -433,6 +434,7 @@
         transform: translateX(-105%);
         transition: transform 180ms ease, visibility 0s linear 180ms;
         visibility: hidden;
+        will-change: transform;
     }
 
     .app-sidebar[data-mobile-open="true"],

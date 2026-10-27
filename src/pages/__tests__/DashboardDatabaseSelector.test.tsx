@@ -178,6 +178,19 @@ describe("Dashboard database selector", () => {
         expect(lastFor("widgets/item-stock-value-by-category").database).toBe("loyal-ibms");
     });
 
+    it("does not rerun widgets while a shared filter draft is being edited", async () => {
+        executeRequestMock.mockReset().mockImplementation(backend());
+        await renderDashboard();
+        await screen.findByText("abc-month");
+        const before = sent().length;
+
+        fireEvent.change(screen.getByLabelText("Category"), { target: { value: "draft only" } });
+
+        expect((screen.getByLabelText("Category") as HTMLInputElement).value).toBe("draft only");
+        expect(sent()).toHaveLength(before);
+        expect(screen.getByText("abc-month")).toBeTruthy();
+    });
+
     it("keeps the selection for refresh, shared filters, table paging, sorting and export-all", async () => {
         executeRequestMock.mockReset().mockImplementation(backend());
         await renderDashboard();

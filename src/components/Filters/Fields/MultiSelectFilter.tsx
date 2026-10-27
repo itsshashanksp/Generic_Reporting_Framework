@@ -2,6 +2,7 @@ import { useFilters } from "../../../engine/FilterContext";
 import { useId, useMemo, useState } from "react";
 import type { DynamicFilterOptions, FilterOption } from "../../../types/filter";
 import { useDynamicFilterOptions } from "../useDynamicFilterOptions";
+import Skeleton from "../../Common/Skeleton";
 
 const optionKey = (option: Pick<FilterOption, "value">) => `${typeof option.value}:${String(option.value)}`;
 
@@ -65,7 +66,7 @@ export default function MultiSelectFilter({
 
     return (
 
-        <div className="filter-field">
+        <div className="filter-field" aria-busy={dynamic.loading}>
 
             <label htmlFor={selectId}>
                 {label}{required && <span className="filter-required" aria-hidden="true"> *</span>}
@@ -83,6 +84,7 @@ export default function MultiSelectFilter({
 
             <select
                 id={selectId}
+                disabled={dynamic.loading}
                 multiple
                 required={required}
                 value={selectedValues.map(
@@ -108,7 +110,7 @@ export default function MultiSelectFilter({
 
             </select>
 
-            {dynamic.loading && <small role="status">Loading values…</small>}
+            {dynamic.loading && <Skeleton kind="filter" label={`Loading ${label} values…`} />}
             {dynamic.error && (
                 <small role="alert">
                     {dynamic.error}{" "}

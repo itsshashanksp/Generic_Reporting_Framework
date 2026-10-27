@@ -1,3 +1,4 @@
+import { useState } from "react";
 import ToolbarButton from "./ToolbarButton";
 import ExportMenu, { type ExportMenuOption } from "../Common/ExportMenu";
 
@@ -31,6 +32,7 @@ interface ReportToolbarProps {
     onRefresh?: () => void;
     isRefreshing?: boolean;
     isExporting?: boolean;
+    allRowsAvailable?: boolean;
 }
 
 
@@ -44,7 +46,10 @@ export default function ReportToolbar({
     onRefresh,
     isRefreshing = false,
     isExporting = false,
+    allRowsAvailable,
 }: ReportToolbarProps) {
+
+    const [currentExporting, setCurrentExporting] = useState(false);
 
     const {
         api,
@@ -72,17 +77,23 @@ export default function ReportToolbar({
     };
 
 
-    const handleExcelExport = () => {
+    const handleExcelExport = async () => {
 
-        onExportMessage?.("");
-        exportExcel(
-            rows,
-            exportConfig?.filename
-                ? `${exportConfig.filename}.xlsx`
-                : "report.xlsx"
-        ).catch((error: unknown) => {
+        setCurrentExporting(true);
+        onExportMessage?.("Exporting…");
+        try {
+            await exportExcel(
+                rows,
+                exportConfig?.filename
+                    ? `${exportConfig.filename}.xlsx`
+                    : "report.xlsx"
+            );
+            onExportMessage?.("");
+        } catch (error: unknown) {
             onExportMessage?.(getRequestErrorMessage(error, "Unable to create the Excel file."));
-        });
+        } finally {
+            setCurrentExporting(false);
+        }
 
     };
 
@@ -98,7 +109,7 @@ export default function ReportToolbar({
             if (exportConfig.formats.includes("excel")) exportOptions.push({
                 id: "current-excel",
                 label: "Current view — Excel",
-                onSelect: handleExcelExport,
+                onSelect: () => void handleExcelExport(),
                 disabled: !rows.length,
             });
         }
@@ -106,11 +117,13 @@ export default function ReportToolbar({
             if (exportConfig.formats.includes("csv")) exportOptions.push({
                 id: "all-csv",
                 label: "All rows — CSV",
+                disabled: allRowsAvailable === false,
                 onSelect: () => onExportAll("csv"),
             });
             if (exportConfig.formats.includes("excel")) exportOptions.push({
                 id: "all-excel",
                 label: "All rows — Excel",
+                disabled: allRowsAvailable === false,
                 onSelect: () => onExportAll("excel"),
             });
         }
@@ -144,7 +157,7 @@ export default function ReportToolbar({
                 )}
 
 
-                <ExportMenu options={exportOptions} disabled={isRefreshing} busy={isExporting} />
+                <ExportMenu options={exportOptions} disabled={isRefreshing} busy={isExporting || currentExporting} />
 
 
                 {isSavedReportsEnabled(config) && onSaveReport && (
@@ -166,7 +179,7 @@ export default function ReportToolbar({
                 <ExportMenu
                     options={mobileOptions}
                     disabled={isRefreshing && !rows.length}
-                    busy={isExporting}
+                    busy={isExporting || currentExporting}
                     triggerLabel="More"
                     busyLabel="Working…"
                     menuLabel="Report actions"

@@ -4,7 +4,7 @@ import type { WidgetFilterFields } from "../../engine/DashboardEngine/filterFiel
 import type { ReportDefinition } from "../../types/report";
 import Empty from "../Common/Empty";
 import ErrorState from "../Common/Error";
-import Loading from "../Common/Loading";
+import Skeleton from "../Common/Skeleton";
 import ReportTableFrame from "../Grid/ReportTableFrame";
 import ReportDataGrid from "./ReportDataGrid";
 import { useDashboardWidgetRequest } from "./useDashboardWidgetRequest";
@@ -75,7 +75,7 @@ function ReportWidgetContent({
                 <ErrorState title="Report unavailable" message="The configured report was not found." compact />
             )}
             {report && loading && rows.length === 0 && (
-                <Loading label="Loading report widget…" compact />
+                <Skeleton kind="table" label="Loading report widget…" columns={report.columns.length || 4} />
             )}
             {report && !loading && error && rows.length === 0 && (
                 <ErrorState title="Unable to load report widget" message={error} onRetry={retry} compact />

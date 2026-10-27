@@ -26,7 +26,7 @@ import type { DashboardDefinition } from "../types/dashboard";
 import type { FilterValues } from "../engine/FilterContext";
 import type { FilterDefinition } from "../types/filter";
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 
 
 import type { CSSProperties } from "react";
@@ -316,255 +316,18 @@ function DashboardContent({
                     } as CSSProperties}
                 >
 
-                    {visibleWidgets.map(
-                        widget => {
-
-                            const resolvedDefinition =
-                                resolveDashboardWidgetDefinition(widget, dashboard.filters ?? []);
-                            const resolvedRequest = resolvedDefinition?.request
-                                ?? resolveDashboardWidgetRequest(widget, dashboard.filters ?? []);
-                            // Widgets without their own database follow the selector.
-                            const widgetRequest = resolvedRequest
-                                && inheritDashboardDatabase(resolvedRequest, effectiveInheritedDatabase);
-                            const widgetDefinition = resolvedDefinition && widgetRequest
-                                ? { ...resolvedDefinition, request: widgetRequest }
-                                : resolvedDefinition;
-                            const widgetColumns = widgetDefinition?.columns
-                                ?? resolveDashboardWidgetColumns(widget, dashboard.filters ?? []);
-                            // Remount only when this widget's effective database
-                            // changes, clearing old rows while the new context
-                            // loads. Pinned widgets keep the same key.
-                            const widgetContextKey = `${widget.id}:${widgetRequest?.database ?? ""}`;
-
-                            /*
-                             * Keep widget width
-                             * between 1 and the
-                             * configured column count.
-                             */
-                            const widgetWidth =
-                                Math.min(
-                                    Math.max(
-                                        widget.width ?? 12,
-                                        1
-                                    ),
-                                    columns
-                                );
-
-                            const tabletWidgetWidth =
-                                getResponsiveWidgetWidth(
-                                    widgetWidth,
-                                    columns,
-                                    tabletColumns
-                                );
-
-                            const mobileWidgetWidth =
-                                getResponsiveWidgetWidth(
-                                    widgetWidth,
-                                    columns,
-                                    mobileColumns
-                                );
-
-                            /*
-                             * Validate X position.
-                             *
-                             * Prevent:
-                             * - negative X
-                             * - widget extending
-                             *   beyond dashboard width
-                             */
-                            const positionX =
-                                widget.position
-                                    ? Math.max(
-                                          0,
-                                          Math.min(
-                                              widget.position.x,
-                                              columns -
-                                                  widgetWidth
-                                          )
-                                      )
-                                    : null;
-
-                            /*
-                             * Validate Y position.
-                             *
-                             * CSS Grid rows start
-                             * from 1.
-                             */
-                            const positionY =
-                                widget.position
-                                    ? Math.max(
-                                          1,
-                                          widget.position.y
-                                      )
-                                    : null;
-
-                            return (
-                                <div
-                                    key={widgetContextKey}
-                                    className={`dashboard-widget${widget.type === "table" || widget.type === "report" ? " dashboard-widget--table" : ""}`}
-                                    data-fixed-height={widget.height !== undefined ? "true" : undefined}
-                                    style={{
-                                        /*
-                                         * Use configured X
-                                         * position when available.
-                                         */
-                                        gridColumn:
-                                            positionX !== null
-                                                ? `${positionX + 1} / span ${widgetWidth}`
-                                                : `span ${widgetWidth}`,
-
-                                        /*
-                                         * Use configured Y
-                                         * position when available.
-                                         */
-                                        gridRow:
-                                            positionY !== null
-                                                ? `${positionY}`
-                                                : "auto",
-
-                                        height:
-                                            widget.height !== undefined
-                                                ? `${widget.height}px`
-                                                : "auto",
-
-                                        "--dashboard-tablet-widget-width":
-                                            tabletWidgetWidth,
-
-                                        "--dashboard-mobile-widget-width":
-                                            mobileWidgetWidth,
-                                    } as CSSProperties}
-                                >
-
-                                    {widget.type === "report" &&
-                                        widgetDefinition && (
-                                            <ReportWidget
-                                                definition={widgetDefinition}
-                                                title={
-                                                    widget.title
-                                                }
-                                                description={
-                                                    widget.description
-                                                }
-                                                filterDefinitions={
-                                                    dashboard.filters ?? []
-                                                }
-                                                filterFields={widget.filterFields}
-                                                runtimeFilters={widget.runtimeFilters}
-                                                runtimeFilterDisplay={widget.runtimeFilterDisplay}
-                                                cacheScope={`${dashboard.id}:${widget.id}`}
-                                            />
-                                        )}
-
-                                    {widget.type === "stat" &&
-                                        widgetRequest && (
-                                            <StatWidget
-                                                title={
-                                                    widget.title
-                                                }
-                                                description={
-                                                    widget.description
-                                                }
-                                                request={
-                                                    widgetRequest
-                                                }
-                                                valueField={widget.valueField}
-                                                format={
-                                                    widget.format
-                                                }
-                                                filterDefinitions={
-                                                    dashboard.filters ?? []
-                                                }
-                                                filterFields={widget.filterFields}
-                                                runtimeFilters={widget.runtimeFilters}
-                                                runtimeFilterDisplay={widget.runtimeFilterDisplay}
-                                                cacheScope={`${dashboard.id}:${widget.id}`}
-                                            />
-                                        )}
-
-                                    {widget.type === "table" &&
-                                        widgetRequest && (
-                                            <TableWidget
-                                                title={
-                                                    widget.title
-                                                }
-                                                description={
-                                                    widget.description
-                                                }
-                                                pageSize={
-                                                    widget.pageSize
-                                                }
-                                                pageSizeOptions={
-                                                    widget.pageSizeOptions
-                                                }
-                                                pagination={widget.pagination}
-                                                request={
-                                                    widgetRequest
-                                                }
-                                                columns={
-                                                    widgetColumns
-                                                }
-                                                filterDefinitions={
-                                                    dashboard.filters ?? []
-                                                }
-                                                filterFields={widget.filterFields}
-                                                runtimeFilters={widget.runtimeFilters}
-                                                runtimeFilterDisplay={widget.runtimeFilterDisplay}
-                                                cacheScope={`${dashboard.id}:${widget.id}`}
-                                                exportConfig={widget.export}
-                                            />
-                                        )}
-
-                                    {widget.type === "chart" &&
-                                        widgetRequest &&
-                                        widget.xField &&
-                                        widget.yField && (
-                                            <ChartWidget
-                                                title={
-                                                    widget.title
-                                                }
-                                                description={
-                                                    widget.description
-                                                }
-                                                request={
-                                                    widgetRequest
-                                                }
-                                                xField={
-                                                    widget.xField
-                                                }
-                                                yField={
-                                                    widget.yField
-                                                }
-                                                chartType={
-                                                    widget.chartType
-                                                }
-                                                chartOptions={widget.chartOptions}
-                                                showLegend={
-                                                    widget.showLegend
-                                                }
-                                                showTooltip={
-                                                    widget.showTooltip
-                                                }
-                                                showGrid={
-                                                    widget.showGrid
-                                                }
-                                                showLabels={
-                                                    widget.showLabels
-                                                }
-                                                filterDefinitions={
-                                                    dashboard.filters ?? []
-                                                }
-                                                filterFields={widget.filterFields}
-                                                runtimeFilters={widget.runtimeFilters}
-                                                runtimeFilterDisplay={widget.runtimeFilterDisplay}
-                                                exportConfig={widget.export}
-                                                cacheScope={`${dashboard.id}:${widget.id}`}
-                                            />
-                                        )}
-
-                                </div>
-                            );
-                        }
-                    )}
+                    {visibleWidgets.map(widget => (
+                        <DashboardWidgetCard
+                            key={widget.id}
+                            widget={widget}
+                            dashboardId={dashboard.id}
+                            filterDefinitions={dashboard.filters ?? []}
+                            inheritedDatabase={effectiveInheritedDatabase}
+                            columns={columns}
+                            tabletColumns={tabletColumns}
+                            mobileColumns={mobileColumns}
+                        />
+                    ))}
 
                 </div>
             )}
@@ -572,6 +335,84 @@ function DashboardContent({
         </main>
     );
 }
+
+const DashboardWidgetCard = memo(function DashboardWidgetCard({
+    widget,
+    dashboardId,
+    filterDefinitions,
+    inheritedDatabase,
+    columns,
+    tabletColumns,
+    mobileColumns,
+}: {
+    widget: DashboardDefinition["widgets"][number];
+    dashboardId: string;
+    filterDefinitions: FilterDefinition[];
+    inheritedDatabase: string;
+    columns: number;
+    tabletColumns: number;
+    mobileColumns: number;
+}) {
+    const resolved = useMemo(() => {
+        const definition = resolveDashboardWidgetDefinition(widget, filterDefinitions);
+        const baseRequest = definition?.request ?? resolveDashboardWidgetRequest(widget, filterDefinitions);
+        const request = baseRequest && inheritDashboardDatabase(baseRequest, inheritedDatabase);
+        return {
+            request,
+            definition: definition && request ? { ...definition, request } : definition,
+            columns: definition?.columns ?? resolveDashboardWidgetColumns(widget, filterDefinitions),
+        };
+    }, [widget, filterDefinitions, inheritedDatabase]);
+    const widgetWidth = Math.min(Math.max(widget.width ?? 12, 1), columns);
+    const positionX = widget.position
+        ? Math.max(0, Math.min(widget.position.x, columns - widgetWidth))
+        : null;
+    const positionY = widget.position ? Math.max(1, widget.position.y) : null;
+    const widgetContextKey = `${widget.id}:${resolved.request?.database ?? ""}`;
+    const cacheScope = `${dashboardId}:${widget.id}`;
+
+    return (
+        <div
+            key={widgetContextKey}
+            className={`dashboard-widget${widget.type === "table" || widget.type === "report" ? " dashboard-widget--table" : ""}`}
+            data-fixed-height={widget.height !== undefined ? "true" : undefined}
+            style={{
+                gridColumn: positionX !== null ? `${positionX + 1} / span ${widgetWidth}` : `span ${widgetWidth}`,
+                gridRow: positionY !== null ? `${positionY}` : "auto",
+                height: widget.height !== undefined ? `${widget.height}px` : "auto",
+                "--dashboard-tablet-widget-width": getResponsiveWidgetWidth(widgetWidth, columns, tabletColumns),
+                "--dashboard-mobile-widget-width": getResponsiveWidgetWidth(widgetWidth, columns, mobileColumns),
+            } as CSSProperties}
+        >
+            {widget.type === "report" && resolved.definition && (
+                <ReportWidget definition={resolved.definition} title={widget.title} description={widget.description}
+                    filterDefinitions={filterDefinitions} filterFields={widget.filterFields} runtimeFilters={widget.runtimeFilters}
+                    runtimeFilterDisplay={widget.runtimeFilterDisplay} cacheScope={cacheScope} />
+            )}
+            {widget.type === "stat" && resolved.request && (
+                <StatWidget title={widget.title} description={widget.description} request={resolved.request}
+                    valueField={widget.valueField} format={widget.format} filterDefinitions={filterDefinitions}
+                    filterFields={widget.filterFields} runtimeFilters={widget.runtimeFilters}
+                    runtimeFilterDisplay={widget.runtimeFilterDisplay} cacheScope={cacheScope} />
+            )}
+            {widget.type === "table" && resolved.request && (
+                <TableWidget title={widget.title} description={widget.description} pageSize={widget.pageSize}
+                    pageSizeOptions={widget.pageSizeOptions} pagination={widget.pagination} request={resolved.request}
+                    columns={resolved.columns} filterDefinitions={filterDefinitions} filterFields={widget.filterFields}
+                    runtimeFilters={widget.runtimeFilters} runtimeFilterDisplay={widget.runtimeFilterDisplay}
+                    cacheScope={cacheScope} exportConfig={widget.export} />
+            )}
+            {widget.type === "chart" && resolved.request && widget.xField && widget.yField && (
+                <ChartWidget title={widget.title} description={widget.description} request={resolved.request}
+                    xField={widget.xField} yField={widget.yField} chartType={widget.chartType}
+                    chartOptions={widget.chartOptions} showLegend={widget.showLegend} showTooltip={widget.showTooltip}
+                    showGrid={widget.showGrid} showLabels={widget.showLabels} filterDefinitions={filterDefinitions}
+                    filterFields={widget.filterFields} runtimeFilters={widget.runtimeFilters}
+                    runtimeFilterDisplay={widget.runtimeFilterDisplay} exportConfig={widget.export} cacheScope={cacheScope} />
+            )}
+        </div>
+    );
+});
 
 function getResponsiveWidgetWidth(
     widgetWidth: number,

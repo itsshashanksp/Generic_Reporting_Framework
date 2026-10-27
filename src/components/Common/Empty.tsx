@@ -6,8 +6,8 @@ interface EmptyProps {
 }
 
 export default function Empty({
-    title = "No records found",
-    message = "The current filters returned no data.",
+    title = "No data available",
+    message = "There is no data to display.",
     compact = false,
 }: EmptyProps) {
     return (

@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { useAuth } from "../auth";
 import { useOptionalGlobalDatabase } from "../engine/DatabaseContext";
+import Skeleton from "../components/Common/Skeleton";
 
 export default function Settings() {
     const { state } = useAuth();
@@ -40,7 +41,10 @@ export default function Settings() {
                             <h2>Database Selection</h2>
                             <p>Set the frontend default used when a report, dashboard, or widget does not specify a database.</p>
                             {globalDatabase.registry.status === "loading" ? (
-                                <p role="status">Loading databases…</p>
+                                <div className="settings-database-form" aria-busy="true">
+                                    <Skeleton kind="filter" label="Loading database settings…" />
+                                    <Skeleton kind="text" label="Loading database setting details…" />
+                                </div>
                             ) : globalDatabase.registry.status === "failed" ? (
                                 <div role="alert">
                                     <p>{globalDatabase.registry.error}</p>
