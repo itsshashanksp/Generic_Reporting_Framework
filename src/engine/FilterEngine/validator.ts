@@ -91,7 +91,7 @@ export function validateFilters(
         }
 
         const configured = filter as unknown as Record<string, unknown>;
-        const allowedKeys = ["field", "label", "type", "operator", "options", "dynamicOptions", "visible", "required", "placeholder"];
+        const allowedKeys = ["field", "label", "type", "operator", "options", "dynamicOptions", "visible", "required", "placeholder", "targetGrids"];
         const unknownKey = Object.keys(configured).find(key => !allowedKeys.includes(key));
         if (unknownKey) {
             throw new Error(`Unknown filter property '${unknownKey}'.`);

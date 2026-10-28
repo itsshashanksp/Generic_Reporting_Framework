@@ -2,7 +2,6 @@
   "id": "orders-database-selector-dashboard",
   "title": "Orders by Database",
   "description": "Widgets without an explicit database follow the authorized runtime selection; one widget demonstrates a pinned logical database.",
-  "databaseSelection": true,
   "widgets": [
     { "id": "order-count", "type": "stat", "title": "Orders", "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": [{ "function": "COUNT", "field": "*", "alias": "TotalOrders" }] }, "valueField": "TotalOrders", "format": "number", "width": 4 },
     { "id": "order-total", "type": "stat", "title": "Order Total", "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": [{ "function": "SUM", "field": "Amount", "alias": "TotalAmount" }] }, "valueField": "TotalAmount", "format": "currency", "width": 4 },

@@ -93,6 +93,8 @@ Table widgets also accept an optional `pagination` object with `style: "modern"`
 
 Chart widgets retain `bar`, `line`, and `pie` types and may add `chartOptions`. Donut appearance, horizontal bars, line smoothing/points, responsive legends, Top-N/Others, and chart exports are documented in [Configuration](CONFIGURATION.md). Graphic exports (`png`, `svg`) represent the displayed chart; tabular exports (`csv`, `excel`) contain the complete filtered source chart rows.
 
+Optional `chartOptions.seriesColors` and `chartOptions.categoryColors` provide persistent color overrides. Existing charts require no migration. Application Administrators can preview, cancel, reset, and save overrides from the existing chart action menu; the backend writes the matching dashboard/widget JSON only after validating its IDs and revision.
+
 ```json
 {
   "id": "category-value",
@@ -191,9 +193,24 @@ Dashboard and widget filters together:
 
 Existing `filters` on reports and reusable definitions retain their prior metadata meaning and are not automatically exposed as widget controls. Declare `runtimeFilters` on the dashboard widget instance to opt in.
 
+## Targeted page filters
+
+Dashboard filters apply to every widget by default. To limit one page-level filter to selected grids, set `targetGrids` to a non-empty list of stable `table` or `report` widget IDs:
+
+```json
+{
+  "field": "Bill_Date",
+  "label": "Bill Date",
+  "type": "daterange",
+  "targetGrids": ["sales-grid", "receipts-grid"]
+}
+```
+
+Unknown, duplicate, empty, and non-grid targets are configuration errors. Non-targeted widgets do not receive the filter definition or its applied value. Omitting `targetGrids` preserves the existing shared-filter behavior, and widget-level runtime filters continue to combine normally.
+
 ## Database selector
 
-A dashboard can let users switch the database its widgets read from:
+A dashboard can let users switch the database its unpinned widgets read from by enabling **Settings → Database Selection → Enable Page-Level Database Selection**. This setting is browser-local and scoped to the authenticated username.
 
 ```json
 {
@@ -202,10 +219,11 @@ A dashboard can let users switch the database its widgets read from:
 ```
 
 - **Inheritance rule:** a widget whose resolved request names **no** `database` follows the selection. A widget that names its own `database` (inline, or through its `reportId` or `widgetId` definition) **always keeps it**. The selection never overrides it.
-- `true` enables the selector. IDs and labels come only from the authorized backend listing. The initial selection, fallback, empty state, and fail-closed listing state follow [Feature behavior](FEATURES.md#database-selector). Until a database is resolved **no widget is mounted**, pinned widgets included, and Refresh is disabled. The dashboard is invalid unless at least one visible widget inherits: "Dashboard databaseSelection needs at least one visible widget whose request names no database; …".
+- Legacy `databaseSelection: true` remains accepted but is deprecated. It cannot override a disabled Settings toggle. IDs and labels come only from the authorized backend listing. A dashboard is eligible when a visible widget's resolved request does not pin a database.
 - **Opting in an existing dashboard:** remove the per-widget `database` from the widgets that should follow. The Item Dashboard does this and starts on the authorized global default when configured, otherwise the registry default. Bill still pins `loyal-ibms` on every widget. Sales, Purchases, and Receipts name none, so their widgets would inherit right away.
 - The **Database** dropdown sits beside **Refresh**. Its options are the enabled rows from `metadata.databases` (see [Feature behavior](FEATURES.md#database-selector)).
 - **Switching:** every inheriting widget reruns on the chosen database, keeping the applied filters. Table widgets return to page 1. Refresh, auto-refresh, table paging, sorting, and **All rows** export then use the chosen database. A running table export is cancelled when the database changes, so it never saves the previous database's rows. Late results from before a switch are ignored, and cache entries are per database.
+- **Session lifetime:** the current choice is retained for this dashboard ID during the authenticated login session and browser refresh. Report and dashboard namespaces cannot collide. Logout, expiration, new login, and user changes clear temporary selections; restored values are accepted only when still authorized and available.
 - A running **All rows** export is also cancelled if applied dashboard/widget filters or table sorting change. Draft-only filter edits do not cancel it. Current-page export remains an immediate export of the rows already displayed.
 - The selection is resolved again when the dashboard is opened again. Shared `dynamicOptions` requests inherit it unless they explicitly pin their own database.
 

@@ -48,7 +48,7 @@ Safety limits (`src/engine/ExportEngine`):
 
 ## Database selector
 
-A report that sets `databaseSelection` (see [Configuration](CONFIGURATION.md#runtime-database-selection)) shows a **Database** dropdown at the start of the report toolbar, beside **Refresh**; on phones it sits beside **More**.
+When **Settings → Database Selection → Enable Page-Level Database Selection** is on, eligible reports and dashboards show a **Database** dropdown. The setting is browser-local and scoped to the authenticated username; it is not shared administrator configuration. Legacy `databaseSelection: true` still parses but no longer overrides this setting.
 
 Reports and dashboards share the same selection logic (`src/components/Toolbar/useDatabaseSelection.ts`). The backend registry, read with `metadata.databases`, authorizes every option and fallback:
 
@@ -60,9 +60,13 @@ Reports and dashboards share the same selection logic (`src/components/Toolbar/u
 
 Until a database is resolved, no report or widget request is sent, so nothing can silently fall back to the backend default by omitting `database`. Frontend JSON contains no selector IDs or names. The listing contains only logical metadata, never connection details, and is cached for 5 minutes. Authentication identity changes clear that cache before the next user can load data.
 
-- **Reopening:** opening the report again, or another report, resolves its initial selection again. Manual page choices are not saved, do not change the global setting, and saved views do not record them.
+- **Session restoration:** a manual choice is retained independently for each stable `report:<id>` or `dashboard:<id>` for the current authenticated login session, including browser refresh. It is validated against the authorized listing before use and is cleared on logout, session expiration, a new login, or user change. It never changes the application default or pinned widget databases. Disabling page selection ignores retained choices.
 - **Switching** reruns the report on the chosen database, from page 1, with the same applied filters, filter logic, and sort. Refresh, paging, sorting, saved-view loading, and **All rows** export then all use the chosen database. A request still running for the previous database is aborted, and its late result is ignored. The selector is disabled while an export runs.
 - **Caching:** the cache key includes the database, so rows from one database are never shown for another. Switching back to a database can be answered from its own cached entry.
+
+## Notifications
+
+Transient operation feedback uses the global top-right toast viewport. Success and informational messages dismiss automatically; warnings and errors remain longer and every toast can be dismissed manually. Field validation and persistent page errors remain inline. The viewport is rendered outside dashboard/report layout, supports multiple deduplicated messages, and respects reduced-motion preferences.
 - **Errors:** a failing database (for example `DATABASE_UNAVAILABLE`, or `403` when an access scope does not grant it) shows the backend's error in the grid area. The selector stays usable, so the user can switch back.
 - **Dynamic filter options:** requests without their own `database` follow the resolved selection and wait while discovery is unresolved. An explicitly pinned filter request keeps its configured database.
 - **Dashboards** have a dashboard-level equivalent that switches only widgets without their own database; see [Dashboards](DASHBOARDS.md#database-selector).

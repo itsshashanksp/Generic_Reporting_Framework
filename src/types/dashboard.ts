@@ -21,12 +21,7 @@ export interface DashboardDefinition {
      */
     dateFilterBehavior?: DashboardDateFilterBehavior;
 
-    /**
-     * Backend-owned runtime database discovery and switching. The registry
-     * global default is the initial selection when authorized, otherwise the
-     * registry default is used; widgets whose request names no
-     * `database` follow the selection, and widgets with their own keep it.
-     */
+    /** @deprecated Selector visibility is controlled by the browser-local Settings toggle. */
     databaseSelection?: true;
 
     layout?: {

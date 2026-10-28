@@ -14,7 +14,7 @@ IDs, update menu references, and rebuild.
 | `dashboards/minimal-dashboard.json` | Smallest useful stat dashboard |
 | `dashboards/date-filtered-dashboard.json` | Required shared date range, field mapping, table/stat/chart widgets |
 | `dashboards/database-selector-dashboard.json` | Database inheritance and an explicitly pinned widget |
-| `dashboards/widget-catalog-dashboard.json` | Report/reusable/inline widgets; modern table paging; number/currency/decimal; horizontal bar, line and donut; Top-N/Others; all chart exports |
+| `dashboards/widget-catalog-dashboard.json` | Report/reusable/inline widgets; targeted page filters; currency columns; modern table paging; horizontal bar, line and donut; Top-N/Others; chart colors and all exports |
 | `dashboards/widget-runtime-filters.json` | Independent table/chart widget filters over orders, customers and shipments |
 | `dashboards/combined-dashboard-widget-filters.json` | Shared dashboard date filtering combined with widget-local filters |
 | `dashboards/dynamic-widget-runtime-filters.json` | Widget-local dropdowns populated by JSON Query `dynamicOptions` |

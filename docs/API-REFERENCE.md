@@ -13,9 +13,11 @@ The frontend sends JSON by `POST` to `VITE_API_URL` with `Content-Type: applicat
 | `auth.session` | `src/auth/authService.ts` | no | One session row ([shape](AUTHENTICATION.md#session-payload)) |
 | `auth.login` (`username`, `password`) | Login page | yes | One session row |
 | `auth.logout` | Sign out | yes | One session row (`authenticated: false`) |
-| `metadata.databases` | Database selector (only for reports and dashboards with `databaseSelection`) | no | Registry rows; the frontend reads `id`, `name`, `enabled`, and `available`. With enforced access scopes, this needs `listDatabases` |
+| `metadata.databases` | Application default and optional page-level database selectors | no | Registry rows; the frontend reads `id`, `name`, `enabled`, and `available`. With enforced access scopes, this needs `listDatabases` |
 | `auth.frontendUsers.list` | User Management | no | Managed-user rows |
 | `auth.frontendUsers.create`, `.update`, `.enable`, `.disable`, `.delete`, `.changePassword`, `.assignRole` | User Management | yes | One managed-user row |
+| `configuration.chartColors.get` | Dashboard chart color overrides | no | Chart configuration rows for one dashboard |
+| `configuration.chartColors.update` | Persist one chart widget's colors | yes | Updated chart configuration row |
 
 A managed-user row has exactly `name`, `username`, `mobile`, `email`, `enabled`, `backendRole`, `frontendAccess`, `frontendRole`, `backendProtected`, and `createdAt` (an ISO date); `parseManagedUser` rejects any other key. The response codes the client handles specially: `401 AUTHENTICATION_REQUIRED` (the client signs out), `403 CSRF_VALIDATION_FAILED` (one retry with a fresh token), and `INVALID_CREDENTIALS` / `LOGIN_RATE_LIMITED` (login messages). See [Authentication](AUTHENTICATION.md).
 

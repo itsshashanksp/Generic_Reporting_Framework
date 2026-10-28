@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DashboardProvider } from "../../../engine/DashboardContext";
 import { clearRequestCache } from "../../../engine/RequestCache";
 import ChartWidget from "../ChartWidget";
+import { ToastProvider } from "../../Notifications/ToastProvider";
 
 const mocks = vi.hoisted(() => ({
     executeRequest: vi.fn(), exportPng: vi.fn(), exportSvg: vi.fn(), exportCsv: vi.fn(), exportExcel: vi.fn(),
@@ -22,8 +23,8 @@ vi.mock("../../../engine/ExportEngine", () => ({
 }));
 vi.mock("recharts", () => {
     const container = ({ children }: { children: ReactNode }) => <div data-testid="responsive-chart">{children}</div>;
-    const series = ({ children, isAnimationActive }: { children?: ReactNode; isAnimationActive?: boolean }) => (
-        <g data-testid="chart-series" data-animated={String(isAnimationActive)}>{children}</g>
+    const series = ({ children, isAnimationActive, fill, stroke }: { children?: ReactNode; isAnimationActive?: boolean; fill?: string; stroke?: string }) => (
+        <g data-testid="chart-series" data-animated={String(isAnimationActive)} data-color={fill ?? stroke}>{children}</g>
     );
     return {
         ResponsiveContainer: container,
@@ -31,7 +32,7 @@ vi.mock("recharts", () => {
         LineChart: ({ children, data }: { children: ReactNode; data: unknown[] }) => <svg data-testid="line-chart" data-count={data.length}>{children}</svg>,
         PieChart: ({ children }: { children: ReactNode }) => <svg data-testid="pie-chart">{children}</svg>,
         Pie: ({ children, innerRadius, outerRadius, cy, data, label, isAnimationActive }: { children: ReactNode; innerRadius?: string | number; outerRadius?: string | number; cy?: string | number; data: Array<{ value: number }>; label?: false | ((props: Record<string, unknown>) => ReactNode); isAnimationActive?: boolean }) => <g data-testid="pie" data-animated={String(isAnimationActive)} data-inner-radius={innerRadius} data-outer-radius={outerRadius} data-cy={cy}>{children}{typeof label === "function" && data.map((item, index) => <g data-testid="pie-external-label" key={index}>{label({ index, value: item.value, cx: 100, cy: 100, outerRadius: 100, midAngle: 90 - index * 40 })}</g>)}</g>,
-        Bar: series, Line: series, Cell: () => null, Label: ({ value }: { value: string }) => <text>{value}</text>,
+        Bar: series, Line: series, Cell: ({ fill }: { fill: string }) => <i data-testid="pie-cell" data-color={fill} />, Label: ({ value }: { value: string }) => <text>{value}</text>,
         CartesianGrid: () => null, Legend: () => null,
         Tooltip: ({ formatter }: { formatter?: (value: unknown) => string }) => <text data-testid="tooltip-value">{formatter?.(12908199.939999992)}</text>,
         XAxis: ({ tickFormatter }: { tickFormatter?: (value: unknown) => string }) => <text data-testid="x-axis-value">{tickFormatter?.(12908199.939999992)}</text>,
@@ -138,32 +139,80 @@ describe("modern chart widget", () => {
         await screen.findByTestId("bar-chart");
         const openMenu = () => fireEvent.click(screen.getByRole("button", { name: "Export" }));
         openMenu();
-        fireEvent.click(screen.getByRole("menuitem", { name: "Displayed chart — PNG" }));
+        expect(screen.getByText("Chart Image")).toBeTruthy();
+        fireEvent.click(screen.getByRole("menuitem", { name: "Download PNG" }));
         await waitFor(() => expect(mocks.exportPng).toHaveBeenCalledWith(expect.objectContaining({ className: "dashboard-widget-content__chart-canvas" }), "sales-chart.png"));
         openMenu();
-        fireEvent.click(screen.getByRole("menuitem", { name: "Displayed chart — SVG" }));
+        fireEvent.click(screen.getByRole("menuitem", { name: "Download SVG" }));
         expect(mocks.exportSvg).toHaveBeenCalledWith(expect.objectContaining({ className: "dashboard-widget-content__chart-canvas" }), "sales-chart.svg");
         openMenu();
-        fireEvent.click(screen.getByRole("menuitem", { name: "Complete filtered source — CSV" }));
+        expect(screen.getByText("Chart Data")).toBeTruthy();
+        fireEvent.click(screen.getByRole("menuitem", { name: "Download CSV — complete filtered source" }));
         const completeSource = [
             { Category: "=Formula", Amount: 10 }, { Category: "B", Amount: 8 }, { Category: "C", Amount: -2 },
         ];
         expect(mocks.exportCsv).toHaveBeenCalledWith(completeSource, "sales-chart.csv");
         openMenu();
-        fireEvent.click(screen.getByRole("menuitem", { name: "Complete filtered source — Excel" }));
+        fireEvent.click(screen.getByRole("menuitem", { name: "Download Excel — complete filtered source" }));
         await waitFor(() => expect(mocks.exportExcel).toHaveBeenCalledWith(completeSource, "sales-chart.xlsx"));
     });
 
     it("hides disabled export and surfaces export failures", async () => {
         mocks.executeRequest.mockResolvedValue(response([{ Category: "A", Amount: 1 }]));
-        const view = render(<DashboardProvider><ChartWidget title="No Export" request={request} xField="Category" yField="Amount" exportConfig={{ enabled: false, formats: ["png"] }} /></DashboardProvider>);
+        const view = render(<ToastProvider><DashboardProvider><ChartWidget title="No Export" request={request} xField="Category" yField="Amount" exportConfig={{ enabled: false, formats: ["png"] }} /></DashboardProvider></ToastProvider>);
         await screen.findByTestId("bar-chart");
         expect(screen.queryByRole("button", { name: "Export" })).toBeNull();
+        expect(screen.queryByRole("button", { name: "Customize" })).toBeNull();
 
         mocks.exportSvg.mockImplementation(() => { throw new Error("SVG failed"); });
-        view.rerender(<DashboardProvider><ChartWidget title="Export" request={request} xField="Category" yField="Amount" exportConfig={{ enabled: true, formats: ["svg"] }} /></DashboardProvider>);
+        view.rerender(<ToastProvider><DashboardProvider><ChartWidget title="Export" request={request} xField="Category" yField="Amount" exportConfig={{ enabled: true, formats: ["svg"] }} /></DashboardProvider></ToastProvider>);
         fireEvent.click(await screen.findByRole("button", { name: "Export" }));
-        fireEvent.click(screen.getByRole("menuitem", { name: "Displayed chart — SVG" }));
+        fireEvent.click(screen.getByRole("menuitem", { name: "Download SVG" }));
         expect(await screen.findByText("SVG failed")).toBeTruthy();
+    });
+
+    it("previews, cancels, saves, and resets administrator chart colors", async () => {
+        mocks.executeRequest.mockResolvedValue(response([{ Category: "A", Amount: 7 }]));
+        const onSave = vi.fn().mockResolvedValue({
+            dashboardId: "sales", widgetId: "sales-chart", chartType: "bar", revision: "b".repeat(64),
+            seriesColors: { Amount: "#ABCDEF" }, categoryColors: {},
+        });
+        render(
+            <ToastProvider><DashboardProvider>
+                <ChartWidget title="Sales" request={request} xField="Category" yField="Amount" chartType="bar"
+                    canCustomizeColors onSaveColors={onSave}
+                    colorConfiguration={{ dashboardId: "sales", widgetId: "sales-chart", chartType: "bar", revision: "a".repeat(64), seriesColors: { Amount: "#112233" }, categoryColors: {} }} />
+            </DashboardProvider></ToastProvider>
+        );
+        expect((await screen.findByTestId("chart-series")).getAttribute("data-color")).toBe("#112233");
+
+        expect(screen.getByRole("button", { name: "Customize" })).toBeTruthy();
+        fireEvent.click(screen.getByRole("button", { name: "Customize" }));
+        expect(screen.getByRole("dialog", { name: "Customize Chart Colors" })).toBeTruthy();
+        expect(document.querySelector(".chart-color-dialog__fields")).not.toBeNull();
+        expect(document.querySelector(".chart-color-dialog__actions")).not.toBeNull();
+        const picker = screen.getByLabelText("Amount color");
+        fireEvent.change(picker, { target: { value: "#abcdef" } });
+        expect(screen.getByTestId("chart-series").getAttribute("data-color")).toBe("#ABCDEF");
+        fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+        expect(screen.getByTestId("chart-series").getAttribute("data-color")).toBe("#112233");
+
+        fireEvent.click(screen.getByRole("button", { name: "Customize" }));
+        fireEvent.change(screen.getByLabelText("Amount color"), { target: { value: "#abcdef" } });
+        fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+        await waitFor(() => expect(onSave).toHaveBeenCalledWith({ Amount: "#ABCDEF" }, "a".repeat(64)));
+        expect(await screen.findByText("Chart colors saved successfully.")).toBeTruthy();
+
+        fireEvent.click(screen.getByRole("button", { name: "Customize" }));
+        fireEvent.click(screen.getByRole("button", { name: "Reset to Default" }));
+        fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+        await waitFor(() => expect(onSave).toHaveBeenLastCalledWith({}, "a".repeat(64)));
+    });
+
+    it("keeps pie category colors stable when categories appear or disappear", async () => {
+        mocks.executeRequest.mockResolvedValue(response([{ Category: "A", Amount: 7 }, { Category: "B", Amount: 3 }]));
+        render(<DashboardProvider><ChartWidget title="Pie" request={request} xField="Category" yField="Amount" chartType="pie" chartOptions={{ categoryColors: { A: "#010203", Missing: "#040506" } }} /></DashboardProvider>);
+        const cells = await screen.findAllByTestId("pie-cell");
+        expect(cells.map(cell => cell.getAttribute("data-color"))).toEqual(["#010203", "#2f9e8f"]);
     });
 });

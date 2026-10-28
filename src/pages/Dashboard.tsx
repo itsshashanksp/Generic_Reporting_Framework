@@ -1,6 +1,7 @@
 import { ResponsiveFilterPanel } from "../components/Filters";
 import {
     getDashboard,
+    getTargetedDashboardFilters,
     getPartialDateRanges,
     inheritDashboardDatabase,
     resolveDashboardWidgetDefinition,
@@ -33,12 +34,21 @@ import type { CSSProperties } from "react";
 
 import TableWidget from "../components/Dashboard/TableWidget";
 import ErrorState from "../components/Common/Error";
+import type { ChartColorConfiguration } from "../api/chartConfiguration";
 import useDocumentTitle from "../components/Layout/useDocumentTitle";
 
 export default function Dashboard({
     dashboardId = "item-dashboard",
+    chartColors = {},
+    canCustomizeCharts = false,
+    chartConfigurationError = "",
+    onSaveChartColors,
 }: {
     dashboardId?: string;
+    chartColors?: Record<string, ChartColorConfiguration>;
+    canCustomizeCharts?: boolean;
+    chartConfigurationError?: string;
+    onSaveChartColors?: (widgetId: string, colors: Record<string, string>, revision: string) => Promise<ChartColorConfiguration>;
 }) {
 
     const dashboardResult = useMemo(
@@ -100,6 +110,10 @@ export default function Dashboard({
         >
             <DashboardContent
                 dashboard={dashboard}
+                chartColors={chartColors}
+                canCustomizeCharts={canCustomizeCharts}
+                chartConfigurationError={chartConfigurationError}
+                onSaveChartColors={onSaveChartColors}
             />
         </DashboardProvider>
     );
@@ -107,8 +121,16 @@ export default function Dashboard({
 
 function DashboardContent({
     dashboard,
+    chartColors,
+    canCustomizeCharts,
+    chartConfigurationError,
+    onSaveChartColors,
 }: {
     dashboard: DashboardDefinition;
+    chartColors: Record<string, ChartColorConfiguration>;
+    canCustomizeCharts: boolean;
+    chartConfigurationError: string;
+    onSaveChartColors?: (widgetId: string, colors: Record<string, string>, revision: string) => Promise<ChartColorConfiguration>;
 }) {
 
     const [filterError, setFilterError] = useState("");
@@ -145,19 +167,22 @@ function DashboardContent({
     // before the backend registry fallback. Until a database is resolved no widget is mounted, so none
     // can silently query the backend default.
     const globalDatabase = useOptionalGlobalDatabase();
-    const databaseSelection = useDatabaseSelection(
-        dashboard.id,
-        dashboard.databaseSelection === true,
-        globalDatabase?.database
-    );
-    const selectedDatabase = databaseSelection.database;
-    const effectiveInheritedDatabase = dashboard.databaseSelection ? selectedDatabase : globalDatabase?.database ?? "";
     const hasUnpinnedWidget = visibleWidgets.some(widget => {
         const request = resolveDashboardWidgetRequest(widget, dashboard.filters ?? []);
         return request && request.database === undefined;
     });
+    const pageDatabaseSelection = globalDatabase
+        ? globalDatabase.pageDatabaseSelection && hasUnpinnedWidget
+        : dashboard.databaseSelection === true;
+    const databaseSelection = useDatabaseSelection(
+        `dashboard:${dashboard.id}`,
+        pageDatabaseSelection,
+        globalDatabase?.database
+    );
+    const selectedDatabase = databaseSelection.database;
+    const effectiveInheritedDatabase = pageDatabaseSelection ? selectedDatabase : globalDatabase?.database ?? "";
     const databaseBlocked = databaseSelection.status !== "off" && databaseSelection.status !== "ready"
-        || !dashboard.databaseSelection && hasUnpinnedWidget && globalDatabase?.resolving === true;
+        || !pageDatabaseSelection && hasUnpinnedWidget && globalDatabase?.resolving === true;
 
     // Widgets mount (and so request, refresh and export) only once the applied
     // filters complete every required filter, e.g. both dates of a range.
@@ -235,7 +260,7 @@ function DashboardContent({
                     {dashboard.description && <p>{dashboard.description}</p>}
                 </div>
                 <div className="dashboard-header__actions">
-                    {dashboard.databaseSelection && (
+                    {pageDatabaseSelection && (
                         <DatabaseSelect
                             value={selectedDatabase}
                             options={databaseSelection.options}
@@ -253,6 +278,8 @@ function DashboardContent({
                     </button>
                 </div>
             </header>
+
+            {chartConfigurationError && canCustomizeCharts && <p className="dashboard-widget-inline-error" role="alert">{chartConfigurationError}</p>}
 
             {dashboard.filters &&
                 dashboard.filters.length > 0 && (
@@ -323,7 +350,10 @@ function DashboardContent({
                             key={widget.id}
                             widget={widget}
                             dashboardId={dashboard.id}
-                            filterDefinitions={dashboard.filters ?? []}
+                            chartColorConfiguration={chartColors[widget.id]}
+                            canCustomizeChart={canCustomizeCharts}
+                            onSaveChartColors={onSaveChartColors}
+                            filterDefinitions={getTargetedDashboardFilters(dashboard.filters ?? [], widget.id)}
                             inheritedDatabase={effectiveInheritedDatabase}
                             columns={columns}
                             tabletColumns={tabletColumns}
@@ -346,6 +376,9 @@ const DashboardWidgetCard = memo(function DashboardWidgetCard({
     columns,
     tabletColumns,
     mobileColumns,
+    chartColorConfiguration,
+    canCustomizeChart,
+    onSaveChartColors,
 }: {
     widget: DashboardDefinition["widgets"][number];
     dashboardId: string;
@@ -354,6 +387,9 @@ const DashboardWidgetCard = memo(function DashboardWidgetCard({
     columns: number;
     tabletColumns: number;
     mobileColumns: number;
+    chartColorConfiguration?: ChartColorConfiguration;
+    canCustomizeChart: boolean;
+    onSaveChartColors?: (widgetId: string, colors: Record<string, string>, revision: string) => Promise<ChartColorConfiguration>;
 }) {
     const resolved = useMemo(() => {
         const definition = resolveDashboardWidgetDefinition(widget, filterDefinitions);
@@ -410,7 +446,9 @@ const DashboardWidgetCard = memo(function DashboardWidgetCard({
                     chartOptions={widget.chartOptions} showLegend={widget.showLegend} showTooltip={widget.showTooltip}
                     showGrid={widget.showGrid} showLabels={widget.showLabels} filterDefinitions={filterDefinitions}
                     filterFields={widget.filterFields} runtimeFilters={widget.runtimeFilters}
-                    runtimeFilterDisplay={widget.runtimeFilterDisplay} exportConfig={widget.export} cacheScope={cacheScope} />
+                    runtimeFilterDisplay={widget.runtimeFilterDisplay} exportConfig={widget.export} cacheScope={cacheScope}
+                    colorConfiguration={chartColorConfiguration} canCustomizeColors={canCustomizeChart}
+                    onSaveColors={onSaveChartColors ? (colors, revision) => onSaveChartColors(widget.id, colors, revision) : undefined} />
             )}
         </div>
     );

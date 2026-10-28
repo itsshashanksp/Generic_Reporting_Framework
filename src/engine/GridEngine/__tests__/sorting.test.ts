@@ -17,6 +17,12 @@ describe("compareGridValues", () => {
         expect([0, -2, 5, -10].sort(ascendingNumber)).toEqual([-10, -2, 0, 5]);
     });
 
+    it("sorts currency values and numeric strings numerically without changing raw values", () => {
+        const values = ["10.50", -2, "1.25", 0];
+        expect(values.sort((left, right) => compareGridValues(left, right, "currency")))
+            .toEqual([-2, 0, "1.25", "10.50"]);
+    });
+
     it("places null and empty numeric values after populated values", () => {
         expect([null, "", "10", "2"].sort(ascendingNumber)).toEqual(["2", "10", null, ""]);
     });

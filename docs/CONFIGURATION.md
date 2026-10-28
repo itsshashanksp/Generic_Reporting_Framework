@@ -73,7 +73,7 @@ Validated by `getReportValidationErrors` in `engine/ReportDefinitionEngine/valid
 | `grid` | no | object | Paging, row selection, grouping display |
 | `toolbar` | no | object | Toolbar switches |
 | `export` | no | object | Export formats and scope |
-| `databaseSelection` | no | `true` | Uses the authorized backend database list for runtime switching ([details](#runtime-database-selection)) |
+| `databaseSelection` | no | deprecated `true` | Accepted for compatibility. Selector visibility is controlled by the browser-local Settings toggle ([details](#runtime-database-selection)) |
 
 Defaults when omitted: toolbar `export`, `refresh`, and `saveReport` are all `true`; `grid.pagination` is `{ enabled: true, style: "modern", pageSize: 10, pageSizeOptions: [10, 25, 50, 100], showTotalRecords: true, showPageNumbers: true, showFirstLast: false }`; `grid.rowSelection` is `"single"`; each column is `visible: true`, `sortable: true`, `width: 150`.
 
@@ -96,7 +96,7 @@ Authored request filters and applied runtime filters are appended to the same fl
 | `width` | no | Positive integer (pixels); default 150 |
 | `visible` | no | `false` means AG Grid never creates the column, so the user cannot restore it |
 | `sortable` | no | Whether the header can be sorted |
-| `dataType` | no | `text`, `number`, `boolean`, `date`, `datetime`. Needed to format numeric strings and to sort them numerically. Date/datetime formatting does not convert timezones or change row data. `null` renders as an em dash |
+| `dataType` | no | `text`, `number`, `currency`, `boolean`, `date`, `datetime`. `currency` displays a symbol-free numeric value with exactly two decimals and preserves numeric sorting. Date/datetime formatting does not convert timezones or change row data. `null` renders as an em dash |
 
 ### Filters
 
@@ -184,10 +184,9 @@ The pagination values are positive integers. `rowSelection` is `single` or `mult
 }
 ```
 
-- `true` opts in. IDs and display names are never registered in frontend configuration; `metadata.databases` is the only option source.
+- Enable page switching once under **Settings → Database Selection → Enable Page-Level Database Selection**. IDs and display names are never registered in frontend configuration; `metadata.databases` is the only option source.
 - An authorized explicit report database initializes a report selector, followed by the browser-local global default and then the backend registry default. A manual page choice overrides that initial value. A switchable report may omit `request.database` / `queryDefinition.database`, because the selected backend ID is supplied at runtime.
-- Omit `databaseSelection` to keep the report on its configured database, as before. Reusable widget files accept the key but ignore it, and dashboard widgets reject it. Dashboards have their own dashboard-level form ([Dashboards](DASHBOARDS.md#database-selector)).
-- Any value other than `true`, including the former `{ databases: [...] }` shape, is rejected.
+- Legacy `databaseSelection: true` remains valid but is deprecated and does not override an explicitly disabled Settings toggle. Any other value remains invalid.
 - Example: [`examples/reports/database-selector-report.json`](../examples/reports/database-selector-report.json). Runtime behavior: [Feature behavior](FEATURES.md#database-selector).
 
 The Settings default fills only otherwise omitted database values. For a switchable report, explicit JSON initializes the selector ahead of the global and metadata defaults; a manual page choice then wins. On dashboards, explicit widget databases remain pinned, dashboard runtime selection controls unpinned widgets, and an authorized global value initializes that selector ahead of the metadata default. Dynamic filter requests follow the same effective database unless they specify their own.
@@ -208,9 +207,9 @@ Validated by `validateDashboard` in `engine/DashboardValidator.ts`. Allowed top-
 | `description` | no | string |
 | `layout` | no | positive integers `columns`, `tabletColumns`, `mobileColumns`; rendered defaults `12`/`6`/`1` |
 | `autoRefresh` | no | `{ enabled?: boolean, interval?: positive integer (ms) }`; `interval` is required when `enabled` is `true` |
-| `filters` | no | the same filter definitions as reports; default `[]`. They are shared by every widget |
+| `filters` | no | the same filter definitions as reports; default `[]`. Optional `targetGrids` limits a page filter to stable table/report widget IDs; omission preserves shared behavior |
 | `dateFilterBehavior` | no | `"required"` or `"optional"`; needs a shared `daterange` filter ([details](DASHBOARDS.md#date-filter-behavior)) |
-| `databaseSelection` | no | `true`: an authorized backend-driven database switch for widgets that name no database of their own ([details](DASHBOARDS.md#database-selector)) |
+| `databaseSelection` | no | deprecated `true`; accepted for compatibility but Settings controls selector visibility ([details](DASHBOARDS.md#database-selector)) |
 | `widgets` | yes | array. An empty array is allowed but produces a warning |
 
 ### Widgets
@@ -233,7 +232,9 @@ Every widget requires a unique `id`, a `type` (`report`, `stat`, `table`, `chart
 | `runtimeFilterDisplay` | all | Optional `"inline"` (default) or `"dialog"`. Dialog edits are drafts until Apply; Cancel, Close, or Escape discards unapplied edits |
 | `chartType`, `xField`, `yField`, `chartOptions`, `showLegend`, `showTooltip`, `showGrid`, `showLabels`, `export` | `chart` | `chartType` remains `bar` (default), `line`, or `pie`. `xField` and `yField` retain their category/value meaning. `chartOptions` controls modern presentation and Top-N behavior; legacy display flags remain supported |
 
-Chart `chartOptions` supports `appearance: "pie" | "donut"`, `orientation: "vertical" | "horizontal"`, `showLegend`, `showLabels`, `showDataLabels`, `showCenterTotal`, `showGrid`, `smooth`, `showPoints`, `topN` (1–100), `showOthers`, and `othersLabel`. Options apply only where meaningful: appearance/center total to pie, orientation to bar, and smooth/points to line.
+Chart `chartOptions` supports `appearance: "pie" | "donut"`, `orientation: "vertical" | "horizontal"`, `showLegend`, `showLabels`, `showDataLabels`, `showCenterTotal`, `showGrid`, `smooth`, `showPoints`, `topN` (1–100), `showOthers`, `othersLabel`, `seriesColors`, and `categoryColors`. Options apply only where meaningful: appearance/center total to pie, orientation to bar, and smooth/points to line.
+
+`seriesColors` maps a bar or line chart's stable `yField` to a six-digit HEX color. `categoryColors` maps pie/donut category values (the raw `xField` values) to colors. Both properties are optional; missing entries use the built-in palette. Application Administrators use the dedicated **Customize** action; exports remain under **Export** grouped into Chart Image and Chart Data. Saving uses the authorized configuration API and the dashboard/widget IDs, updates only the selected widget, and rejects stale revisions. Deployments must set `GENERIC_FRONTEND_DASHBOARD_CONFIG_DIR` on the backend API worker to the dashboard JSON directory. Reset removes the relevant override rather than storing default colors.
 
 Top-N aggregates duplicate category names, ranks signed aggregate values descending, and resolves ties by first appearance. Null/empty categories use `Uncategorized`; missing numeric values do not contribute. When enabled, `Others` is the signed sum of remaining categories, so positive and negative values may offset. The query response is never mutated and backend paging/filtering is unchanged.
 

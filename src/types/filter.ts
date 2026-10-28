@@ -70,5 +70,8 @@ export interface FilterDefinition {
 
     placeholder?: string;
 
+    /** Stable dashboard table/report widget ids that receive this page filter. */
+    targetGrids?: string[];
+
 }
 import type { UniversalQueryRequest } from "./api";

@@ -46,6 +46,9 @@ export default function ReportViewer() {
     useDocumentTitle(report?.title);
     const reportConfigurationError = getReportError(reportId || "");
     const globalDatabase = useOptionalGlobalDatabase();
+    const pageDatabaseSelection = globalDatabase
+        ? globalDatabase.pageDatabaseSelection
+        : report?.databaseSelection === true;
     // Runtime database (reports with databaseSelection): initialized from the
     // configured/global default when authorized, then the backend fallback.
     // Every report request
@@ -53,12 +56,12 @@ export default function ReportViewer() {
     // not resolved yet, and then nothing is requested.
     const configuredDatabase = resolveConfiguredDatabase(report?.request.database, globalDatabase?.database);
     const databaseSelection = useDatabaseSelection(
-        report?.id ?? "",
-        report?.databaseSelection === true,
+        `report:${report?.id ?? ""}`,
+        pageDatabaseSelection,
         configuredDatabase
     );
     const selectedDatabase = databaseSelection.database;
-    const inheritsGlobalDatabase = Boolean(report && !report.databaseSelection && !report.request.database);
+    const inheritsGlobalDatabase = Boolean(report && !pageDatabaseSelection && !report.request.database);
     const databaseBlocked = databaseSelection.status !== "off" && databaseSelection.status !== "ready"
         || inheritsGlobalDatabase && globalDatabase?.resolving === true;
     const [initialRequestState] = useState(() => {
@@ -66,13 +69,13 @@ export default function ReportViewer() {
             return { response: null, pageSize: 10 };
         }
         // A switchable report shows a cached result only for its resolved database.
-        if (report.databaseSelection && !selectedDatabase) {
+        if (pageDatabaseSelection && !selectedDatabase) {
             return { response: null, pageSize: report.grid.pagination.pageSize };
         }
 
         const pageSize = report.grid.pagination.pageSize;
         const requestPayload = {
-            ...withRuntimeDatabase(report.request, report.databaseSelection ? selectedDatabase : configuredDatabase),
+            ...withRuntimeDatabase(report.request, pageDatabaseSelection ? selectedDatabase : configuredDatabase),
             filters: Array.isArray(report.request.filters) ? report.request.filters : [],
             sort: report.request.sort ?? [],
             ...getReportPaginationParameters(report.grid.pagination, 1, pageSize),
@@ -99,7 +102,7 @@ export default function ReportViewer() {
     const [currentSorting, setCurrentSorting] = useState<SortDefinition[]>(report?.request.sort ?? []);
     const [appliedFilters, setAppliedFilters] = useState<Record<string, FilterValue>>({});
     const [savedReportsRevision, setSavedReportsRevision] = useState(0);
-    const databaseRef = useRef(report?.databaseSelection ? "" : configuredDatabase);
+    const databaseRef = useRef(pageDatabaseSelection ? "" : configuredDatabase);
     const previousGlobalDatabase = useRef(globalDatabase?.database ?? "");
     const requestSequence = useRef(0);
     const activeController = useRef<AbortController | null>(null);
@@ -111,9 +114,9 @@ export default function ReportViewer() {
         request: report?.request,
         filters: appliedFilters,
         sorting: currentSorting,
-        database: report?.databaseSelection ? selectedDatabase : configuredDatabase,
+        database: pageDatabaseSelection ? selectedDatabase : configuredDatabase,
         export: report?.export,
-    }), [report, appliedFilters, currentSorting, selectedDatabase, configuredDatabase]);
+    }), [report, appliedFilters, currentSorting, pageDatabaseSelection, selectedDatabase, configuredDatabase]);
 
     useEffect(() => {
         const previous = previousExportRequestKey.current;
@@ -134,11 +137,11 @@ export default function ReportViewer() {
         if (!report) {
             return;
         }
-        if (!report.databaseSelection && !report.request.database && globalDatabase?.resolving) {
+        if (!pageDatabaseSelection && !report.request.database && globalDatabase?.resolving) {
             return;
         }
         // Never fall back to the backend default by omitting the database.
-        if (report.databaseSelection && !databaseRef.current) {
+        if (pageDatabaseSelection && !databaseRef.current) {
             return;
         }
 
@@ -218,7 +221,7 @@ export default function ReportViewer() {
                 setIsGridLoading(false);
             }
         }
-    }, [report, globalDatabase?.resolving]);
+    }, [report, pageDatabaseSelection, globalDatabase?.resolving]);
 
     useEffect(() => {
         if (!report) {
@@ -226,11 +229,11 @@ export default function ReportViewer() {
         }
 
         // A switchable report loads once its database is resolved (below).
-        databaseRef.current = report.databaseSelection ? "" : configuredDatabase;
+        databaseRef.current = pageDatabaseSelection ? "" : configuredDatabase;
         const timer = window.setTimeout(() => {
             clearFilters();
             setAppliedFilters({});
-            if (!report.databaseSelection) {
+            if (!pageDatabaseSelection) {
                 void loadReport({}, 1, report.grid.pagination.pageSize, report.request.sort ?? []);
             }
         }, 0);
@@ -248,22 +251,22 @@ export default function ReportViewer() {
         const next = globalDatabase?.database ?? "";
         const previous = previousGlobalDatabase.current;
         previousGlobalDatabase.current = next;
-        if (!report || report.databaseSelection || report.request.database || globalDatabase?.resolving || next === previous) return;
+        if (!report || pageDatabaseSelection || report.request.database || globalDatabase?.resolving || next === previous) return;
         databaseRef.current = next;
         setResult(null);
         setLoadedReportId("");
         void loadReport(appliedFilters, currentPage, currentPageSize, currentSorting);
-    }, [globalDatabase?.database, globalDatabase?.resolving, report, appliedFilters, currentPage, currentPageSize, currentSorting, loadReport]);
+    }, [globalDatabase?.database, globalDatabase?.resolving, pageDatabaseSelection, report, appliedFilters, currentPage, currentPageSize, currentSorting, loadReport]);
 
     // First load of a switchable report, as soon as its database is resolved.
     useEffect(() => {
-        if (!report?.databaseSelection || !selectedDatabase || databaseRef.current) return;
+        if (!report || !pageDatabaseSelection || !selectedDatabase || databaseRef.current) return;
         databaseRef.current = selectedDatabase;
         const timer = window.setTimeout(() => {
             void loadReport({}, 1, report.grid.pagination.pageSize, report.request.sort ?? []);
         }, 0);
         return () => window.clearTimeout(timer);
-    }, [report, selectedDatabase, loadReport]);
+    }, [report, pageDatabaseSelection, selectedDatabase, loadReport]);
 
     const validateRequiredFilters = () => {
         const errors = report ? getFilterValueErrors(report.filters, filters) : [];
@@ -398,7 +401,7 @@ export default function ReportViewer() {
     };
 
     const handleExportAll = async (format: "csv" | "excel") => {
-        if (!report || (report.databaseSelection && !databaseRef.current)) {
+        if (!report || (pageDatabaseSelection && !databaseRef.current)) {
             return;
         }
 
@@ -494,7 +497,7 @@ export default function ReportViewer() {
                     <h1>{report.title}</h1>
                     {report.description && <p>{report.description}</p>}
                 </div>
-                {report.databaseSelection && (
+                {pageDatabaseSelection && (
                     <div className="report-page__header-actions">
                         <DatabaseSelect
                             value={selectedDatabase}
@@ -509,7 +512,7 @@ export default function ReportViewer() {
             {report.filters.length > 0 && (
                 <ResponsiveFilterPanel
                     filters={report.filters}
-                    database={report.databaseSelection ? selectedDatabase : configuredDatabase || undefined}
+                    database={pageDatabaseSelection ? selectedDatabase : configuredDatabase || undefined}
                     className="report-section"
                     error={filterError}
                     disabled={isGridLoading}

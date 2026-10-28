@@ -66,11 +66,7 @@ export interface ReportPresentationDefinition {
 
     filterLogic?: "AND" | "OR";
 
-    /**
-     * Enables backend-owned runtime database discovery and switching. The
-     * The configured report/global default is selected when authorized;
-     * otherwise the registry default (or first available result) is used.
-     */
+    /** @deprecated Selector visibility is controlled by the browser-local Settings toggle. */
     databaseSelection?: true;
 }
 

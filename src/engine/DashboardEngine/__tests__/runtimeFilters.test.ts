@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { validateDashboard } from "../../DashboardValidator";
-import { loadDashboardConfiguration, resolveDashboardWidgetDefinition } from "..";
+import { getTargetedDashboardFilters, loadDashboardConfiguration, mapWidgetFilters, resolveDashboardWidgetDefinition } from "..";
 import type { DashboardWidget } from "../../../types/widget";
+import type { FilterDefinition } from "../../../types/filter";
 
-const filter = (field = "Status") => ({ field, label: field, type: "text", operator: "equals" });
+const filter = (field = "Status"): FilterDefinition => ({ field, label: field, type: "text", operator: "equals" });
 const widget = (extra: Record<string, unknown> = {}): DashboardWidget => ({
     id: "orders", type: "stat", title: "Orders",
     request: { action: "select", source: { table: "Orders" }, fields: ["Status"] },
@@ -14,6 +15,36 @@ const widget = (extra: Record<string, unknown> = {}): DashboardWidget => ({
 const dashboard = (widgets: unknown[], filters: unknown[] = []) => ({ id: "runtime", title: "Runtime", filters, widgets });
 
 describe("dashboard widget runtimeFilters validation", () => {
+    it("targets page filters to stable table/report widget ids and omits their values elsewhere", () => {
+        const filters = [
+            filter("Status"),
+            { ...filter("BillDate"), targetGrids: ["orders"] },
+        ];
+        const targeted = getTargetedDashboardFilters(filters, "orders");
+        const untargeted = getTargetedDashboardFilters(filters, "other-grid");
+        expect(targeted.map(entry => entry.field)).toEqual(["Status", "BillDate"]);
+        expect(untargeted.map(entry => entry.field)).toEqual(["Status"]);
+        expect(mapWidgetFilters(untargeted, { Status: "open", BillDate: "2026-01-01" }).values)
+            .toEqual({ Status: "open" });
+    });
+
+    it("validates unknown, duplicate, empty, and non-grid target ids", () => {
+        const table = widget({ type: "table" });
+        expect(validateDashboard(dashboard([table], [{ ...filter(), targetGrids: ["orders"] }])).errors).toEqual([]);
+        const invalid = validateDashboard(dashboard([
+            table,
+            widget({ id: "total", type: "stat" }),
+        ], [
+            { ...filter("One"), targetGrids: [] },
+            { ...filter("Two"), targetGrids: ["orders", "orders"] },
+            { ...filter("Three"), targetGrids: ["missing"] },
+            { ...filter("Four"), targetGrids: ["total"] },
+        ])).errors.join(" ");
+        expect(invalid).toContain("must be a non-empty array");
+        expect(invalid).toContain("duplicate widget id");
+        expect(invalid).toContain("unknown widget id");
+        expect(invalid).toContain("not a table or report grid");
+    });
     it("accepts the existing filter definition language", () => {
         expect(validateDashboard(dashboard([widget()])).errors).toEqual([]);
     });
@@ -66,6 +97,21 @@ describe("dashboard widget runtimeFilters validation", () => {
             'Chart widget "orders" chartOptions topN must be a positive integer.',
             'Chart widget "orders" chartOptions smooth must be a boolean.',
             'Chart widget "orders" export formats must contain png, svg, csv, or excel.',
+        ]));
+    });
+
+    it("validates optional series and category chart colors without requiring them", () => {
+        const valid = widget({
+            type: "chart", xField: "Status", yField: "Total", chartType: "pie",
+            chartOptions: { seriesColors: { Total: "#2563EB" }, categoryColors: { Open: "#16A34A" } },
+        });
+        expect(validateDashboard(dashboard([valid])).errors).toEqual([]);
+        expect(validateDashboard(dashboard([widget({
+            type: "chart", xField: "Status", yField: "Total",
+            chartOptions: { seriesColors: {}, categoryColors: { Open: "blue" } },
+        })])).errors).toEqual(expect.arrayContaining([
+            'Chart widget "orders" chartOptions seriesColors must be a non-empty object.',
+            'Chart widget "orders" chartOptions categoryColors.Open must be a six-digit HEX color.',
         ]));
     });
 

@@ -7,6 +7,7 @@ export interface ExportMenuOption {
     label: string;
     onSelect: () => void;
     disabled?: boolean;
+    group?: string;
 }
 
 interface ExportMenuProps {
@@ -120,9 +121,11 @@ export default function ExportMenu({
                 }}
             />
             <div ref={menuRef} className="export-menu__items" data-placement={mobile ? "sheet" : "viewport"} role="menu" aria-label={menuLabel} style={mobile ? undefined : position} onKeyDown={handleKeyDown}>
-                {options.map((option, index) => (
+                {options.map((option, index) => <div className="export-menu__option" key={option.id}>
+                    {(index === 0 || options[index - 1].group !== option.group) && option.group && (
+                        <p className="export-menu__group" role="presentation">{option.group}</p>
+                    )}
                     <button
-                        key={option.id}
                         ref={element => { itemRefs.current[index] = element; }}
                         type="button"
                         role="menuitem"
@@ -135,7 +138,7 @@ export default function ExportMenu({
                     >
                         {option.label}
                     </button>
-                ))}
+                </div>)}
                 <button
                     type="button"
                     role="menuitem"

@@ -26,13 +26,13 @@ function TitleHarness({ title }: { title?: string }) {
 
 describe("application branding", () => {
     it("provides the default public application branding", () => {
-        expect(APPLICATION_BRANDING.applicationName).toBe("Generic Reporting Framework");
-        expect(APPLICATION_BRANDING.browserTitle).toBe("Generic Reporting Framework");
+        expect(APPLICATION_BRANDING.applicationName.trim()).not.toBe("");
+        expect(APPLICATION_BRANDING.browserTitle.trim()).not.toBe("");
     });
 
     it("builds default, custom, and fallback browser titles", () => {
         expect(getApplicationPageTitle()).toBe(APPLICATION_BRANDING.browserTitle);
-        expect(getApplicationPageTitle("Item Dashboard")).toBe("Item Dashboard | Generic Reporting Framework");
+        expect(getApplicationPageTitle("Item Dashboard")).toBe(`Item Dashboard | ${APPLICATION_BRANDING.browserTitle}`);
         expect(getApplicationPageTitle("Dashboard", customBranding)).toBe("Dashboard | Configured Browser Brand");
         expect(getApplicationPageTitle("  ", customBranding)).toBe("Configured Browser Brand");
     });
@@ -62,15 +62,15 @@ describe("application branding", () => {
 
     it("updates page titles without leaving a stale title after navigation or unmount", () => {
         const { rerender, unmount } = render(<TitleHarness title="Login" />);
-        expect(document.title).toBe("Login | Generic Reporting Framework");
+        expect(document.title).toBe(`Login | ${APPLICATION_BRANDING.browserTitle}`);
 
         rerender(<TitleHarness title="Settings" />);
-        expect(document.title).toBe("Settings | Generic Reporting Framework");
+        expect(document.title).toBe(`Settings | ${APPLICATION_BRANDING.browserTitle}`);
 
         rerender(<TitleHarness />);
-        expect(document.title).toBe("Generic Reporting Framework");
+        expect(document.title).toBe(APPLICATION_BRANDING.browserTitle);
 
         act(() => unmount());
-        expect(document.title).toBe("Generic Reporting Framework");
+        expect(document.title).toBe(APPLICATION_BRANDING.browserTitle);
     });
 });

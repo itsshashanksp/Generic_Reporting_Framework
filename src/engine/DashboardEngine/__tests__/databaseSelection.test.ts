@@ -25,12 +25,10 @@ describe("dashboard databaseSelection validation", () => {
         expect(validateDashboard(dashboard(databaseSelection)).errors).toEqual(["Dashboard databaseSelection must be true."]);
     });
 
-    it("rejects a selector that no widget would follow", () => {
+    it("keeps legacy configuration valid when no widget would follow the centralized selector", () => {
         const result = loadDashboardConfiguration(dashboard(true, [pinned]));
-        expect(result.status).toBe("invalid");
-        expect(result.validation.errors).toEqual([
-            "Dashboard databaseSelection needs at least one visible widget whose request names no database; widgets with their own database never follow the selection.",
-        ]);
+        expect(result.status).toBe("valid");
+        expect(result.validation.errors).toEqual([]);
     });
 
     it("counts a report-backed widget that names no database as inheriting", () => {

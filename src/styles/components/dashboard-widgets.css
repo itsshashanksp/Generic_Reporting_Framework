@@ -314,7 +314,100 @@
     padding: 3px 8px;
 }
 
+.dashboard-widget-inline-success {
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: #ecfdf5;
+    color: #166534;
+    font-size: 12px;
+}
+
+.chart-color-dialog .app-dialog__surface {
+    width: min(460px, calc(100vw - 32px));
+    height: min(680px, calc(100dvh - 32px));
+}
+
+.chart-color-dialog .app-dialog__body {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chart-color-dialog__fields {
+    display: grid;
+    min-height: 0;
+    flex: 1 1 auto;
+    align-content: start;
+    gap: 8px;
+    overflow-y: auto;
+    padding: 16px 20px;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+
+.chart-color-dialog__fields label {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+}
+
+.chart-color-dialog__fields label span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chart-color-dialog__fields input[type="color"] {
+    width: 48px;
+    height: 34px;
+    flex: 0 0 48px;
+    padding: 2px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.chart-color-dialog__actions {
+    display: flex;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 14px 20px;
+    border-top: 1px solid #e2e8f0;
+    background: #fff;
+}
+
 @media (max-width: 520px) {
+    .chart-color-dialog .app-dialog__surface {
+        width: calc(100vw - 20px);
+        height: calc(100dvh - 20px);
+    }
+
+    .chart-color-dialog__fields {
+        padding: 12px;
+    }
+
+    .chart-color-dialog__actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding: 12px;
+    }
+
+    .chart-color-dialog__actions .app-button:first-child {
+        grid-column: 1 / -1;
+    }
+
     .dashboard-widget-content__header h2 {
         overflow: visible;
         white-space: normal;

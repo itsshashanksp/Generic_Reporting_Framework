@@ -26,6 +26,14 @@ export function formatNumberForDisplay(value: number): string {
     });
 }
 
+export function formatCurrencyForDisplay(value: number): string {
+    if (!Number.isFinite(value)) return String(value);
+    return value.toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+}
+
 function formatDateForDisplay(value: string, includeTime: boolean): string {
     const match = ISO_DATE_TIME_PATTERN.exec(value.trim());
     if (!match) return value;
@@ -64,10 +72,14 @@ export function formatValueForDisplay(
 ): string {
     if (value === null) return NULL_DISPLAY_VALUE;
     if (value === undefined) return "";
-    if (typeof value === "number") return formatNumberForDisplay(value);
-    if (dataType === "number" && typeof value === "string" && value.trim() !== "") {
+    if (typeof value === "number") {
+        return dataType === "currency" ? formatCurrencyForDisplay(value) : formatNumberForDisplay(value);
+    }
+    if ((dataType === "number" || dataType === "currency") && typeof value === "string" && value.trim() !== "") {
         const numericValue = Number(value);
-        if (Number.isFinite(numericValue)) return formatNumberForDisplay(numericValue);
+        if (Number.isFinite(numericValue)) {
+            return dataType === "currency" ? formatCurrencyForDisplay(numericValue) : formatNumberForDisplay(numericValue);
+        }
     }
     if ((dataType === "date" || dataType === "datetime") && typeof value === "string") {
         return formatDateForDisplay(value, dataType === "datetime");

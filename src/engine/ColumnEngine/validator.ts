@@ -14,7 +14,7 @@ export function validateColumns(columns: ColumnDefinition[]): ColumnDefinition[]
 
         if (
             column.dataType !== undefined &&
-            !["text", "number", "boolean", "date", "datetime"].includes(column.dataType)
+            !["text", "number", "currency", "boolean", "date", "datetime"].includes(column.dataType)
         ) {
             throw new Error(`Invalid data type for column '${column.field}'.`);
         }

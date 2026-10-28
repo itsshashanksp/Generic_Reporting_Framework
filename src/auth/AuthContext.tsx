@@ -15,6 +15,7 @@ import { subscribeToAuthenticationRequired } from "../api/client";
 import { getRequestErrorMessage, isRequestAbort } from "../api/request";
 import { getCurrentSession, login as loginRequest, logout as logoutRequest } from "./authService";
 import type { AuthSessionSnapshot, AuthState } from "./authTypes";
+import { beginPageDatabaseSession, clearPageDatabaseSession, ensurePageDatabaseSession } from "../engine/DatabaseContext/pageDatabaseSession";
 
 interface AuthContextValue {
     state: AuthState;
@@ -49,9 +50,17 @@ export function AuthProvider({ children, enabled = true }: { children: ReactNode
     const authChannel = useRef<BroadcastChannel | null>(null);
 
     const updateState = useCallback((next: AuthState) => {
+        const previous = stateRef.current;
         if (identityKey(stateRef.current) !== identityKey(next)) {
             clearRequestCache();
             removeUnscopedSavedReports();
+        }
+        if (next.status !== "authenticated") {
+            clearPageDatabaseSession();
+        } else if (previous.status === "authenticated" && previous.user.username !== next.user.username) {
+            beginPageDatabaseSession();
+        } else {
+            ensurePageDatabaseSession();
         }
         stateRef.current = next;
         setState(next);
@@ -140,6 +149,7 @@ export function AuthProvider({ children, enabled = true }: { children: ReactNode
     }, [enabled, applySessionSnapshot, updateState]);
 
     const login = useCallback(async (username: string, password: string) => {
+        beginPageDatabaseSession();
         const snapshot = await loginRequest(username, password);
         if (!snapshot.authenticated) {
             throw new Error("The API did not establish an authenticated session.");

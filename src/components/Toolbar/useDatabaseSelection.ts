@@ -1,6 +1,7 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDatabaseRegistry } from "../../engine/DatabaseContext";
 import type { DatabaseOption } from "../../engine/DatabaseContext";
+import { readPageDatabaseSelection, removePageDatabaseSelection, savePageDatabaseSelection } from "../../engine/DatabaseContext/pageDatabaseSession";
 export type { DatabaseOption } from "../../engine/DatabaseContext";
 
 export type DatabaseSelectionStatus =
@@ -37,12 +38,14 @@ export interface DatabaseSelection {
  * 3. A failed or denied listing has no fallback options and sends no data
  *    request. Frontend configuration is never treated as authorization.
  *
- * `scopeKey` (the report or dashboard id) resets the user's choice.
+ * `scopeKey` includes the page kind and stable id, so report/dashboard ids
+ * cannot collide. Choices are bound to the current authenticated session.
  */
 export function useDatabaseSelection(scopeKey: string, enabled: boolean, initialDatabase = ""): DatabaseSelection {
     const registry = useDatabaseRegistry(enabled);
-    const [choice, setChoice] = useState<{ scopeKey: string; database: string } | null>(null);
-    const chosen = choice?.scopeKey === scopeKey && registry.usable.includes(choice.database) ? choice.database : "";
+    const [, refreshStoredChoice] = useState(0);
+    const stored = enabled ? readPageDatabaseSelection(scopeKey) : "";
+    const chosen = registry.usable.includes(stored) ? stored : "";
     const configured = registry.usable.includes(initialDatabase) ? initialDatabase : "";
     const database = chosen || configured || registry.fallback;
     const status: DatabaseSelectionStatus = !enabled
@@ -54,8 +57,17 @@ export function useDatabaseSelection(scopeKey: string, enabled: boolean, initial
                 : registry.status === "failed" ? "listing-failed" : "empty";
 
     const select = useCallback((next: string) => {
-        if (registry.usable.includes(next)) setChoice({ scopeKey, database: next });
+        if (registry.usable.includes(next)) {
+            savePageDatabaseSelection(scopeKey, next);
+            refreshStoredChoice(value => value + 1);
+        }
     }, [registry.usable, scopeKey]);
+
+    useEffect(() => {
+        if (enabled && registry.status === "ready" && stored && !registry.usable.includes(stored)) {
+            removePageDatabaseSelection(scopeKey);
+        }
+    }, [enabled, registry.status, registry.usable, scopeKey, stored]);
 
     return {
         status,

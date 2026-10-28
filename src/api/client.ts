@@ -15,6 +15,7 @@ const csrfProtectedActions = new Set([
     "auth.frontendUsers.delete",
     "auth.frontendUsers.changePassword",
     "auth.frontendUsers.assignRole",
+    "configuration.chartColors.update",
     "insert",
     "update",
     "delete",

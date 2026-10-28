@@ -11,6 +11,19 @@ const presentation = {
 };
 
 describe("report request contract alignment", () => {
+    it("accepts currency columns while rejecting unsupported data types", () => {
+        const report = {
+            ...presentation,
+            queryDefinition: { format: "sql", resource: "reports/customer" },
+            columns: [{ field: "TotalAmount", header: "Total", dataType: "currency" }],
+        };
+        expect(getReportValidationErrors(report)).toEqual([]);
+        expect(getReportValidationErrors({
+            ...report,
+            columns: [{ field: "TotalAmount", header: "Total", dataType: "money" }],
+        })).toContain("Report column at index 0 dataType is invalid.");
+    });
+
     it("accepts optional column alignment and rejects unsupported values", () => {
         const report = {
             ...presentation,

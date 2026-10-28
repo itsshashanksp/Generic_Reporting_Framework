@@ -125,6 +125,7 @@ async function switchTo(database: string) {
 
 describe("Dashboard database selector", () => {
     beforeEach(() => {
+        sessionStorage.clear();
         clearRequestCache();
         gridProps.mockClear();
         exportRowsCSVMock.mockReset();

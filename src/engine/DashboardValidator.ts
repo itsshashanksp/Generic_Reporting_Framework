@@ -148,6 +148,7 @@ export function validateDashboard(
                 );
             }
         );
+        validateFilterTargets(dashboard.filters, dashboard.widgets, errors);
     }
 
     return {
@@ -327,7 +328,7 @@ function validateFilters(
 
         rejectUnknownProperties(
             filter,
-            ["field", "label", "type", "operator", "options", "dynamicOptions", "visible", "required", "placeholder"],
+            ["field", "label", "type", "operator", "options", "dynamicOptions", "visible", "required", "placeholder", "targetGrids"],
             label,
             errors
         );
@@ -373,6 +374,22 @@ function validateFilters(
         }
 
         validateOptionalString(filter.placeholder, `${label} placeholder`, errors);
+        if (filter.targetGrids !== undefined) {
+            if (!Array.isArray(filter.targetGrids) || filter.targetGrids.length === 0) {
+                errors.push(`${label} targetGrids must be a non-empty array of widget ids.`);
+            } else {
+                const targets = new Set<string>();
+                filter.targetGrids.forEach((target, targetIndex) => {
+                    if (!isNonEmptyString(target)) {
+                        errors.push(`${label} targetGrids at index ${targetIndex} must be a non-empty widget id.`);
+                    } else if (targets.has(target)) {
+                        errors.push(`${label} targetGrids contains duplicate widget id "${target}".`);
+                    } else {
+                        targets.add(target);
+                    }
+                });
+            }
+        }
         if (filter.dynamicOptions !== undefined) {
             if (!isRecord(filter.dynamicOptions)) {
                 errors.push(`${label} dynamicOptions must be an object.`);
@@ -407,6 +424,28 @@ function validateFilters(
             );
         }
     }
+}
+
+function validateFilterTargets(filters: unknown, widgets: unknown[], errors: string[]) {
+    if (!Array.isArray(filters)) return;
+
+    const widgetTypesById = new Map<string, unknown>();
+    widgets.forEach(widget => {
+        if (isRecord(widget) && isNonEmptyString(widget.id)) widgetTypesById.set(widget.id, widget.type);
+    });
+
+    filters.forEach((filter, index) => {
+        if (!isRecord(filter) || !Array.isArray(filter.targetGrids)) return;
+        filter.targetGrids.forEach(target => {
+            if (!isNonEmptyString(target)) return;
+            const type = widgetTypesById.get(target);
+            if (type === undefined) {
+                errors.push(`Dashboard filter at index ${index} targetGrids references unknown widget id "${target}".`);
+            } else if (type !== "table" && type !== "report") {
+                errors.push(`Dashboard filter at index ${index} targetGrids references "${target}", which is not a table or report grid.`);
+            }
+        });
+    });
 }
 
 function validateWidget(
@@ -693,7 +732,7 @@ function validateWidget(
 function validateChartOptions(value: unknown, label: string, errors: string[]) {
     if (value === undefined) return;
     if (!isRecord(value)) return errors.push(`${label} must be an object.`);
-    const keys = ["appearance", "orientation", "showLegend", "showLabels", "showDataLabels", "showCenterTotal", "showGrid", "smooth", "showPoints", "topN", "showOthers", "othersLabel"];
+    const keys = ["appearance", "orientation", "showLegend", "showLabels", "showDataLabels", "showCenterTotal", "showGrid", "smooth", "showPoints", "topN", "showOthers", "othersLabel", "seriesColors", "categoryColors"];
     rejectUnknownProperties(value, keys, label, errors);
     if (value.appearance !== undefined && value.appearance !== "pie" && value.appearance !== "donut") errors.push(`${label} appearance must be pie or donut.`);
     if (value.orientation !== undefined && value.orientation !== "vertical" && value.orientation !== "horizontal") errors.push(`${label} orientation must be vertical or horizontal.`);
@@ -703,6 +742,21 @@ function validateChartOptions(value: unknown, label: string, errors: string[]) {
     if (value.topN !== undefined) validatePositiveInteger(value.topN, `${label} topN`, errors);
     if (typeof value.topN === "number" && value.topN > 100) errors.push(`${label} topN must be at most 100.`);
     validateOptionalString(value.othersLabel, `${label} othersLabel`, errors);
+    validateChartColors(value.seriesColors, `${label} seriesColors`, errors);
+    validateChartColors(value.categoryColors, `${label} categoryColors`, errors);
+}
+
+function validateChartColors(value: unknown, label: string, errors: string[]) {
+    if (value === undefined) return;
+    if (!isRecord(value) || Object.keys(value).length === 0) {
+        errors.push(`${label} must be a non-empty object.`);
+        return;
+    }
+    if (Object.keys(value).length > 100) errors.push(`${label} must contain at most 100 colors.`);
+    Object.entries(value).forEach(([key, color]) => {
+        if (!key.trim() || key.length > 200) errors.push(`${label} keys must be non-empty strings of at most 200 characters.`);
+        if (typeof color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(color)) errors.push(`${label}.${key} must be a six-digit HEX color.`);
+    });
 }
 
 function validateChartExport(value: unknown, label: string, errors: string[]) {

@@ -29,7 +29,7 @@ export function compareGridValues(
         return leftIsEmpty ? 1 : -1;
     }
 
-    if (dataType === "number") {
+    if (dataType === "number" || dataType === "currency") {
         const leftNumber = toFiniteNumber(left);
         const rightNumber = toFiniteNumber(right);
 

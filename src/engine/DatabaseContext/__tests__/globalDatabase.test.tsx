@@ -45,8 +45,10 @@ function Probe() {
         <span data-testid="database">{global.database}</span>
         <span data-testid="configured">{global.configuredDatabase}</span>
         <span data-testid="status">{global.registry.status}</span>
+        <span data-testid="page-selection">{String(global.pageDatabaseSelection)}</span>
         <button onClick={() => global.save("archive")}>Save archive</button>
         <button onClick={() => global.save("")}>Use backend default</button>
+        <button onClick={() => global.savePageDatabaseSelection(true)}>Enable page selection</button>
     </>;
 }
 
@@ -72,6 +74,18 @@ describe("GlobalDatabaseProvider", () => {
 
         render(<GlobalDatabaseProvider><Probe /></GlobalDatabaseProvider>);
         await waitFor(() => expect(screen.getByTestId("database").textContent).toBe("archive"));
+    });
+
+    it("persists the page selector toggle per authenticated user", async () => {
+        const first = render(<GlobalDatabaseProvider><Probe /></GlobalDatabaseProvider>);
+        await waitFor(() => expect(screen.getByTestId("status").textContent).toBe("ready"));
+        expect(screen.getByTestId("page-selection").textContent).toBe("false");
+        screen.getByRole("button", { name: "Enable page selection" }).click();
+        await waitFor(() => expect(screen.getByTestId("page-selection").textContent).toBe("true"));
+        first.unmount();
+
+        render(<GlobalDatabaseProvider><Probe /></GlobalDatabaseProvider>);
+        await waitFor(() => expect(screen.getByTestId("page-selection").textContent).toBe("true"));
     });
 
     it.each(["Bad Id", "offline", "unknown"])("ignores invalid or unavailable stored database %s", async database => {

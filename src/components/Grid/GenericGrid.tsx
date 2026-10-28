@@ -48,7 +48,7 @@ function formatGridValue(value: unknown, dataType?: ColumnDefinition["dataType"]
 }
 
 function getColumnAlignment(column: Pick<ColumnDefinition, "align" | "dataType">): ColumnAlignment {
-    return column.align ?? (column.dataType === "number" ? "right" : "left");
+    return column.align ?? (column.dataType === "number" || column.dataType === "currency" ? "right" : "left");
 }
 
 export default function GenericGrid({

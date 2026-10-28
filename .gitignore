@@ -68,5 +68,7 @@ coverage/
 /src/config/reports/**/*.json
 /src/config/dashboards/*.json
 /src/config/dashboards/**/*.json
+/src/config/dashboards/.chart-configuration.lock
+/src/config/dashboards/*.json.io.lock
 /src/config/widgets/*.json
 /src/config/widgets/**/*.json

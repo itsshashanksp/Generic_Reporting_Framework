@@ -128,6 +128,7 @@ async function switchTo(database: string, expectedRow = `${database} item`) {
 
 describe("ReportViewer database selector", () => {
     beforeEach(() => {
+        sessionStorage.clear();
         clearRequestCache();
         gridProps.mockClear();
         exportRowsCSVMock.mockReset();

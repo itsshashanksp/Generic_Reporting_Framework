@@ -8,10 +8,10 @@ export interface ApplicationBranding {
 }
 
 export const APPLICATION_BRANDING: Readonly<ApplicationBranding> = {
-    applicationName: "Generic Reporting Framework",
-    shortName: "Generic Framework",
-    browserTitle: "Generic Reporting Framework",
-    description: "Generic SQL Reporting and Dashboard Framework",
+    applicationName: "Sigma Reporting Framework",
+    shortName: "Sigma Framework",
+    browserTitle: "Sigma Reporting Framework",
+    description: "Sigma SQL Reporting and Dashboard Framework",
     logoUrl: null,
     favicon: "/favicon.svg",
 } as const;

@@ -192,7 +192,7 @@ function validateColumns(value: unknown, errors: string[], required: boolean) {
         optionalBoolean(entry.visible, `${label} visible`, errors);
         optionalBoolean(entry.sortable, `${label} sortable`, errors);
         positiveInteger(entry.width, `${label} width`, errors);
-        if (entry.dataType !== undefined && !["text", "number", "boolean", "date", "datetime"].includes(String(entry.dataType))) {
+        if (entry.dataType !== undefined && !["text", "number", "currency", "boolean", "date", "datetime"].includes(String(entry.dataType))) {
             errors.push(`${label} dataType is invalid.`);
         }
         if (entry.align !== undefined && !["left", "center", "right"].includes(String(entry.align))) {

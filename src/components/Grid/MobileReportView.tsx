@@ -30,7 +30,7 @@ function formatValue(value: unknown, dataType?: ColumnDataType) {
     if (value === null) return NULL_DISPLAY_VALUE;
     if (value === undefined) return "";
     if (typeof value === "number") return formatNumberForDisplay(value);
-    if (dataType === "number" && typeof value === "string") return formatValueForDisplay(value, dataType);
+    if ((dataType === "number" || dataType === "currency") && typeof value === "string") return formatValueForDisplay(value, dataType);
     if ((dataType === "date" || dataType === "datetime") && typeof value === "string") {
         return formatValueForDisplay(value, dataType);
     }
@@ -146,7 +146,7 @@ export default function MobileReportView({
                             {detailColumns.length > 0 && (
                                 <dl className="mobile-report-record__details">
                                     {detailColumns.map(column => (
-                                        <div key={column.field} className={`mobile-report-record__field mobile-report-record__field--${column.align ?? (column.dataType === "number" ? "right" : "left")}`}>
+                                        <div key={column.field} className={`mobile-report-record__field mobile-report-record__field--${column.align ?? (column.dataType === "number" || column.dataType === "currency" ? "right" : "left")}`}>
                                             <dt>{column.headerName}</dt>
                                             <dd>{formatValue(row[column.field], column.dataType)}</dd>
                                         </div>

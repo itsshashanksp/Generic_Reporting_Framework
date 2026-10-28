@@ -39,6 +39,25 @@ describe("formatValueForDisplay", () => {
         expect(formatValueForDisplay(value, "number")).toBe(expected);
     });
 
+    it.each([
+        [190, "190.00"],
+        [2850, "2,850.00"],
+        [95.5, "95.50"],
+        [1234.567, "1,234.57"],
+        [-1520, "-1,520.00"],
+        ["1200", "1,200.00"],
+        [0, "0.00"],
+    ])("formats currency value %s with exactly two decimals", (value, expected) => {
+        expect(formatValueForDisplay(value, "currency")).toBe(expected);
+    });
+
+    it("handles empty and invalid currency values without NaN or Infinity formatting", () => {
+        expect(formatValueForDisplay(null, "currency")).toBe("—");
+        expect(formatValueForDisplay(undefined, "currency")).toBe("");
+        expect(formatValueForDisplay("", "currency")).toBe("");
+        expect(formatValueForDisplay("not-a-number", "currency")).toBe("not-a-number");
+    });
+
     it.each(["7019901585", "7259381613", "ABC123"])(
         "preserves untyped/text value %s",
         value => {

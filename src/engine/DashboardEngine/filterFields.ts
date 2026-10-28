@@ -20,16 +20,33 @@ export function mapWidgetFilters(
     appliedValues: Record<string, unknown>,
     filterFields?: WidgetFilterFields
 ): WidgetFilters {
+    const applicableFields = new Set(sharedFilters.map(filter => filter.field));
+    const applicableValues = Object.fromEntries(
+        Object.entries(appliedValues).filter(([field]) => applicableFields.has(field))
+    );
+    const withoutTargets = sharedFilters.map(filter => {
+        const definition = { ...filter };
+        delete definition.targetGrids;
+        return definition as FilterDefinition;
+    });
     if (!filterFields || Object.keys(filterFields).length === 0) {
-        return { filters: sharedFilters, values: appliedValues };
+        return { filters: withoutTargets, values: applicableValues };
     }
     const fieldFor = (field: string) =>
         Object.prototype.hasOwnProperty.call(filterFields, field) ? filterFields[field] : field;
+    const asWidgetFilter = (filter: FilterDefinition): FilterDefinition => {
+        return { ...filter, field: fieldFor(filter.field) };
+    };
 
     return {
-        filters: sharedFilters.map(filter => ({ ...filter, field: fieldFor(filter.field) })),
+        filters: withoutTargets.map(asWidgetFilter),
         values: Object.fromEntries(
-            Object.entries(appliedValues).map(([field, value]) => [fieldFor(field), value])
+            Object.entries(applicableValues).map(([field, value]) => [fieldFor(field), value])
         ),
     };
+}
+
+/** Page filters applicable to one stable dashboard grid id. */
+export function getTargetedDashboardFilters(filters: FilterDefinition[], widgetId: string) {
+    return filters.filter(filter => !filter.targetGrids || filter.targetGrids.includes(widgetId));
 }

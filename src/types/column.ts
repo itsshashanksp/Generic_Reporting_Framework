@@ -1,4 +1,4 @@
-export type ColumnDataType = "text" | "number" | "boolean" | "date" | "datetime";
+export type ColumnDataType = "text" | "number" | "currency" | "boolean" | "date" | "datetime";
 export type ColumnAlignment = "left" | "center" | "right";
 
 export interface ColumnDefinition {

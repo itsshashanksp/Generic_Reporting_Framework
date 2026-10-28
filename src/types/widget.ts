@@ -38,6 +38,10 @@ export interface ChartOptions {
     topN?: number;
     showOthers?: boolean;
     othersLabel?: string;
+    /** Stable data-series keys mapped to six-digit HEX colors. */
+    seriesColors?: Record<string, string>;
+    /** Stable pie category values mapped to six-digit HEX colors. */
+    categoryColors?: Record<string, string>;
 }
 
 export type WidgetRequest = DataRequest;

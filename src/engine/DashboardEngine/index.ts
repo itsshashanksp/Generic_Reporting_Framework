@@ -6,7 +6,7 @@ export {
     resolveDashboardWidgetColumns,
     resolveDashboardWidgetRequest,
 } from "./dashboardLoader";
-export { mapWidgetFilters } from "./filterFields";
+export { getTargetedDashboardFilters, mapWidgetFilters } from "./filterFields";
 export { inheritDashboardDatabase, requestInheritsDatabase } from "./databaseInheritance";
 export { applyDateFilterBehavior, dashboardDateFilterBehaviors, getPartialDateRanges } from "./dateFilterBehavior";
 

@@ -3,11 +3,10 @@
   "title": "Orders (Database Selector)",
   "description": "Runs the same illustrative DemoOrders query on an authorized database selected at runtime.",
   "request": { "action": "select", "source": { "table": "DemoOrders" }, "fields": ["OrderId", "CustomerName", "Amount"] },
-  "databaseSelection": true,
   "columns": [
     { "field": "OrderId", "header": "Order", "dataType": "number" },
     { "field": "CustomerName", "header": "Customer" },
-    { "field": "Amount", "header": "Amount", "dataType": "number" }
+    { "field": "Amount", "header": "Amount", "dataType": "currency" }
   ],
   "sort": [{ "field": "OrderId", "direction": "ASC" }],
   "filters": [{ "field": "CustomerName", "label": "Customer", "type": "text" }],
