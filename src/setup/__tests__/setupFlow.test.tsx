@@ -19,6 +19,7 @@ import { ApplicationRoutes } from "../../router/AppRouter";
 import { ApiClientError } from "../../api/client";
 import { SetupProvider, useSetup } from "../SetupContext";
 import { AuthProvider } from "../../auth";
+import { APPLICATION_BRANDING } from "../../config/branding";
 
 function setupResponse(initialized: boolean) {
     return {
@@ -64,6 +65,8 @@ describe("first-time setup flow", () => {
         executeRequestMock.mockResolvedValue(setupResponse(false));
         renderFlow("/report/item");
         expect(await screen.findByRole("heading", { name: "User setup is required." })).not.toBeNull();
+        expect(screen.getByText(APPLICATION_BRANDING.applicationName)).not.toBeNull();
+        expect(document.title).toBe(`Setup Required | ${APPLICATION_BRANDING.browserTitle}`);
         expect(screen.getByText("Please complete user setup in the Backend Admin Console.")).not.toBeNull();
         expect(screen.queryByRole("form")).toBeNull();
         expect(executeRequestMock).toHaveBeenCalledTimes(1);

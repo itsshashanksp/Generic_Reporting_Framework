@@ -6,6 +6,7 @@ import Sidebar from "../Sidebar";
 import type { NavigationItem } from "../../../types/navigation";
 import { AuthProvider, useAuth } from "../../../auth";
 import { APPLICATION_VERSION } from "../../../config/version";
+import { APPLICATION_BRANDING } from "../../../config/branding";
 
 const { logoutMock } = vi.hoisted(() => ({ logoutMock: vi.fn() }));
 
@@ -55,7 +56,7 @@ describe("Sidebar", () => {
 
     it("renders branding and nested report navigation", () => {
         renderSidebar();
-        expect(screen.getAllByText("Generic Reporting Framework")).toHaveLength(2);
+        expect(screen.getAllByText(APPLICATION_BRANDING.applicationName)).toHaveLength(2);
         fireEvent.click(screen.getByRole("button", { name: "Reports" }));
         expect(screen.getByRole("link", { name: "Customer Report" })).toBeTruthy();
         expect(screen.getByRole("link", { name: "Item Report" })).toBeTruthy();

@@ -14,6 +14,8 @@ import { getFirstDashboardRoute, loadConfiguredNavigation } from "../engine/Navi
 import { getReportIds } from "../engine/ReportEngine/reportLoader";
 import { useSetup } from "../setup";
 import { useAuth } from "../auth";
+import BrandIdentity from "../components/Layout/BrandIdentity";
+import useDocumentTitle from "../components/Layout/useDocumentTitle";
 
 const homeRoute = getFirstDashboardRoute(loadConfiguredNavigation({
     reportIds: getReportIds(),
@@ -89,11 +91,13 @@ export function ApplicationRoutes() {
 }
 
 function EmptyApplicationHome() {
+    useDocumentTitle();
     return <main className="dashboard"><ErrorState title="No dashboards configured" message="Copy or create local report, dashboard, widget, and menu configuration to activate this framework." /></main>;
 }
 
 function SetupRequired() {
-    return <main className="setup-page"><section className="setup-card" aria-labelledby="setup-required-title"><div className="setup-card__heading"><p className="setup-card__eyebrow">Generic Reporting Framework</p><h1 id="setup-required-title">User setup is required.</h1><p>Please complete user setup in the Backend Admin Console.</p></div></section></main>;
+    useDocumentTitle("Setup Required");
+    return <main className="setup-page"><section className="setup-card" aria-labelledby="setup-required-title"><div className="setup-card__heading"><BrandIdentity className="setup-card__eyebrow application-brand" /><h1 id="setup-required-title">User setup is required.</h1><p>Please complete user setup in the Backend Admin Console.</p></div></section></main>;
 }
 
 function ProtectedRoute() {
@@ -117,13 +121,18 @@ function LoginRoute() {
         return <ApplicationSkeleton label="Restoring your session…" />;
     }
     if (state.status === "authenticated" && !state.user.frontendAccess) {
-        return <div className="setup-page"><section className="setup-card">
-            <h1>Frontend access is not assigned</h1>
-            <p>This identity may have backend access, but it cannot use this application.</p>
-            <button className="app-button app-button--primary" type="button" onClick={() => void logout()}>Sign out</button>
-        </section></div>;
+        return <AccessUnavailable onLogout={() => void logout()} />;
     }
     return state.status === "authenticated" ? <Navigate to="/" replace /> : <Login />;
+}
+
+function AccessUnavailable({ onLogout }: { onLogout: () => void }) {
+    useDocumentTitle("Access Unavailable");
+    return <div className="setup-page"><section className="setup-card">
+        <h1>Frontend access is not assigned</h1>
+        <p>This identity may have backend access, but it cannot use this application.</p>
+        <button className="app-button app-button--primary" type="button" onClick={onLogout}>Sign out</button>
+    </section></div>;
 }
 
 function AdminRoute() {

@@ -33,6 +33,7 @@ import type { ApiResponse } from "../types/api";
 import type { FilterValue } from "../engine/FilterContext/FilterContext";
 import type { SavedReport } from "../types/savedReport";
 import type { SortDefinition } from "../types/report";
+import useDocumentTitle from "../components/Layout/useDocumentTitle";
 
 
 export default function ReportViewer() {
@@ -42,6 +43,7 @@ export default function ReportViewer() {
     const savedReportsOwner = useAuthenticatedUsername();
     const { api } = useGrid();
     const report = getReport(reportId || "") ?? null;
+    useDocumentTitle(report?.title);
     const reportConfigurationError = getReportError(reportId || "");
     const globalDatabase = useOptionalGlobalDatabase();
     // Runtime database (reports with databaseSelection): initialized from the

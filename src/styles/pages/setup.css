@@ -39,6 +39,15 @@
     text-transform: uppercase;
 }
 
+.setup-card__eyebrow.application-brand {
+    align-items: center;
+}
+
+.setup-card__eyebrow .application-brand-logo {
+    max-width: min(180px, 45%);
+    height: 32px;
+}
+
 .setup-form {
     display: grid;
     gap: 18px;

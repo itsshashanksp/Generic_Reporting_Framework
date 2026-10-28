@@ -5,8 +5,10 @@ import { useState } from "react";
 import { useAuth } from "../auth";
 import { useOptionalGlobalDatabase } from "../engine/DatabaseContext";
 import Skeleton from "../components/Common/Skeleton";
+import useDocumentTitle from "../components/Layout/useDocumentTitle";
 
 export default function Settings() {
+    useDocumentTitle("Settings");
     const { state } = useAuth();
     const globalDatabase = useOptionalGlobalDatabase();
     const isAdmin = state.status === "authenticated" && state.user.frontendRole === "application-administrator";

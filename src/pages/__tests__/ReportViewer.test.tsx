@@ -6,6 +6,7 @@ import { FilterProvider } from "../../engine/FilterContext";
 import { GridProvider } from "../../engine/GridContext";
 import { clearRequestCache } from "../../engine/RequestCache";
 import ReportViewer from "../ReportViewer";
+import { APPLICATION_BRANDING } from "../../config/branding";
 
 const { executeRequestMock, genericGridProps } = vi.hoisted(() => ({
     executeRequestMock: vi.fn(),
@@ -77,6 +78,7 @@ describe("ReportViewer runtime", () => {
 
     it("preserves existing rows and shows updating feedback while filtered results load", async () => {
         renderReport();
+        expect(document.title).toBe(`Item Report | ${APPLICATION_BRANDING.browserTitle}`);
         await screen.findByTestId("report-grid");
         let resolve!: (value: { success: boolean; message: string; data: Record<string, unknown>[]; meta: Record<string, number> }) => void;
         executeRequestMock.mockReturnValueOnce(new Promise(next => { resolve = next; }));

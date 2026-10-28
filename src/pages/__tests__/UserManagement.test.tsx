@@ -47,6 +47,7 @@ import {
   getAssignableFrontendRoles,
   type FrontendCapabilities,
 } from "../../config/frontendCapabilities";
+import { APPLICATION_BRANDING } from "../../config/branding";
 
 const createdAt = "2026-01-01T00:00:00+00:00";
 const users = [
@@ -135,6 +136,7 @@ describe("User Management", () => {
   it("renders one Role column and safe profile fields", async () => {
     renderPage();
     await screen.findByText("Operator");
+    expect(document.title).toBe(`User Management | ${APPLICATION_BRANDING.browserTitle}`);
     const headings = screen
       .getAllByRole("columnheader")
       .map((item) => item.textContent);

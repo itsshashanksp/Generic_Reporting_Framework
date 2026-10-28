@@ -20,6 +20,7 @@ vi.mock("../../pages/UserManagement", () => ({ default: () => <div>User manageme
 import { ApplicationRoutes } from "../../router/AppRouter";
 import { SetupProvider, useSetup } from "../../setup";
 import { AuthProvider } from "../AuthContext";
+import { APPLICATION_BRANDING } from "../../config/branding";
 
 function response(data: Record<string, unknown>) {
     return {
@@ -56,7 +57,10 @@ function prepareSession(authenticated: boolean, isAdmin = true) {
 }
 
 describe("protected application routes", () => {
-    beforeEach(() => executeRequestMock.mockReset());
+    beforeEach(() => {
+        executeRequestMock.mockReset();
+        document.title = APPLICATION_BRANDING.browserTitle;
+    });
 
     it.each(["/", "/dashboard/item-dashboard", "/report/item", "/settings", "/settings/users"])(
         "redirects unauthenticated direct navigation to login: %s",
@@ -64,6 +68,8 @@ describe("protected application routes", () => {
             prepareSession(false);
             renderRoute(path);
             expect(await screen.findByRole("heading", { name: "Sign in" })).not.toBeNull();
+            expect(screen.getByText(APPLICATION_BRANDING.applicationName)).not.toBeNull();
+            expect(document.title).toBe(`Login | ${APPLICATION_BRANDING.browserTitle}`);
             expect(screen.queryByTestId("application-layout")).toBeNull();
         }
     );
@@ -79,6 +85,7 @@ describe("protected application routes", () => {
         expect(screen.queryByText("Dashboard route")).toBeNull();
         expect(screen.queryByText("Report route")).toBeNull();
         expect(screen.queryByRole("heading", { name: "Sign in" })).toBeNull();
+        expect(document.title).toBe(APPLICATION_BRANDING.browserTitle);
     });
 
     it("allows authenticated users to open application routes", async () => {
@@ -113,6 +120,7 @@ describe("protected application routes", () => {
         expect(await screen.findByRole("heading", { name: "Settings" })).not.toBeNull();
         expect(screen.getByText("No settings are available for your account")).not.toBeNull();
         expect(screen.queryByRole("link", { name: /Open User Management/ })).toBeNull();
+        expect(document.title).toBe(`Settings | ${APPLICATION_BRANDING.browserTitle}`);
     });
 
     it("lets an admin navigate from Settings to User Management", async () => {

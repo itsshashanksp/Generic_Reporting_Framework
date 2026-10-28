@@ -6,6 +6,8 @@ import { ApiClientError } from "../api/client";
 import { useAuth } from "../auth";
 import { APPLICATION_VERSION } from "../config/version";
 import AccessibleDialog from "../components/Common/AccessibleDialog";
+import BrandIdentity from "../components/Layout/BrandIdentity";
+import useDocumentTitle from "../components/Layout/useDocumentTitle";
 
 function loginErrorMessage(error: unknown): string {
     const fallback = getRequestErrorMessage(error, "Unable to sign in.");
@@ -23,6 +25,7 @@ function loginErrorMessage(error: unknown): string {
 }
 
 export default function Login() {
+    useDocumentTitle("Login");
     const { login, error: sessionError } = useAuth();
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -54,7 +57,7 @@ export default function Login() {
         <main className="setup-page login-page">
             <section className="setup-card login-card" aria-labelledby="login-title">
                 <div className="setup-card__heading">
-                    <p className="setup-card__eyebrow">Generic Reporting Framework</p>
+                    <BrandIdentity className="setup-card__eyebrow application-brand" />
                     <p className="login-card__welcome">Welcome back</p>
                     <h1 id="login-title">Sign in</h1>
                     <p>Continue to your reporting workspace.</p>

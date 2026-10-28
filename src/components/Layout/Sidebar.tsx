@@ -8,6 +8,7 @@ import { getDashboardIds } from "../../engine/DashboardEngine";
 import type { NavigationIcon, NavigationItem } from "../../types/navigation";
 import { useAuth } from "../../auth";
 import { APPLICATION_VERSION } from "../../config/version";
+import BrandIdentity from "./BrandIdentity";
 
 const SIDEBAR_STORAGE_KEY = "generic-report-sidebar-collapsed";
 const REPORTS_STORAGE_KEY = "generic-report-sidebar-reports-expanded";
@@ -136,7 +137,7 @@ export default function Sidebar({ items = configuredItems }: { items?: Navigatio
             >
                 <Menu aria-hidden="true" />
             </button>
-            <strong>Generic Reporting Framework</strong>
+            <BrandIdentity className="mobile-app-header__brand application-brand" />
         </header>
 
         <button
@@ -159,7 +160,7 @@ export default function Sidebar({ items = configuredItems }: { items?: Navigatio
 
             <div className="app-sidebar__header">
                 <div className="app-sidebar__brand">
-                    <span className="app-sidebar__brand-name"><strong>Generic Reporting Framework</strong></span>
+                    <BrandIdentity className="app-sidebar__brand-name application-brand" />
                 </div>
 
                 <button

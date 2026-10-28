@@ -28,6 +28,7 @@ import {
   getAssignableFrontendRoles,
   type FrontendCapabilities,
 } from "../config/frontendCapabilities";
+import useDocumentTitle from "../components/Layout/useDocumentTitle";
 
 const MINIMUM_PASSWORD_LENGTH = 12;
 type Modal = "create" | "edit" | "password" | null;
@@ -70,6 +71,7 @@ export default function UserManagement({
 }: {
   capabilities?: Readonly<FrontendCapabilities>;
 }) {
+  useDocumentTitle("User Management");
   const { state: authentication } = useAuth();
   const currentUsername =
     authentication.status === "authenticated"

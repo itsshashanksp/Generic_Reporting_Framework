@@ -33,6 +33,7 @@ import type { CSSProperties } from "react";
 
 import TableWidget from "../components/Dashboard/TableWidget";
 import ErrorState from "../components/Common/Error";
+import useDocumentTitle from "../components/Layout/useDocumentTitle";
 
 export default function Dashboard({
     dashboardId = "item-dashboard",
@@ -44,6 +45,7 @@ export default function Dashboard({
         () => getDashboard(dashboardId),
         [dashboardId]
     );
+    useDocumentTitle(dashboardResult.status === "valid" ? dashboardResult.dashboard.title : null);
 
     if (
         dashboardResult.status ===

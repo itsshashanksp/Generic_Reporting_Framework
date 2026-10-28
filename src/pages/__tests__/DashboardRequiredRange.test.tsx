@@ -6,6 +6,7 @@ import purchaseDashboard from "../../../tests/fixtures/runtime-config/dashboards
 import { FilterProvider } from "../../engine/FilterContext";
 import { clearRequestCache } from "../../engine/RequestCache";
 import Dashboard from "../Dashboard";
+import { APPLICATION_BRANDING } from "../../config/branding";
 
 const { executeRequestMock } = vi.hoisted(() => ({ executeRequestMock: vi.fn() }));
 
@@ -57,6 +58,8 @@ describe("Bill dashboard required date range", () => {
     it("sends no report request, refresh or export before a range is searched", () => {
         renderBill();
 
+        const dashboardTitle = screen.getByRole("heading", { level: 1 }).textContent;
+        expect(document.title).toBe(`${dashboardTitle} | ${APPLICATION_BRANDING.browserTitle}`);
         expect(screen.getByRole("status").textContent).toBe(GATE);
         expect(screen.queryByTestId("table-grid")).toBeNull();
         expect(exportMenus()).toHaveLength(0);
