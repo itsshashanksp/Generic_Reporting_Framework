@@ -27,6 +27,7 @@ import Skeleton from "../Common/Skeleton";
 import GenericGrid from "../Grid/GenericGrid";
 import ReportTableFrame from "../Grid/ReportTableFrame";
 import { getDashboardTableViewportHeight } from "./tableViewport";
+import { resolveTableLayout } from "../Grid/tableLayout";
 import WidgetFilterController, { type WidgetFilterControls } from "./WidgetFilterController";
 
 
@@ -371,21 +372,25 @@ function TableWidgetContent({
         [configuredColumns]
     );
     const inferredGridColumns = useMemo<ColumnDefinition[]>(
-        () => visibleRows.length > 0
-            ? Object.keys(visibleRows[0]).map(field => ({
+        () => {
+            const columnRows = visibleRows.length > 0 ? visibleRows : rows;
+            return columnRows.length > 0
+            ? Object.keys(columnRows[0]).map(field => ({
                 field,
                 header: formatHeader(field),
                 visible: true,
                 sortable: true,
-                width: getColumnWidth(field, visibleRows),
+                width: getColumnWidth(field, columnRows),
             }))
-            : [],
-        [visibleRows]
+            : [];
+        },
+        [visibleRows, rows]
     );
     const columns = configuredGridColumns.length > 0
         ? configuredGridColumns
         : inferredGridColumns;
     const handleSort = (sorting: SortState[]) => {
+        if (isViewLoading) return;
         const nextSort = sorting[0] ?? null;
         if (sort?.field === nextSort?.field && sort?.direction === nextSort?.direction) {
             return;
@@ -493,6 +498,28 @@ function TableWidgetContent({
             : visibleTotalRows === 0
                 ? "empty"
                 : "success";
+    const preserveGridDuringLoading = tableState === "loading" && rows.length > 0 && columns.length > 0;
+    const tableViewportHeight = getDashboardTableViewportHeight(activePageSize);
+    const tableLayout = resolveTableLayout(activePageSize, { fixedViewport: true });
+    const renderGrid = (gridRows: Record<string, unknown>[], gridTotalRows: number) => (
+        <GenericGrid
+            rows={gridRows}
+            columns={columns}
+            gridConfig={gridConfig}
+            height={tableViewportHeight}
+            initialSort={request.sort}
+            serverPagination={{
+                page: currentPage,
+                pageSize: activePageSize,
+                totalRows: gridTotalRows,
+                disabled: isViewLoading,
+                onPageChange: page => setPageState({ queryKey, page }),
+                onPageSizeChange: handlePageSize,
+            }}
+            onSortChange={handleSort}
+            busy={tableState === "loading"}
+        />
+    );
 
     return (
         <ReportTableFrame
@@ -526,8 +553,17 @@ function TableWidgetContent({
                 <div className="dashboard-table__inline-error" role="alert">{exportError}</div>
             )}
 
-            {tableState === "loading" && (
-                <Skeleton kind="table" label="Loading table data…" columns={columns.length || 4} rows={Math.min(activePageSize, 6)} />
+            {tableState === "loading" && !preserveGridDuringLoading && (
+                <div className="dashboard-table__skeleton" style={{ height: tableViewportHeight + 58 }}>
+                    <Skeleton kind="table" label="Loading table data…" columns={columns.length || 4} tableColumns={columns} rows={activePageSize} tableLayout={tableLayout} showPagination />
+                </div>
+            )}
+
+            {preserveGridDuringLoading && (
+                <div className="dashboard-table__loading-grid" aria-label="Updating table data">
+                    {renderGrid(rows, totalRows)}
+                    <Skeleton kind="table" label="Updating table data…" columns={columns.length || 4} tableColumns={columns} rows={activePageSize} tableLayout={tableLayout} showPagination />
+                </div>
             )}
 
             {tableState === "error" && (
@@ -566,22 +602,7 @@ function TableWidgetContent({
                             </button>
                         </div>
                     )}
-                    <GenericGrid
-                        rows={visibleRows}
-                        columns={columns}
-                        gridConfig={gridConfig}
-                        height={getDashboardTableViewportHeight(activePageSize)}
-                        initialSort={request.sort}
-                        serverPagination={{
-                            page: currentPage,
-                            pageSize: activePageSize,
-                            totalRows: visibleTotalRows,
-                            disabled: isViewLoading,
-                            onPageChange: page => setPageState({ queryKey, page }),
-                            onPageSizeChange: handlePageSize,
-                        }}
-                        onSortChange={handleSort}
-                    />
+                    {renderGrid(visibleRows, visibleTotalRows)}
                 </>
             )}
         </ReportTableFrame>

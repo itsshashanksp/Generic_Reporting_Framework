@@ -89,9 +89,8 @@
 }
 
 .report-table-frame__loading {
-    position: absolute;
+    position: relative;
     z-index: 10;
-    inset: 0;
     display: flex;
     align-items: stretch;
     justify-content: stretch;
@@ -100,24 +99,17 @@
 }
 
 .report-table-frame__updating {
-    position: absolute;
+    position: relative;
     z-index: 10;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 9px;
-    background: rgb(255 255 255 / 76%);
-    color: #475569;
-    font-size: 13px;
-    font-weight: 650;
+    display: block;
+    overflow: hidden;
+    background: #fff;
     cursor: progress;
 }
 
-.report-table-frame__updating .ui-spinner {
-    width: 18px;
-    height: 18px;
-    border-width: 2px;
+.report-table-frame__updating > .skeleton {
+    height: 100%;
+    min-height: 0;
 }
 
 @media (max-width: 720px) {

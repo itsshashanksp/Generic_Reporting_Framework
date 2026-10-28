@@ -6,6 +6,7 @@ import Empty from "../Common/Empty";
 import ErrorState from "../Common/Error";
 import Skeleton from "../Common/Skeleton";
 import ReportTableFrame from "../Grid/ReportTableFrame";
+import { resolveTableLayout } from "../Grid/tableLayout";
 import ReportDataGrid from "./ReportDataGrid";
 import { useDashboardWidgetRequest } from "./useDashboardWidgetRequest";
 import WidgetFilterController, { type WidgetFilterControls } from "./WidgetFilterController";
@@ -74,8 +75,19 @@ function ReportWidgetContent({
             {!report && (
                 <ErrorState title="Report unavailable" message="The configured report was not found." compact />
             )}
-            {report && loading && rows.length === 0 && (
-                <Skeleton kind="table" label="Loading report widget…" columns={report.columns.length || 4} />
+            {report && loading && (
+                <Skeleton
+                    kind="table"
+                    label="Loading report widget…"
+                    columns={report.columns.length || 4}
+                    tableColumns={report.columns}
+                    rows={report.grid.pagination.pageSize}
+                    tableLayout={resolveTableLayout(report.grid.pagination.pageSize, {
+                        fixedViewport: true,
+                        pagination: report.grid.pagination.enabled,
+                    })}
+                    showPagination={report.grid.pagination.enabled}
+                />
             )}
             {report && !loading && error && rows.length === 0 && (
                 <ErrorState title="Unable to load report widget" message={error} onRetry={retry} compact />
@@ -89,7 +101,7 @@ function ReportWidgetContent({
             {report && !loading && !error && rows.length === 0 && (
                 <Empty title="No records found" message="The current filters returned no data." compact />
             )}
-            {report && rows.length > 0 && (
+            {report && !loading && rows.length > 0 && (
                 <ReportDataGrid
                     rows={rows}
                     columns={report.columns}

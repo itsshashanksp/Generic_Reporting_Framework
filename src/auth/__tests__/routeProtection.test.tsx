@@ -75,6 +75,9 @@ describe("protected application routes", () => {
         renderRoute("/report/item");
 
         expect(await screen.findByText("Restoring your session…")).not.toBeNull();
+        expect(screen.getByRole("status", { name: "Restoring your session…" }).classList.contains("app-initialization")).toBe(true);
+        expect(screen.queryByText("Dashboard route")).toBeNull();
+        expect(screen.queryByText("Report route")).toBeNull();
         expect(screen.queryByRole("heading", { name: "Sign in" })).toBeNull();
     });
 

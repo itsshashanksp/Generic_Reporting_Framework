@@ -280,6 +280,22 @@
     text-align: center;
 }
 
+.dashboard-table__skeleton,
+.dashboard-table__loading-grid {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.dashboard-table__loading-grid > .skeleton {
+    position: relative;
+    z-index: 8;
+    min-height: 0;
+    background: #fff;
+}
+
 .dashboard-widget-inline-error {
     display: flex;
     align-items: center;

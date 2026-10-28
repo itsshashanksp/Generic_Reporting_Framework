@@ -200,6 +200,39 @@ describe("dashboard widgets", () => {
         expect(genericGridProps.mock.calls.at(-1)?.[0].height).toBe(466);
     });
 
+    it("preserves the dashboard grid height and pagination footprint while a new page loads", async () => {
+        const nextPage = deferred<{ success: boolean; message: string; data: Record<string, unknown>[]; meta: { page: number; pageSize: number; totalRows: number; rowsReturned: number; executionTime: number } }>();
+        executeRequestMock
+            .mockResolvedValueOnce({
+                success: true,
+                message: "ok",
+                data: Array.from({ length: 10 }, (_, index) => ({ Item_Code: String(index + 1) })),
+                meta: { page: 1, pageSize: 10, totalRows: 20, rowsReturned: 10, executionTime: 1 },
+            })
+            .mockReturnValueOnce(nextPage.promise);
+        render(<DashboardProvider><TableWidget title="Paged items" request={request} pageSize={10} /></DashboardProvider>);
+        await waitFor(() => expect(genericGridProps).toHaveBeenCalled());
+        const initialHeight = genericGridProps.mock.calls.at(-1)?.[0].height;
+
+        act(() => genericGridProps.mock.calls.at(-1)?.[0].serverPagination.onPageChange(2));
+        expect(await screen.findByRole("status", { name: "Updating table data…" })).toBeTruthy();
+        expect(genericGridProps.mock.calls.at(-1)?.[0].height).toBe(initialHeight);
+        expect(document.querySelector(".dashboard-table__loading-grid")).toBeTruthy();
+        expect(genericGridProps.mock.calls.at(-1)?.[0].serverPagination.disabled).toBe(true);
+        expect(genericGridProps.mock.calls.at(-1)?.[0].busy).toBe(true);
+        expect(document.querySelector(".dashboard-table__loading-grid .skeleton__table-row--header")).toBeTruthy();
+        expect(document.querySelector(".dashboard-table__loading-grid .skeleton__pagination")).toBeTruthy();
+
+        await act(async () => nextPage.resolve({
+            success: true,
+            message: "ok",
+            data: Array.from({ length: 10 }, (_, index) => ({ Item_Code: String(index + 11) })),
+            meta: { page: 2, pageSize: 10, totalRows: 20, rowsReturned: 10, executionTime: 1 },
+        }));
+        await waitFor(() => expect(screen.queryByRole("status", { name: "Updating table data…" })).toBeNull());
+        expect(genericGridProps.mock.calls.at(-1)?.[0].height).toBe(initialHeight);
+    });
+
     it("gives modern pagination page size precedence over legacy widget settings", async () => {
         executeRequestMock.mockResolvedValue({
             success: true,

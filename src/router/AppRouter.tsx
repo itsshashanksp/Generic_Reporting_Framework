@@ -8,7 +8,7 @@ import Login from "../pages/Login";
 import UserManagement from "../pages/UserManagement";
 import Settings from "../pages/Settings";
 import ErrorState from "../components/Common/Error";
-import Loading from "../components/Common/Loading";
+import ApplicationSkeleton from "../components/Common/ApplicationSkeleton";
 import { getDashboardIds } from "../engine/DashboardEngine";
 import { getFirstDashboardRoute, loadConfiguredNavigation } from "../engine/NavigationEngine";
 import { getReportIds } from "../engine/ReportEngine/reportLoader";
@@ -32,7 +32,7 @@ export function ApplicationRoutes() {
     const { state, refresh } = useSetup();
 
     if (state.status === "loading") {
-        return <div className="setup-page"><Loading label="Checking application setup…" /></div>;
+        return <ApplicationSkeleton label="Checking application setup…" />;
     }
     if (state.status === "error") {
         return (
@@ -99,7 +99,7 @@ function SetupRequired() {
 function ProtectedRoute() {
     const { state } = useAuth();
     if (state.status === "loading") {
-        return <div className="setup-page"><Loading label="Restoring your session…" /></div>;
+        return <ApplicationSkeleton label="Restoring your session…" />;
     }
     if (state.status === "unauthenticated") {
         return <Navigate to="/login" replace />;
@@ -114,7 +114,7 @@ function ProtectedRoute() {
 function LoginRoute() {
     const { state, logout } = useAuth();
     if (state.status === "loading") {
-        return <div className="setup-page"><Loading label="Restoring your session…" /></div>;
+        return <ApplicationSkeleton label="Restoring your session…" />;
     }
     if (state.status === "authenticated" && !state.user.frontendAccess) {
         return <div className="setup-page"><section className="setup-card">

@@ -17,6 +17,7 @@ import type { GridConfig, SortDefinition } from "../../types/report";
 import type { ColumnAlignment, ColumnDefinition } from "../../types/column";
 import MobileReportView from "./MobileReportView";
 import Pagination from "./Pagination";
+import { GRID_HEADER_HEIGHT, GRID_ROW_HEIGHT } from "./tableLayout";
 
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
@@ -37,6 +38,7 @@ interface Props {
         onPageSizeChange: (pageSize: number) => void;
     };
     onSortChange?: (sort: Array<{ field: string; direction: "ASC" | "DESC" }>) => void;
+    busy?: boolean;
 }
 
 const EMPTY_SORTS: SortDefinition[] = [];
@@ -58,6 +60,7 @@ export default function GenericGrid({
     initialSort = EMPTY_SORTS,
     serverPagination,
     onSortChange,
+    busy = false,
 }: Props) {
 
     const { setApi } = useGrid();
@@ -253,7 +256,11 @@ export default function GenericGrid({
 
     return (
 
-        <div className={`universal-grid${usesNaturalHeight ? " universal-grid--natural-height" : ""}`}>
+        <div
+            className={`universal-grid${usesNaturalHeight ? " universal-grid--natural-height" : ""}`}
+            aria-hidden={busy || undefined}
+            inert={busy || undefined}
+        >
             <div
                 className={gridTheme.className}
                 style={{
@@ -279,8 +286,8 @@ export default function GenericGrid({
                 columnDefs={columnDefs}
 
                 defaultColDef={defaultColumn}
-                headerHeight={44}
-                rowHeight={42}
+                headerHeight={GRID_HEADER_HEIGHT}
+                rowHeight={GRID_ROW_HEIGHT}
                 domLayout={usesNaturalHeight ? "autoHeight" : "normal"}
                 enableCellTextSelection
 

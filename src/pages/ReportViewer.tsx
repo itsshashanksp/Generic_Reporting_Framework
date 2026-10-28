@@ -9,11 +9,11 @@ import {
 import { useAuthenticatedUsername } from "../auth";
 import Empty from "../components/Common/Empty";
 import ErrorState from "../components/Common/Error";
-import Loading from "../components/Common/Loading";
 import Skeleton from "../components/Common/Skeleton";
 import usePullToRefresh from "../components/Common/usePullToRefresh";
 import { ResponsiveFilterPanel } from "../components/Filters";
 import GenericGrid from "../components/Grid/GenericGrid";
+import { resolveTableLayout } from "../components/Grid/tableLayout";
 import ReportTableFrame from "../components/Grid/ReportTableFrame";
 import SavedReports from "../components/SavedReports/SavedReports";
 import { ReportToolbar } from "../components/Toolbar";
@@ -93,6 +93,7 @@ export default function ReportViewer() {
     const [isExporting, setIsExporting] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [currentPageSize, setCurrentPageSize] = useState(initialRequestState.pageSize);
+    const [loadingPageSize, setLoadingPageSize] = useState<number | null>(null);
     const [currentSorting, setCurrentSorting] = useState<SortDefinition[]>(report?.request.sort ?? []);
     const [appliedFilters, setAppliedFilters] = useState<Record<string, FilterValue>>({});
     const [savedReportsRevision, setSavedReportsRevision] = useState(0);
@@ -173,6 +174,7 @@ export default function ReportViewer() {
 
         const controller = new AbortController();
         activeController.current = controller;
+        setLoadingPageSize(activePageSize);
         setIsGridLoading(true);
         setGridError("");
 
@@ -210,6 +212,7 @@ export default function ReportViewer() {
             setGridError(message);
         } finally {
             if (sequence === requestSequence.current) {
+                setLoadingPageSize(null);
                 setIsGridLoading(false);
             }
         }
@@ -553,7 +556,7 @@ export default function ReportViewer() {
             >
                     {databaseBlocked ? (
                         databaseSelection.status === "loading" || globalDatabase?.resolving
-                            ? <div className="report-table-frame__loading"><Loading label="Loading databases…" compact /></div>
+                            ? <div className="report-table-frame__loading"><Skeleton kind="table" label="Loading databases…" columns={report.columns.length || 4} tableColumns={report.columns} rows={currentPageSize} tableLayout={resolveTableLayout(currentPageSize, { pagination: report.grid.pagination.enabled })} showPagination={report.grid.pagination.enabled} /></div>
                             : databaseSelection.status === "listing-failed"
                                 ? <ErrorState title="Database list unavailable" message={databaseSelection.error} onRetry={databaseSelection.retry} />
                                 : <ErrorState title="No database available" message="No authorized, enabled and available database was returned." onRetry={databaseSelection.retry} />
@@ -580,6 +583,7 @@ export default function ReportViewer() {
                                 onPageSizeChange: pageSize => void loadReport(appliedFilters, 1, pageSize, currentSorting),
                             }}
                             onSortChange={handleSortChange}
+                            busy={isGridLoading}
                         />
                     )}
 
@@ -596,13 +600,12 @@ export default function ReportViewer() {
 
                     {isGridLoading && rows.length === 0 && (
                         <div className="report-table-frame__loading">
-                            <Skeleton kind="table" label="Loading report data…" columns={report.columns.length || 4} />
+                            <Skeleton kind="table" label="Loading report data…" columns={report.columns.length || 4} tableColumns={report.columns} rows={loadingPageSize ?? currentPageSize} tableLayout={resolveTableLayout(loadingPageSize ?? currentPageSize, { pagination: report.grid.pagination.enabled })} showPagination={report.grid.pagination.enabled} />
                         </div>
                     )}
                     {isGridLoading && rows.length > 0 && (
-                        <div className="report-table-frame__updating" role="status" aria-live="polite">
-                            <span className="ui-spinner" aria-hidden="true" />
-                            <span>Updating results...</span>
+                        <div className="report-table-frame__updating">
+                            <Skeleton kind="table" label="Updating results..." columns={report.columns.length || 4} tableColumns={report.columns} rows={loadingPageSize ?? currentPageSize} tableLayout={resolveTableLayout(loadingPageSize ?? currentPageSize, { pagination: report.grid.pagination.enabled })} showPagination={report.grid.pagination.enabled} />
                         </div>
                     )}
                     </>)}

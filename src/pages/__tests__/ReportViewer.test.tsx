@@ -7,7 +7,10 @@ import { GridProvider } from "../../engine/GridContext";
 import { clearRequestCache } from "../../engine/RequestCache";
 import ReportViewer from "../ReportViewer";
 
-const { executeRequestMock } = vi.hoisted(() => ({ executeRequestMock: vi.fn() }));
+const { executeRequestMock, genericGridProps } = vi.hoisted(() => ({
+    executeRequestMock: vi.fn(),
+    genericGridProps: vi.fn(),
+}));
 
 vi.mock("../../api/request", async () => ({
     // Checked-in reports/dashboards may enable databaseSelection, which first lists databases.
@@ -17,19 +20,29 @@ vi.mock("../../api/request", async () => ({
 }));
 
 vi.mock("../../components/Grid/GenericGrid", () => ({
-    default: ({ columns, initialSort, onSortChange }: {
+    default: ({ columns, initialSort, onSortChange, serverPagination, busy }: {
         columns: Array<{ field: string }>;
         initialSort?: Array<{ field: string; direction: "ASC" | "DESC" }>;
         onSortChange?: (sort: Array<{ field: string; direction: "ASC" | "DESC" }>) => void;
-    }) => <div
-        data-testid="report-grid"
-        data-columns={columns.map(column => column.field).join(",")}
-        data-initial-sort={JSON.stringify(initialSort ?? [])}
-    >
-        <button type="button" onClick={() => onSortChange?.([{ field: "Item_Desc", direction: "DESC" }])}>
-            Sort test grid
-        </button>
-    </div>,
+        serverPagination?: { onPageSizeChange: (pageSize: number) => void };
+        busy?: boolean;
+    }) => {
+        genericGridProps({ serverPagination, busy });
+        return (
+            <div
+                data-testid="report-grid"
+                data-columns={columns.map(column => column.field).join(",")}
+                data-initial-sort={JSON.stringify(initialSort ?? [])}
+                aria-hidden={busy || undefined}
+                inert={busy || undefined}
+            >
+                <button type="button" onClick={() => onSortChange?.([{ field: "Item_Desc", direction: "DESC" }])}>
+                    Sort test grid
+                </button>
+                <button type="button" onClick={() => serverPagination?.onPageSizeChange(100)}>Show 100</button>
+            </div>
+        );
+    },
 }));
 
 function renderReport(reportId = "item") {
@@ -59,6 +72,7 @@ describe("ReportViewer runtime", () => {
             data: [{ Item_Code: "A1", Item_Desc: "Alpha", Item_MRP: 100 }],
             meta: { page: 1, pageSize: 25, totalRows: 1, rowsReturned: 1, executionTime: 2 },
         });
+        genericGridProps.mockClear();
     });
 
     it("preserves existing rows and shows updating feedback while filtered results load", async () => {
@@ -72,6 +86,11 @@ describe("ReportViewer runtime", () => {
 
         expect(screen.getByTestId("report-grid")).toBeTruthy();
         expect((await screen.findByText("Updating results...")).closest("[role='status']")).toBeTruthy();
+        expect(document.querySelector(".report-table-frame__updating .skeleton__table")).toBeTruthy();
+        expect(document.querySelector(".report-table-frame__updating .ui-spinner")).toBeNull();
+        expect(screen.getByTestId("report-grid").getAttribute("aria-hidden")).toBe("true");
+        expect(document.querySelector(".report-table-frame__updating .skeleton__table-row--header")).toBeTruthy();
+        expect(document.querySelector(".report-table-frame__updating .skeleton__pagination")).toBeTruthy();
         resolve({
             success: true,
             message: "ok",
@@ -80,6 +99,28 @@ describe("ReportViewer runtime", () => {
         });
         await waitFor(() => expect(screen.queryByText("Updating results...")).toBeNull());
         expect(screen.getByTestId("report-grid")).toBeTruthy();
+    });
+
+    it("updates the full skeleton immediately when runtime page size changes", async () => {
+        renderReport();
+        await screen.findByTestId("report-grid");
+        let resolve!: (value: { success: boolean; message: string; data: Record<string, unknown>[]; meta: Record<string, number> }) => void;
+        executeRequestMock.mockReturnValueOnce(new Promise(next => { resolve = next; }));
+
+        fireEvent.click(screen.getByRole("button", { name: "Show 100" }));
+
+        const skeleton = await screen.findByRole("status", { name: "Updating results..." });
+        expect(skeleton.querySelectorAll(".skeleton__table-row:not(.skeleton__table-row--header)")).toHaveLength(100);
+        expect((skeleton.querySelector(".skeleton__table") as HTMLElement).style.minHeight).toBe("4304px");
+        expect(executeRequestMock.mock.calls.at(-1)?.[0].pagination).toEqual({ page: 1, pageSize: 100 });
+
+        resolve({
+            success: true,
+            message: "ok",
+            data: [{ Item_Code: "A1" }],
+            meta: { page: 1, pageSize: 100, totalRows: 1, rowsReturned: 1, executionTime: 1 },
+        });
+        await waitFor(() => expect(screen.queryByRole("status", { name: "Updating results..." })).toBeNull());
     });
 
     it("sends the normalized JSON Query request with the existing runtime state", async () => {

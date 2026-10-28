@@ -25,6 +25,17 @@ const gridConfig = {
 };
 
 describe("GenericGrid shared configuration", () => {
+    it("makes retained grid content inert and hidden while its full skeleton is active", () => {
+        const { container } = render(
+            <GridProvider>
+                <GenericGrid rows={[{ Code: "A" }]} columns={columns} gridConfig={gridConfig} busy />
+            </GridProvider>,
+        );
+        const grid = container.querySelector(".universal-grid");
+        expect(grid?.getAttribute("aria-hidden")).toBe("true");
+        expect(grid?.hasAttribute("inert")).toBe(true);
+    });
+
     beforeEach(() => agGridProps.mockClear());
 
     it("preserves configured column order and labels", () => {
