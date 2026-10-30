@@ -10,6 +10,7 @@ import {
     getReportValidationErrors,
     validateDatabaseId,
 } from "./ReportDefinitionEngine/validator";
+import { unknownPropertyMessage } from "./configurationValidation";
 
 export interface DashboardValidationResult {
     valid: boolean;
@@ -32,7 +33,12 @@ const widgetTypes = [
 const chartTypes = [
     "bar",
     "line",
+    "area",
     "pie",
+    "doughnut",
+    "treemap",
+    "funnel",
+    "radial-bar",
 ] as const;
 
 const statFormats = [
@@ -477,7 +483,7 @@ function validateWidget(
         report: ["request", "reportId", "widgetId", ...definitionKeys],
         stat: ["request", "reportId", "widgetId", "format", "valueField", ...definitionKeys],
         table: ["request", "reportId", "widgetId", "pageSize", "pageSizeOptions", "pagination", "export", ...definitionKeys],
-        chart: ["request", "reportId", "widgetId", "xField", "yField", "chartType", "chartOptions", "showLegend", "showTooltip", "showGrid", "showLabels", "export", ...definitionKeys],
+        chart: ["request", "reportId", "widgetId", "xField", "yField", "chartType", "chartOptions", "chartCustomizationDefaults", "showLegend", "showTooltip", "showGrid", "showLabels", "export", ...definitionKeys],
     };
     rejectUnknownProperties(
         widget,
@@ -633,6 +639,7 @@ function validateWidget(
 
     if (widget.type === "chart") {
         validateChartOptions(widget.chartOptions, `Chart widget "${String(widget.id ?? "")}" chartOptions`, errors);
+        validateChartCustomizationDefaults(widget.chartCustomizationDefaults, `Chart widget "${String(widget.id ?? "")}" chartCustomizationDefaults`, errors);
         validateChartExport(widget.export, `Chart widget "${String(widget.id ?? "")}" export`, errors);
         if (!isNonEmptyString(widget.xField)) {
             errors.push(
@@ -658,6 +665,9 @@ function validateWidget(
             errors.push(
                 `Chart widget "${String(widget.id ?? "")}" has invalid chartType.`
             );
+        }
+        if (widget.chartType === "funnel") {
+            warnings.push(`Chart widget "${String(widget.id ?? "")}" uses legacy Funnel rendering, which is no longer supported. Source data and mappings are preserved.`);
         }
 
 
@@ -729,13 +739,29 @@ function validateWidget(
     }
 }
 
+function validateChartCustomizationDefaults(value: unknown, label: string, errors: string[]) {
+    if (value === undefined) return;
+    if (!isRecord(value)) return errors.push(`${label} must be an object.`);
+    rejectUnknownProperties(value, ["chartType", "orientation", "numberFormat", "valueFormat", "seriesColors", "categoryColors"], label, errors);
+    if (!isNonEmptyString(value.chartType) || !chartTypes.includes(value.chartType as typeof chartTypes[number])) {
+        errors.push(`${label} chartType must be bar, line, area, pie, doughnut, treemap, funnel, or radial-bar.`);
+    }
+    if (value.orientation !== undefined && value.orientation !== "vertical" && value.orientation !== "horizontal") errors.push(`${label} orientation must be vertical or horizontal.`);
+    if (value.numberFormat !== undefined && !["full", "compact", "compact-indian"].includes(String(value.numberFormat))) errors.push(`${label} numberFormat must be full, compact, or compact-indian.`);
+    if (value.valueFormat !== undefined && !["number", "decimal", "currency"].includes(String(value.valueFormat))) errors.push(`${label} valueFormat must be number, decimal, or currency.`);
+    validateChartColors(value.seriesColors, `${label} seriesColors`, errors, true);
+    validateChartColors(value.categoryColors, `${label} categoryColors`, errors, true);
+}
+
 function validateChartOptions(value: unknown, label: string, errors: string[]) {
     if (value === undefined) return;
     if (!isRecord(value)) return errors.push(`${label} must be an object.`);
-    const keys = ["appearance", "orientation", "showLegend", "showLabels", "showDataLabels", "showCenterTotal", "showGrid", "smooth", "showPoints", "topN", "showOthers", "othersLabel", "seriesColors", "categoryColors"];
+    const keys = ["appearance", "orientation", "showLegend", "showLabels", "showDataLabels", "showCenterTotal", "showGrid", "smooth", "showPoints", "topN", "showOthers", "othersLabel", "numberFormat", "valueFormat", "seriesColors", "categoryColors"];
     rejectUnknownProperties(value, keys, label, errors);
     if (value.appearance !== undefined && value.appearance !== "pie" && value.appearance !== "donut") errors.push(`${label} appearance must be pie or donut.`);
     if (value.orientation !== undefined && value.orientation !== "vertical" && value.orientation !== "horizontal") errors.push(`${label} orientation must be vertical or horizontal.`);
+    if (value.numberFormat !== undefined && !["full", "compact", "compact-indian"].includes(String(value.numberFormat))) errors.push(`${label} numberFormat must be full, compact, or compact-indian.`);
+    if (value.valueFormat !== undefined && !["number", "decimal", "currency"].includes(String(value.valueFormat))) errors.push(`${label} valueFormat must be number, decimal, or currency.`);
     for (const field of ["showLegend", "showLabels", "showDataLabels", "showCenterTotal", "showGrid", "smooth", "showPoints", "showOthers"]) {
         if (value[field] !== undefined && typeof value[field] !== "boolean") errors.push(`${label} ${field} must be a boolean.`);
     }
@@ -746,10 +772,11 @@ function validateChartOptions(value: unknown, label: string, errors: string[]) {
     validateChartColors(value.categoryColors, `${label} categoryColors`, errors);
 }
 
-function validateChartColors(value: unknown, label: string, errors: string[]) {
+function validateChartColors(value: unknown, label: string, errors: string[], allowEmpty = false) {
     if (value === undefined) return;
-    if (!isRecord(value) || Object.keys(value).length === 0) {
-        errors.push(`${label} must be a non-empty object.`);
+    if (allowEmpty && Array.isArray(value) && value.length === 0) return;
+    if (!isRecord(value) || (!allowEmpty && Object.keys(value).length === 0)) {
+        errors.push(`${label} must be ${allowEmpty ? "an object" : "a non-empty object"}.`);
         return;
     }
     if (Object.keys(value).length > 100) errors.push(`${label} must contain at most 100 colors.`);
@@ -1185,7 +1212,7 @@ function rejectUnknownProperties(
 ) {
     Object.keys(value)
         .filter(key => !allowed.includes(key))
-        .forEach(key => errors.push(`${label} contains unknown property "${key}".`));
+        .forEach(key => errors.push(unknownPropertyMessage(label, key, allowed)));
 }
 
 function validateOptionalString(value: unknown, label: string, errors: string[]) {

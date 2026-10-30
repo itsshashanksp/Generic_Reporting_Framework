@@ -102,9 +102,51 @@ describe("dashboard widgets", () => {
         const props = genericGridProps.mock.calls.at(-1)?.[0];
         expect(props.columns.map((column: { field: string }) => column.field)).toEqual(["Item_Code", "Item_Desc"]);
         expect(props.serverPagination).toMatchObject({ page: 1, pageSize: 10, totalRows: 1 });
-        expect(props.height).toBe(466);
-        expect(props.autoHeight).toBeUndefined();
+        expect(props.height).toBe(88);
+        expect(props.autoHeight).toBe(false);
         expect(executeRequestMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("loads the complete filtered result before rendering a reporting table", async () => {
+        const allRows = Array.from({ length: 1205 }, (_, index) => ({
+            Item_Code: `I${index + 1}`,
+            Item_Desc: index < 1000 ? "Primary" : "Secondary",
+        }));
+        executeRequestMock.mockImplementation(async (payload: { pagination?: { page: number; pageSize: number } }) => {
+            const page = payload.pagination?.page ?? 1;
+            const pageSize = payload.pagination?.pageSize ?? 1000;
+            const start = (page - 1) * pageSize;
+            const data = allRows.slice(start, start + pageSize);
+            return {
+                success: true,
+                message: "ok",
+                data,
+                meta: { page, pageSize, totalRows: allRows.length, rowsReturned: data.length, executionTime: 1 },
+            };
+        });
+
+        render(<DashboardProvider><TableWidget
+            title="Grouped items"
+            request={request}
+            columns={[
+                { field: "Item_Code", header: "Item Code" },
+                { field: "Item_Desc", header: "Category" },
+            ]}
+            pageSize={10}
+            grouping={{
+                enabled: true,
+                groups: [{ field: "Item_Desc" }],
+                aggregates: [{ field: "Item_Code", function: "COUNT" }],
+            }}
+        /></DashboardProvider>);
+
+        await waitFor(() => expect(genericGridProps.mock.calls.at(-1)?.[0].rows).toHaveLength(1205));
+        expect(executeRequestMock).toHaveBeenCalledTimes(2);
+        expect(executeRequestMock.mock.calls.map(call => call[0].pagination.page)).toEqual([1, 2]);
+        const reportingProps = genericGridProps.mock.calls.at(-1)?.[0];
+        expect(reportingProps.serverPagination).toBeUndefined();
+        expect(reportingProps.height).toBe(466);
+        expect(reportingProps.stableViewport).toBe(true);
     });
 
     it("sends the configured database with table filters, sorting, and pagination", async () => {
@@ -142,7 +184,7 @@ describe("dashboard widgets", () => {
         expect(getDashboardTableViewportHeight(100)).toBe(466);
     });
 
-    it.each([2, 8, 10])("keeps %i real rows inside the full dashboard table viewport", async rowCount => {
+    it.each([[2, 130], [8, 382], [10, 466]])("bounds a %i-row dashboard table at %ipx before row alignment", async (rowCount, expectedHeight) => {
         const rows = Array.from({ length: rowCount }, (_, index) => ({ Item_Code: String(index + 1) }));
         executeRequestMock.mockResolvedValue({
             success: true,
@@ -159,8 +201,8 @@ describe("dashboard widgets", () => {
         await waitFor(() => expect(screen.getByTestId("shared-generic-grid")).toBeTruthy());
         const props = genericGridProps.mock.calls.at(-1)?.[0];
         expect(props.rows).toEqual(rows);
-        expect(props.height).toBe(466);
-        expect(props.autoHeight).toBeUndefined();
+        expect(props.height).toBe(expectedHeight);
+        expect(props.autoHeight).toBe(false);
         expect(props.serverPagination).toMatchObject({ page: 1, pageSize: 10, totalRows: rowCount });
     });
 
@@ -182,7 +224,7 @@ describe("dashboard widgets", () => {
         expect(genericGridProps).not.toHaveBeenCalled();
     });
 
-    it("uses the controlled dashboard viewport when the returned page exceeds ten rows", async () => {
+    it("bounds the viewport when the returned page exceeds ten rows", async () => {
         executeRequestMock.mockResolvedValue({
             success: true,
             message: "ok",
@@ -196,8 +238,11 @@ describe("dashboard widgets", () => {
         );
 
         await waitFor(() => expect(screen.getByTestId("shared-generic-grid")).toBeTruthy());
-        expect(genericGridProps.mock.calls.at(-1)?.[0].autoHeight).toBeUndefined();
-        expect(genericGridProps.mock.calls.at(-1)?.[0].height).toBe(466);
+        const props = genericGridProps.mock.calls.at(-1)?.[0];
+        expect(props.rows).toHaveLength(25);
+        expect(props.height).toBe(466);
+        expect(props.autoHeight).toBe(false);
+
     });
 
     it("preserves the dashboard grid height and pagination footprint while a new page loads", async () => {
@@ -213,10 +258,17 @@ describe("dashboard widgets", () => {
         render(<DashboardProvider><TableWidget title="Paged items" request={request} pageSize={10} /></DashboardProvider>);
         await waitFor(() => expect(genericGridProps).toHaveBeenCalled());
         const initialHeight = genericGridProps.mock.calls.at(-1)?.[0].height;
+        expect(initialHeight).toBe(466);
+        expect(genericGridProps.mock.calls.at(-1)?.[0].autoHeight).toBe(false);
+        const actionCount = document.querySelector(".report-table-frame__actions")?.children.length;
+        expect(document.querySelector(".report-table-frame__status")).toBeTruthy();
 
         act(() => genericGridProps.mock.calls.at(-1)?.[0].serverPagination.onPageChange(2));
         expect(await screen.findByRole("status", { name: "Updating table data…" })).toBeTruthy();
+        expect(screen.getByText("Refreshing…")).toBeTruthy();
+        expect(document.querySelector(".report-table-frame__actions")?.children.length).toBe(actionCount);
         expect(genericGridProps.mock.calls.at(-1)?.[0].height).toBe(initialHeight);
+        expect(genericGridProps.mock.calls.at(-1)?.[0].autoHeight).toBe(false);
         expect(document.querySelector(".dashboard-table__loading-grid")).toBeTruthy();
         expect(genericGridProps.mock.calls.at(-1)?.[0].serverPagination.disabled).toBe(true);
         expect(genericGridProps.mock.calls.at(-1)?.[0].busy).toBe(true);

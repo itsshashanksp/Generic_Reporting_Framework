@@ -80,6 +80,35 @@
     flex: 1 1 auto;
 }
 
+.dashboard-widget:not([data-fixed-height="true"]) .universal-grid {
+    min-height: var(--dashboard-row-table-region-height, 0px);
+    box-sizing: border-box;
+}
+
+.dashboard-widget:not([data-fixed-height="true"]) .universal-grid:not(.universal-grid--reporting) > .ag-theme-alpine,
+.dashboard-widget:not([data-fixed-height="true"]) .universal-grid:not(.universal-grid--reporting) .ag-root-wrapper,
+.dashboard-widget:not([data-fixed-height="true"]) .universal-grid--reporting .reporting-grid__scroll {
+    min-height: var(--dashboard-row-table-viewport-height, 0px);
+}
+
+.dashboard-widget:not([data-fixed-height="true"]) .universal-grid > .universal-grid__pagination {
+    min-height: var(--dashboard-row-table-footer-height, 0px);
+    box-sizing: border-box;
+}
+
+.dashboard-widget--table:not([data-fixed-height="true"]):has(.universal-grid--natural-height),
+.dashboard-widget--table:has(.universal-grid--reporting) {
+    align-self: start;
+}
+
+.dashboard-widget--table:not([data-fixed-height="true"]):has(.universal-grid--natural-height) > .report-table-frame,
+.dashboard-widget--table .report-table-frame__body > .universal-grid--natural-height,
+.dashboard-widget--table:has(.universal-grid--reporting) > .report-table-frame,
+.dashboard-widget--table .report-table-frame__body > .universal-grid--reporting {
+    height: auto;
+    flex: 0 1 auto;
+}
+
 .dashboard-widget[data-fixed-height="true"] {
     overflow: hidden;
 }

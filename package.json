@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json",
     "test": "vitest run",
+    "config:audit": "vitest run src/config/__tests__/configurationCoverage.test.ts src/config/__tests__/exampleLibrary.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {

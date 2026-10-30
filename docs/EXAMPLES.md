@@ -15,12 +15,22 @@ IDs, update menu references, and rebuild.
 | `dashboards/date-filtered-dashboard.json` | Required shared date range, field mapping, table/stat/chart widgets |
 | `dashboards/database-selector-dashboard.json` | Database inheritance and an explicitly pinned widget |
 | `dashboards/widget-catalog-dashboard.json` | Report/reusable/inline widgets; targeted page filters; currency columns; modern table paging; horizontal bar, line and donut; Top-N/Others; chart colors and all exports |
+| `reports/reporting-grid-report.json` | Nested reporting groups, SUM/COUNT/AVG subtotals, grand total, complete-dataset pagination and grouped export |
 | `dashboards/widget-runtime-filters.json` | Independent table/chart widget filters over orders, customers and shipments |
 | `dashboards/combined-dashboard-widget-filters.json` | Shared dashboard date filtering combined with widget-local filters |
 | `dashboards/dynamic-widget-runtime-filters.json` | Widget-local dropdowns populated by JSON Query `dynamicOptions` |
 | `dashboards/referenced-widget-runtime-filters.json` | Instance-local filters on reusable `widgetId` and referenced `reportId` widgets |
 | `widgets/customer-summary.json` | Reusable SQL Resource table definition |
 | `menu.json` | Nested dashboards, reports, and a direct route |
+
+## Complete reference examples
+
+- `dashboards/widget-catalog-dashboard.json` is the complete dashboard/widget/chart reference. It covers every widget type, responsive layout, shared and local filtering, targeted grids, modern pagination, stat formats, chart variants, color overrides, and chart/table exports.
+- `reports/filter-catalog-report.json` is the complete ordinary report/filter/grid reference.
+- `reports/json-query-report.json` and `reports/sql-resource-report.json` are the complete references for the two mutually exclusive data-source modes.
+- `reports/reporting-grid-report.json` is the complete Reporting Grid reference, including nested groups, aggregations, totals, generated-row pagination, and grouped export.
+
+Mutually exclusive data-source modes and chart-versus-table export formats intentionally remain in separate valid documents.
 
 The illustrative schema uses `DemoOrders`, `DemoCustomers`, and
 `DemoShipments`. Replace these names and logical database IDs with objects from

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import DashboardWidgetHeader from "../Dashboard/DashboardWidgetHeader";
 
 interface ReportTableFrameProps {
     title: string;
@@ -25,13 +26,12 @@ export default function ReportTableFrame({
             aria-label={ariaLabel}
             aria-busy={busy}
         >
-            <header className="report-table-frame__header">
-                <div className="report-table-frame__heading">
-                    <h2>{title}</h2>
-                    {description && <p>{description}</p>}
-                </div>
-                {actions && <div className="report-table-frame__actions">{actions}</div>}
-            </header>
+            <DashboardWidgetHeader
+                title={title}
+                description={description}
+                actions={actions}
+                variant="table"
+            />
             <div className="report-table-frame__body">
                 {children}
             </div>

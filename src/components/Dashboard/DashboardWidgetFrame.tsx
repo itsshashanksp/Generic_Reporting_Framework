@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-
+import DashboardWidgetHeader from "./DashboardWidgetHeader";
 
 interface DashboardWidgetFrameProps {
     title: string;
@@ -24,18 +24,20 @@ export default function DashboardWidgetFrame({
 }: DashboardWidgetFrameProps) {
     return (
         <section className={`dashboard-widget-content dashboard-widget-content--${variant}`} aria-busy={busy}>
-            <header className="dashboard-widget-content__header">
-                <div>
-                    <h2>{title}</h2>
-                    {description && <p>{description}</p>}
-                </div>
-                <div className="dashboard-widget-content__actions">
-                    {refreshing && (
-                        <span className="dashboard-widget-content__refreshing" role="status">Refreshing…</span>
-                    )}
+            <DashboardWidgetHeader
+                title={title}
+                description={description}
+                actions={(
+                    <>
+                    <span
+                        className="dashboard-widget-content__refreshing"
+                        role={refreshing ? "status" : undefined}
+                        aria-hidden={refreshing ? undefined : true}
+                    >{refreshing ? "Refreshing…" : ""}</span>
                     {actions}
-                </div>
-            </header>
+                    </>
+                )}
+            />
             {filterPanel}
             <div className="dashboard-widget-content__body">
                 {children}

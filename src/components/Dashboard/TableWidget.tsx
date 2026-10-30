@@ -22,11 +22,13 @@ import type { FilterDefinition } from "../../types/filter";
 import type { ColumnDefinition } from "../../types/column";
 import type { GridConfig, PaginationPresentationConfig } from "../../types/report";
 import type { WidgetRequest } from "../../types/widget";
+import type { GroupingConfig } from "../../types/grouping";
+import { buildReportingExportRows } from "../../engine/GridEngine";
 import ExportMenu, { type ExportMenuOption } from "../Common/ExportMenu";
 import Skeleton from "../Common/Skeleton";
 import GenericGrid from "../Grid/GenericGrid";
 import ReportTableFrame from "../Grid/ReportTableFrame";
-import { getDashboardTableViewportHeight } from "./tableViewport";
+import { getDashboardTableContentHeight, getDashboardTableViewportHeight } from "./tableViewport";
 import { resolveTableLayout } from "../Grid/tableLayout";
 import WidgetFilterController, { type WidgetFilterControls } from "./WidgetFilterController";
 
@@ -49,6 +51,7 @@ interface TableWidgetProps {
     exportConfig?: ExportConfig;
     runtimeFilters?: FilterDefinition[];
     runtimeFilterDisplay?: "inline" | "dialog";
+    grouping?: GroupingConfig;
 }
 
 type SortDirection = "ASC" | "DESC";
@@ -123,6 +126,7 @@ function TableWidgetContent({
     exportConfig,
     runtimeFilters = EMPTY_FILTER_DEFINITIONS,
     widgetFilterControls,
+    grouping,
 }: TableWidgetProps & { widgetFilterControls: WidgetFilterControls }) {
     const { refreshKey, appliedFilters } = useDashboard();
 
@@ -165,6 +169,7 @@ function TableWidgetContent({
         [widgetFilterControls.appliedValues, runtimeFilters, request.action]
     );
     const hasActiveFilters = composeRequestFilters(request.filters, dashboardFilters, widgetFilters).length > 0;
+    const reportingEnabled = grouping?.enabled === true;
 
     const queryKey = useMemo(
         () => JSON.stringify({
@@ -224,7 +229,8 @@ function TableWidgetContent({
             showFirstLast: pagination?.showFirstLast ?? false,
         },
         rowSelection: "multiple",
-    }), [activePageSize, sizeOptions, pagination?.showTotalRecords, pagination?.showPageNumbers, pagination?.showFirstLast]);
+        ...(grouping ? { grouping } : {}),
+    }), [activePageSize, sizeOptions, pagination?.showTotalRecords, pagination?.showPageNumbers, pagination?.showFirstLast, grouping]);
 
     useEffect(() => {
         const forceRefresh = previousRefreshKey.current !== refreshKey
@@ -236,7 +242,7 @@ function TableWidgetContent({
         const requestId = ++latestRequest.current;
 
         const loadTable = async () => {
-            if (!forceRefresh) {
+            if (!forceRefresh && !reportingEnabled) {
                 const cachedResponse = getCachedResponse(cacheKey);
                 if (cachedResponse) {
                     const cachedRows = cachedResponse.data ?? [];
@@ -254,11 +260,23 @@ function TableWidgetContent({
             setError(null);
 
             try {
-                const response = await getOrCreateInFlightRequest(
-                    cacheKey,
-                    signal => executeRequest(requestPayload, { signal }),
-                    controller.signal
-                );
+                const response = reportingEnabled
+                    ? {
+                        success: true as const,
+                        message: "OK",
+                        data: await fetchAllRowsForExport({
+                            ...request,
+                            pagination: undefined,
+                            filters: composeRequestFilters(request.filters, dashboardFilters, widgetFilters),
+                            ...(sort ? { sort: [sort] } : {}),
+                        }, { signal: controller.signal }),
+                        meta: undefined,
+                    }
+                    : await getOrCreateInFlightRequest(
+                        cacheKey,
+                        signal => executeRequest(requestPayload, { signal }),
+                        controller.signal
+                    );
 
                 if (requestId !== latestRequest.current) {
                     return;
@@ -291,7 +309,7 @@ function TableWidgetContent({
 
                 setRows(responseRows);
                 setTotalRows(responseTotal);
-                setCachedResponse(cacheKey, response);
+                if (!reportingEnabled) setCachedResponse(cacheKey, response);
                 resultViewKeyRef.current = viewKey;
                 setResultViewKey(viewKey);
             } catch (caughtError: unknown) {
@@ -340,6 +358,10 @@ function TableWidgetContent({
         sort,
         refreshKey,
         retryKey,
+        reportingEnabled,
+        request,
+        dashboardFilters,
+        widgetFilters,
     ]);
 
     useEffect(() => {
@@ -450,7 +472,9 @@ function TableWidgetContent({
                 return;
             }
             if (controller.signal.aborted) return;
-            await exportRows(data, format);
+            await exportRows(grouping?.exportMode === "grouped"
+                ? buildReportingExportRows(data, grouping, columns, sort ? [sort] : [])
+                : data, format);
         } catch (caughtError: unknown) {
             if (!isRequestAbort(caughtError)) {
                 const message = getRequestErrorMessage(caughtError, "Unable to prepare the table export.");
@@ -461,11 +485,11 @@ function TableWidgetContent({
             setExportProgress("");
             setExporting(false);
         }
-    }, [request, dashboardFilters, widgetFilters, sort, exportRows]);
+    }, [request, dashboardFilters, widgetFilters, sort, exportRows, grouping, columns]);
 
     const exportOptions: ExportMenuOption[] = [];
     if (exportConfig?.enabled) {
-        if (exportConfig.exportCurrentView !== false) {
+        if (exportConfig.exportCurrentView !== false && !reportingEnabled) {
             exportConfig.formats.forEach(format => exportOptions.push({
                 id: `current-${format}`,
                 label: `Current page — ${format === "csv" ? "CSV" : "Excel"}`,
@@ -499,16 +523,21 @@ function TableWidgetContent({
                 ? "empty"
                 : "success";
     const preserveGridDuringLoading = tableState === "loading" && rows.length > 0 && columns.length > 0;
+    const showRefreshingStatus = isViewLoading && (visibleRows.length > 0 || rows.length > 0);
     const tableViewportHeight = getDashboardTableViewportHeight(activePageSize);
     const tableLayout = resolveTableLayout(activePageSize, { fixedViewport: true });
-    const renderGrid = (gridRows: Record<string, unknown>[], gridTotalRows: number) => (
-        <GenericGrid
+    const renderGrid = (gridRows: Record<string, unknown>[], gridTotalRows: number) => {
+        return <GenericGrid
             rows={gridRows}
             columns={columns}
             gridConfig={gridConfig}
-            height={tableViewportHeight}
+            height={reportingEnabled
+                ? tableViewportHeight
+                : getDashboardTableContentHeight(gridRows.length, activePageSize)}
+            autoHeight={false}
+            stableViewport={reportingEnabled}
             initialSort={request.sort}
-            serverPagination={{
+            serverPagination={reportingEnabled ? undefined : {
                 page: currentPage,
                 pageSize: activePageSize,
                 totalRows: gridTotalRows,
@@ -518,8 +547,8 @@ function TableWidgetContent({
             }}
             onSortChange={handleSort}
             busy={tableState === "loading"}
-        />
-    );
+        />;
+    };
 
     return (
         <ReportTableFrame
@@ -529,9 +558,11 @@ function TableWidgetContent({
             busy={isViewLoading || tableState === "loading"}
             actions={(
                 <>
-                    {isViewLoading && visibleRows.length > 0 && (
-                        <span className="report-table-frame__status" role="status">Refreshing…</span>
-                    )}
+                    <span
+                        className="report-table-frame__status"
+                        role={showRefreshingStatus ? "status" : undefined}
+                        aria-hidden={showRefreshingStatus ? undefined : true}
+                    >{showRefreshingStatus ? "Refreshing…" : ""}</span>
                     {widgetFilterControls.button}
                     <ExportMenu
                         options={exportOptions}

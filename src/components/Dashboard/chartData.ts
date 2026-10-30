@@ -1,6 +1,8 @@
+import { formatCurrencyForDisplay, formatNumberForDisplay } from "../../engine/ValueFormatter";
 import type { ChartOptions } from "../../types/widget";
 
 export interface ChartDatum {
+    [key: string]: string | number | null;
     name: string;
     value: number | null;
 }
@@ -21,29 +23,43 @@ export function getHorizontalCategoryAxisWidth(data: ChartDatum[]): number {
     return Math.min(190, Math.max(110, longest * 6.5 + 18));
 }
 
-const compactNumber = new Intl.NumberFormat("en", {
+const compactNumber = new Intl.NumberFormat("en-IN", {
     notation: "compact",
     maximumFractionDigits: 2,
 });
 
-const tooltipNumber = new Intl.NumberFormat("en", {
-    maximumFractionDigits: 3,
-});
+function formatIndianCompact(value: number): string {
+    const absolute = Math.abs(value);
+    const unit = absolute >= 10_000_000 ? { divisor: 10_000_000, suffix: "Cr" }
+        : absolute >= 100_000 ? { divisor: 100_000, suffix: "L" }
+            : absolute >= 1_000 ? { divisor: 1_000, suffix: "K" }
+                : null;
+    if (!unit) return formatNumberForDisplay(value);
+    return `${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(value / unit.divisor)} ${unit.suffix}`;
+}
 
-export function formatChartNumber(value: unknown): string {
+function formatChartFullValue(value: number, options?: ChartOptions): string {
+    if (options?.valueFormat === "currency") return `₹${formatCurrencyForDisplay(value)}`;
+    if (options?.valueFormat === "decimal") return value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return formatNumberForDisplay(value);
+}
+
+export function formatChartNumber(value: unknown, options?: ChartOptions): string {
     if (value === null || value === undefined || value === "") return "—";
     const numeric = Number(value);
     if (!Number.isFinite(numeric)) return "—";
     if (Object.is(numeric, -0)) return "0";
-    return compactNumber.format(numeric);
+    if (options?.numberFormat === "full") return formatChartFullValue(numeric, options);
+    const formatted = options?.numberFormat === "compact" ? compactNumber.format(numeric) : formatIndianCompact(numeric);
+    return options?.valueFormat === "currency" ? `₹${formatted}` : formatted;
 }
 
-export function formatChartTooltipValue(value: unknown): string {
+export function formatChartTooltipValue(value: unknown, options?: ChartOptions): string {
     if (value === null || value === undefined || value === "") return "—";
     const numeric = Number(value);
     if (!Number.isFinite(numeric)) return String(value);
     if (Object.is(numeric, -0)) return "0";
-    return tooltipNumber.format(numeric);
+    return formatChartFullValue(numeric, options);
 }
 
 /**
@@ -88,6 +104,12 @@ export function mapChartData(rows: Record<string, unknown>[], xField: string, yF
             value: numeric !== null && Number.isFinite(numeric) ? numeric : null,
         };
     });
+}
+
+export function isLikelyOrderedChartDimension(data: ChartDatum[]): boolean {
+    if (data.length < 2) return true;
+    return data.every(item => /^-?\d+(?:\.\d+)?$/.test(item.name)
+        || /^\d{4}-\d{2}(?:-\d{2})?(?:[T ].*)?$/.test(item.name));
 }
 
 /**

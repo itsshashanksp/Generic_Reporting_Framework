@@ -1,5 +1,7 @@
 # Configuration reference
 
+The complete cross-scope inventory and automated coverage rules are maintained in the [configuration feature registry](CONFIGURATION-FEATURE-REGISTRY.md). Runtime validators and loaders remain the executable source of truth.
+
 The frontend has two kinds of configuration:
 
 1. **Environment variables**, read by Vite at build time.
@@ -56,6 +58,8 @@ maintained because it would duplicate these executable validators and their
 cross-reference checks.
 
 ## Report definition
+
+A standalone report owns exactly one primary grid: its top-level `columns`, `grid`, filters, toolbar, request/query definition, and export settings all describe that grid. Dashboard-style arrays of independent report tables are not part of the report schema and are rejected rather than partially rendered. `grid.pagination.pageSize` is optional; normalization supplies the framework default of 10 while preserving any explicitly authored positive value and page-size options.
 
 Validated by `getReportValidationErrors` in `engine/ReportDefinitionEngine/validator.ts`. Defaults come from `ReportDefinitionEngine/defaults.ts` and `ColumnEngine/defaults.ts`.
 
@@ -167,13 +171,27 @@ Duplicate values are collapsed. Results are cached under the `dynamic-filter-opt
     "grouping": {
       "enabled": true,
       "groups": [{ "field": "region", "header": "Region" }],
-      "aggregates": [{ "field": "amount", "function": "SUM", "alias": "total", "header": "Total" }]
+      "aggregates": [{ "field": "amount", "function": "SUM", "header": "Total" }],
+      "expandedByDefault": true,
+      "showSubtotals": true,
+      "showGrandTotal": true,
+      "showGroupTotalsInHeader": true,
+      "subtotalPosition": "bottom",
+      "exportMode": "grouped"
     }
   }
 }
 ```
 
-The pagination values are positive integers. `rowSelection` is `single` or `multiple`; no workflow currently uses the selected rows. The aggregate functions are `COUNT`, `SUM`, `AVG`, `MIN`, and `MAX`; `alias` and `header` are optional. **Grouping is display-only**: it replaces the displayed column set, but the response must already contain the grouped output. Put the grouping itself in the JSON `groupBy` or in the SQL Resource.
+The pagination values are positive integers. `rowSelection` is `single` or `multiple`; no workflow currently uses the selected rows. When grouping is omitted or disabled, the standard server-paged grid is unchanged.
+
+Enabled grouping creates nested, expandable presentation groups from ordinary result rows. At least one unique `groups` field is required. Group and aggregate fields must reference configured columns. The aggregate functions are `COUNT`, `SUM`, `AVG`, `MIN`, and `MAX`; `alias` and `header` remain optional for legacy compatibility. `COUNT` counts non-null values. The numeric functions use finite numbers and numeric strings and ignore null, empty, non-numeric, and non-finite values.
+
+`expandedByDefault`, `showSubtotals`, and `showGrandTotal` default to `true`; `showGroupTotalsInHeader` defaults to `false`; `subtotalPosition` defaults to `bottom`. When header totals are enabled, the existing group aggregates are displayed in their configured columns for both expanded and collapsed groups. They are informational and do not add aggregation inputs or exported rows.
+
+Generated group/detail/subtotal rows use client pagination, while the grand total remains outside that pagination. Dashboard reporting grids use the shared stable table viewport so expanding, collapsing, or paging does not move adjacent dashboard content; long results scroll internally, column headings and the grand total remain sticky, and pagination stays below the scrolling body. Collapsed groups may leave intentional empty viewport space. Content-aware group/numeric widths protect totals while descriptive columns flex and use an accessible full-value title; narrow viewports scroll inside the grid only when the calculated minimum cannot fit. Standalone reports retain natural height unless explicitly bounded. The frontend obtains the complete filtered result through the existing bounded all-row paging flow before computing totals, and fails safely if the result exceeds the 100,000-row export bound or paging metadata is inconsistent. It does not change the backend query grammar or inject `groupBy`.
+
+`exportMode` defaults to `source`. `grouped` exports the complete generated group/subtotal/grand-total result; `source` exports the complete filtered source rows. Reporting grids suppress current-page export because their visible page contains generated rows owned by the presentation component. Use configured all-row export instead. See `examples/reports/reporting-grid-report.json`.
 
 ### Runtime database selection
 
@@ -230,11 +248,13 @@ Every widget requires a unique `id`, a `type` (`report`, `stat`, `table`, `chart
 | `valueField`, `format` | `stat` | `valueField` defaults to the first key of the first row. `format`: `number`, `decimal`, `currency`, or `percentage` (`en-IN` locale; decimal, INR currency, and percentage use two fraction digits) |
 | `pageSize`, `pageSizeOptions`, `pagination`, `export` | `table` | Legacy defaults are `10` and `[10, 25, 50, 100]`. Optional `pagination` supports `style: "modern"`, `pageSize`, `pageSizeOptions`, `showTotalRecords`, `showPageNumbers`, and `showFirstLast`. `pagination.pageSize` and `pagination.pageSizeOptions` take precedence over the legacy sibling properties. Columns are inferred from the first row when omitted |
 | `runtimeFilterDisplay` | all | Optional `"inline"` (default) or `"dialog"`. Dialog edits are drafts until Apply; Cancel, Close, or Escape discards unapplied edits |
-| `chartType`, `xField`, `yField`, `chartOptions`, `showLegend`, `showTooltip`, `showGrid`, `showLabels`, `export` | `chart` | `chartType` remains `bar` (default), `line`, or `pie`. `xField` and `yField` retain their category/value meaning. `chartOptions` controls modern presentation and Top-N behavior; legacy display flags remain supported |
+| `chartType`, `xField`, `yField`, `chartOptions`, `showLegend`, `showTooltip`, `showGrid`, `showLabels`, `export` | `chart` | `chartType` supports `bar` (default), `line`, `area`, `pie`, `doughnut`, `treemap`, and `radial-bar`. `xField` and `yField` retain their category/value meaning. Legacy Pie with `chartOptions.appearance: "donut"` normalizes to Doughnut. Legacy Funnel loads as an unsupported state and cannot be newly saved. The UI presents vertical `bar` as **Column** and horizontal `bar` as **Bar**; existing `chartOptions.orientation` remains canonical and is not rewritten merely by loading. |
 
-Chart `chartOptions` supports `appearance: "pie" | "donut"`, `orientation: "vertical" | "horizontal"`, `showLegend`, `showLabels`, `showDataLabels`, `showCenterTotal`, `showGrid`, `smooth`, `showPoints`, `topN` (1–100), `showOthers`, `othersLabel`, `seriesColors`, and `categoryColors`. Options apply only where meaningful: appearance/center total to pie, orientation to bar, and smooth/points to line.
+Chart `chartOptions` supports legacy `appearance: "pie" | "donut"`, `orientation: "vertical" | "horizontal"`, `numberFormat: "full" | "compact" | "compact-indian"`, `valueFormat: "number" | "decimal" | "currency"`, `showLegend`, `showLabels`, `showDataLabels`, `showCenterTotal`, `showGrid`, `smooth`, `showPoints`, `topN` (1–100), `showOthers`, `othersLabel`, `seriesColors`, and `categoryColors`. Axes default to compact Indian units (`K`, `L`, `Cr`); tooltips always show full `en-IN` values. CSV/Excel exports retain source numbers.
 
-`seriesColors` maps a bar or line chart's stable `yField` to a six-digit HEX color. `categoryColors` maps pie/donut category values (the raw `xField` values) to colors. Both properties are optional; missing entries use the built-in palette. Application Administrators use the dedicated **Customize** action; exports remain under **Export** grouped into Chart Image and Chart Data. Saving uses the authorized configuration API and the dashboard/widget IDs, updates only the selected widget, and rejects stale revisions. Deployments must set `GENERIC_FRONTEND_DASHBOARD_CONFIG_DIR` on the backend API worker to the dashboard JSON directory. Reset removes the relevant override rather than storing default colors.
+Pie and Doughnut enable collision-aware value labels by default when neither label flag is authored. Set `showLabels: false` (or `showDataLabels: false`) to suppress them. Both retain complete category, value and percentage information in tooltips.
+
+`seriesColors` maps a bar or line chart's stable `yField` to a six-digit HEX color. `categoryColors` maps pie/donut category values (the raw `xField` values) to colors. Both properties are optional; missing entries use the built-in palette. Application Administrators use the dedicated **Customize** action to preview a compatible `bar`, `line`, or `pie` type and edit colors without refetching data; exports remain under **Export** grouped into Chart Image and Chart Data. Saving persists chart type and both color maps through the authorized configuration API, updates only the selected widget, and rejects stale revisions. Deployments must set `GENERIC_FRONTEND_DASHBOARD_CONFIG_DIR` on the backend API worker to the dashboard JSON directory. Reset selects the recoverable authored type/colors as a draft and persists them only when Save is pressed. The backend may add `chartCustomizationDefaults` to local runtime JSON while overrides exist; this snapshot is backend-owned and removed after reset.
 
 Top-N aggregates duplicate category names, ranks signed aggregate values descending, and resolves ties by first appearance. Null/empty categories use `Uncategorized`; missing numeric values do not contribute. When enabled, `Others` is the signed sum of remaining categories, so positive and negative values may offset. The query response is never mutated and backend paging/filtering is unchanged.
 

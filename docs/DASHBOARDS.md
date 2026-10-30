@@ -8,6 +8,12 @@ Checked-in dashboards: `item-dashboard`, `sales-dashboard`, `receipts-dashboard`
 
 The rendered column defaults are 12 on desktop, 6 on tablet, and 1 on mobile. On desktop, a widget's `position.x` (zero-based), `position.y` (one-based CSS row), `width`, and pixel `height` are honored; the position and width must fit the desktop columns. At the 1024px and 768px breakpoints, explicit positions are dropped and widths are scaled up proportionally with `ceil`.
 
+Widget dimensions remain automatic when `width` or `height` is omitted. Within each rendered dashboard row, the framework aligns the natural header footprints of adjacent widgets so their content begins at the same vertical position even when titles, descriptions, or action groups have different lengths. This synchronization is scoped to the actual rendered row: widgets that move into separate rows at responsive breakpoints retain independent natural header heights. It preserves explicit dimensions, Reporting Grid stability, and standalone report layout.
+
+Adjacent dashboard tables coordinate their complete table-region and pagination-footer footprints within the rendered row. Natural viewports with the same visible-row count also share the tallest viewport footprint. The browser's measurement includes any native horizontal scrollbar, so pagination starts, footer bottoms, and card bottoms remain aligned without assuming an operating-system scrollbar size. Explicit-height widgets, standalone reports, and tables that stack into separate responsive rows are not forced to share those heights.
+
+Content-sized standard grids with different visible row counts keep independent natural viewports: rows are never stretched and the shorter grid does not receive a large empty scrollable body. The dashboard instead reserves any row-alignment difference as non-scrollable space between the natural viewport and the shared pagination footer. Tables with the same visible-row footprint can still account for a native horizontal scrollbar without moving their footer. Bounded standard grids and dashboard Reporting Grids retain their existing stable viewport contract.
+
 Widgets without an explicit position flow through the CSS grid. Invisible widgets are left out.
 
 ## Widget types and sources
@@ -91,9 +97,11 @@ An optional `runtimeFilters` array on a dashboard widget adds independent contro
 
 Table widgets also accept an optional `pagination` object with `style: "modern"`, `pageSize`, `pageSizeOptions`, `showTotalRecords`, `showPageNumbers`, and `showFirstLast`. Its page-size fields override legacy `pageSize` and `pageSizeOptions`; omitted settings retain legacy values and defaults. Paging remains server-side.
 
-Chart widgets retain `bar`, `line`, and `pie` types and may add `chartOptions`. Donut appearance, horizontal bars, line smoothing/points, responsive legends, Top-N/Others, and chart exports are documented in [Configuration](CONFIGURATION.md). Graphic exports (`png`, `svg`) represent the displayed chart; tabular exports (`csv`, `excel`) contain the complete filtered source chart rows.
+Chart widgets support `bar`, `line`, `area`, `pie`, `doughnut`, `treemap`, and `radial-bar` types and may add `chartOptions`. These types reuse the established `xField` category and `yField` numeric-value mappings. The customization UI calls `bar` with vertical orientation **Column** and `bar` with horizontal orientation **Bar**; the canonical JSON remains `chartType: "bar"` plus `chartOptions.orientation`, preserving existing dashboards. Existing `pie` definitions with `chartOptions.appearance: "donut"` normalize to Doughnut without rewriting JSON. Legacy Funnel definitions preserve their query and mappings but display a clear unsupported-chart state; Funnel is not offered or accepted for new customization saves. Horizontal bars, line/area smoothing, responsive legends, Indian/full numeric formatting, Top-N/Others, and chart exports are documented in [Configuration](CONFIGURATION.md). Graphic exports (`png`, `svg`) represent the displayed chart; tabular exports (`csv`, `excel`) contain the complete filtered source chart rows.
 
-Optional `chartOptions.seriesColors` and `chartOptions.categoryColors` provide persistent color overrides. Existing charts require no migration. Application Administrators can preview, cancel, reset, and save overrides from the existing chart action menu; the backend writes the matching dashboard/widget JSON only after validating its IDs and revision.
+Grouped/stacked and combination charts need multiple numeric-series mappings. Scatter, bubble, and heatmap need additional numeric or dimensional mappings, while gauge needs target/range semantics. Those mappings are not part of the current configuration contract, so these chart types are intentionally not accepted rather than silently reinterpreting existing query results.
+
+Optional `chartOptions.seriesColors` and `chartOptions.categoryColors` provide persistent color overrides. Existing charts require no migration. Application Administrators can preview, cancel, reset, and save chart type, Bar/Column orientation, numeric presentation, and colors from the existing chart action menu; the backend writes the matching dashboard/widget JSON only after validating its IDs and revision.
 
 ```json
 {

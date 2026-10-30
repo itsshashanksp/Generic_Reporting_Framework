@@ -13,7 +13,7 @@ Only implemented frontend behavior appears in this inventory. Backend capabiliti
 | Search | Partially supported | Search applies configured backend filters; no global multi-field search |
 | Sorting | Supported | Report multi-sort; dashboard table sends its first active sort |
 | Query grouping | Supported | Authored JSON `groupBy`/HAVING; SQL grouping remains in the resource |
-| Interactive grouping | Not supported | No group builder or expandable client-generated groups |
+| Reporting-grid grouping | Supported | JSON-authored nested expandable groups, subtotals and grand total; no runtime group builder |
 | Pagination | Supported | Server paging, page size 10, deterministic SQL Resource ordering |
 | Column visibility | Supported | Configuration-driven visibility |
 | Column ordering/sizing | Partially supported | Runtime grid interaction, not persisted |
@@ -59,7 +59,8 @@ Only implemented frontend behavior appears in this inventory. Backend capabiliti
 ## Grouping and presentation
 
 - Backend JSON Query grouping and aggregate HAVING in authored requests.
-- Configured grouped-result columns for responses already aggregated by the backend.
+- Optional configured reporting grids over ordinary result rows, with nested expandable groups and `COUNT`, `SUM`, `AVG`, `MIN`, and `MAX` subtotals/grand totals.
+- Complete-result aggregation through bounded paged loading; standard grids retain server pagination.
 - Configured column visibility, sortability, initial width, drag reordering, resizing, selectable rows, and text selection.
 - Presentation-only number, ISO-style date, and datetime formatting without row mutation or timezone conversion.
 - One shared report/table frame, grid, mobile sort, compact labeled record cards, pagination, and responsive menu behavior for reports and dashboard tables/widgets.
@@ -75,7 +76,7 @@ Only implemented frontend behavior appears in this inventory. Backend capabiliti
 - Responsive configured dashboard layout, shared dashboard filters, manual refresh, and interval refresh.
 - Inline JSON/SQL Resource definitions, report-backed widgets, and optional reusable widget definitions.
 - Report, stat, table, and bar/line/pie chart widgets.
-- Table widget server paging, sorting, multiple selection, current-view export, and batched all-row export.
+- Table widget server paging, sorting, multiple selection, current-view export, and batched all-row export. Reporting table widgets use complete-result grouping and all-row export.
 
 ## Export
 
@@ -87,7 +88,7 @@ Only implemented frontend behavior appears in this inventory. Backend capabiliti
 
 - Raw SQL, SQL files, SQL parsing/generation/manipulation, resource registration, database paths, credentials, placeholders, or authored execution mappings.
 - Interactive nested filter groups, operator selection, global multi-field search, or AG Grid column-filter requests.
-- Interactive grouping, client aggregation, expandable group nodes, or grouping personalization.
+- Runtime group builders, drag-to-group controls, or grouping personalization.
 - Column chooser, runtime show/hide/reset, or persisted column layouts.
 - PDF/print/email export, chart export, or scheduled delivery.
 - Report create/edit/delete/upsert actions. The backend Write API exists, but the frontend has no mutation schema, forms, or handlers.

@@ -24,6 +24,7 @@ export default function ReportDataGrid({
             gridConfig={gridConfig}
             initialSort={initialSort}
             height="100%"
+            stableViewport
         />
     );
 }

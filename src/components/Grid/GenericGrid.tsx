@@ -18,6 +18,7 @@ import type { ColumnAlignment, ColumnDefinition } from "../../types/column";
 import MobileReportView from "./MobileReportView";
 import Pagination from "./Pagination";
 import { GRID_HEADER_HEIGHT, GRID_ROW_HEIGHT } from "./tableLayout";
+import ReportingGrid from "./ReportingGrid";
 
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
@@ -28,6 +29,7 @@ interface Props {
     gridConfig: GridConfig;
     height?: CSSProperties["height"];
     autoHeight?: boolean;
+    stableViewport?: boolean;
     initialSort?: SortDefinition[];
     serverPagination?: {
         page: number;
@@ -51,7 +53,22 @@ function getColumnAlignment(column: Pick<ColumnDefinition, "align" | "dataType">
     return column.align ?? (column.dataType === "number" || column.dataType === "currency" ? "right" : "left");
 }
 
-export default function GenericGrid({
+export default function GenericGrid(props: Props) {
+    if (props.gridConfig.grouping?.enabled) {
+        const reportingConfigurationKey = JSON.stringify({
+            pageSize: props.gridConfig.pagination.pageSize,
+            groups: props.gridConfig.grouping.groups,
+            expandedByDefault: props.gridConfig.grouping.expandedByDefault,
+            showSubtotals: props.gridConfig.grouping.showSubtotals,
+            showGrandTotal: props.gridConfig.grouping.showGrandTotal,
+            subtotalPosition: props.gridConfig.grouping.subtotalPosition,
+        });
+        return <ReportingGrid key={reportingConfigurationKey} rows={props.rows} columns={props.columns} grouping={props.gridConfig.grouping} gridConfig={props.gridConfig} height={props.height} stableViewport={props.stableViewport} initialSort={props.initialSort} onSortChange={props.onSortChange} />;
+    }
+    return <StandardGrid {...props} />;
+}
+
+function StandardGrid({
     rows,
     columns,
     gridConfig,
@@ -90,64 +107,7 @@ export default function GenericGrid({
                 initialSortIndex: sortIndex,
             };
         };
-        const hasConfiguredGrouping = gridConfig.grouping?.enabled
-            && ((gridConfig.grouping.groups?.length ?? 0) > 0
-                || (gridConfig.grouping.aggregates?.length ?? 0) > 0);
-        const groupedColumns = hasConfiguredGrouping
-            ? gridConfig.grouping?.groups ?? []
-            : [];
-        const aggregateColumns = hasConfiguredGrouping
-            ? gridConfig.grouping?.aggregates ?? []
-            : [];
-
-        return hasConfiguredGrouping
-            ? [
-                ...groupedColumns.map(group => ({
-                    field: group.field,
-                    headerName: group.header ?? group.field,
-                    sortable: true,
-                    filter: false,
-                    initialWidth: 200,
-                    minWidth: getContentMinWidth(
-                        rows,
-                        group.field,
-                        group.header ?? group.field,
-                        true,
-                    ),
-                    valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value),
-                    dataType: undefined,
-                    align: "left" as const,
-                    cellClass: "universal-grid__cell--left",
-                    headerClass: "universal-grid__header--left",
-                    comparator: (left: unknown, right: unknown) => compareGridValues(left, right),
-                    ...getInitialSortState(group.field),
-                })),
-                ...aggregateColumns.map(aggregate => ({
-                    field: aggregate.alias ?? `${aggregate.function}_${aggregate.field}`,
-                    headerName: aggregate.header
-                        ?? aggregate.alias
-                        ?? `${aggregate.function} ${aggregate.field}`,
-                    sortable: true,
-                    filter: false,
-                    initialWidth: 180,
-                    minWidth: getContentMinWidth(
-                        rows,
-                        aggregate.alias ?? `${aggregate.function}_${aggregate.field}`,
-                        aggregate.header
-                            ?? aggregate.alias
-                            ?? `${aggregate.function} ${aggregate.field}`,
-                        true,
-                    ),
-                    valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value, "number"),
-                    dataType: "number" as const,
-                    align: "right" as const,
-                    cellClass: "universal-grid__cell--right",
-                    headerClass: "universal-grid__header--right",
-                    comparator: (left: unknown, right: unknown) => compareGridValues(left, right, "number"),
-                    ...getInitialSortState(aggregate.alias ?? `${aggregate.function}_${aggregate.field}`),
-                })),
-            ]
-            : columns
+        return columns
                 .filter(column => column.visible)
                 .map(column => {
                     const alignment = getColumnAlignment(column);
@@ -157,6 +117,7 @@ export default function GenericGrid({
                     sortable: column.sortable,
                     filter: false,
                     initialWidth: column.width,
+                    flex: column.width === undefined ? 1 : undefined,
                     minWidth: getContentMinWidth(
                         rows,
                         column.field,
@@ -174,7 +135,7 @@ export default function GenericGrid({
                     ...getInitialSortState(column.field),
                 });
                 });
-    }, [columns, gridConfig.grouping, initialSort, rows]);
+    }, [columns, initialSort, rows]);
 
     const mobileColumns = useMemo(() => columnDefs.map(column => ({
         field: column.field,
@@ -227,6 +188,9 @@ export default function GenericGrid({
                 },
             }
             : null;
+    useEffect(() => {
+        if (usesClientPagination) gridRef.current?.api.paginationGoToPage(activeClientPage - 1);
+    }, [activeClientPage, usesClientPagination]);
     const applyMobileSort = (field: string, direction: "asc" | "desc") => {
         const nextSort = field ? { field, direction } : null;
         setMobileSort(nextSort);
@@ -258,6 +222,8 @@ export default function GenericGrid({
 
         <div
             className={`universal-grid${usesNaturalHeight ? " universal-grid--natural-height" : ""}`}
+            data-grid-sizing={usesNaturalHeight ? "natural" : "bounded"}
+            data-visible-rows={rows.length}
             aria-hidden={busy || undefined}
             inert={busy || undefined}
         >
@@ -292,7 +258,7 @@ export default function GenericGrid({
                 enableCellTextSelection
 
                 pagination={gridConfig.pagination.enabled && !serverPagination}
-                paginationPageSize={gridConfig.pagination.pageSize}
+                paginationPageSize={mobileClientPageSize}
                 paginationPageSizeSelector={
                     gridConfig.pagination.pageSizeOptions
                 }
@@ -339,8 +305,17 @@ export default function GenericGrid({
                     rowsOnPage={displayedMobileRows.length}
                     disabled={pagination.disabled}
                     config={gridConfig.pagination}
-                    onPageChange={pagination.onPageChange}
-                    onPageSizeChange={pagination.onPageSizeChange}
+                    onPageChange={page => {
+                        pagination.onPageChange(page);
+                        if (usesClientPagination) gridRef.current?.api.paginationGoToPage(page - 1);
+                    }}
+                    onPageSizeChange={pageSize => {
+                        pagination.onPageSizeChange(pageSize);
+                        if (usesClientPagination) {
+                            gridRef.current?.api.setGridOption("paginationPageSize", pageSize);
+                            gridRef.current?.api.paginationGoToFirstPage();
+                        }
+                    }}
                     className={serverPagination ? "" : "universal-grid__pagination--client"}
                 />
             )}

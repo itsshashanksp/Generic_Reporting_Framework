@@ -6,6 +6,7 @@ const CELL_HORIZONTAL_SPACE = 25;
 const HEADER_HORIZONTAL_SPACE = 53;
 const GRID_FONT_FAMILY = 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 const FALLBACK_CHARACTER_WIDTH = 8;
+const MAX_WIDTH_SAMPLE_ROWS = 200;
 
 type TextMeasurer = (value: string, fontWeight: number) => number;
 
@@ -58,7 +59,10 @@ export function getContentMinWidth(
     const headerWidth = measureText(header, 650)
         + HEADER_HORIZONTAL_SPACE
         - (sortable ? 0 : 28);
-    const cellWidth = rows.reduce(
+    const sample = rows.length <= MAX_WIDTH_SAMPLE_ROWS
+        ? rows
+        : Array.from({ length: MAX_WIDTH_SAMPLE_ROWS }, (_, index) => rows[Math.floor(index * (rows.length - 1) / (MAX_WIDTH_SAMPLE_ROWS - 1))]);
+    const cellWidth = sample.reduce(
         (longest, row) => Math.max(
             longest,
             measureText(displayText(row[field], dataType), 400) + CELL_HORIZONTAL_SPACE,

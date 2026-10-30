@@ -26,7 +26,7 @@ Configured visible columns can be resized and reordered in AG Grid. `sortable` c
 
 ## Grouping
 
-Configured grouping replaces the displayed columns with group and aggregate output columns. It does not aggregate rows on the client, create expandable group nodes, or inject `groupBy`; data must already have matching output fields. There is no interactive group-by control. The unused saved-report grouping snapshot was removed.
+Optional configured reporting grids create nested expandable groups, subtotals, and a grand total from the complete filtered result. Group levels and `COUNT`, `SUM`, `AVG`, `MIN`, or `MAX` aggregates are JSON-authored; there is no runtime group builder or grouping personalization. Optional group-header totals make aggregate values visible without expansion. Generated rows use client pagination with non-interactive ancestor context when a page starts inside a group. Dashboard instances shrink when short and use the existing viewport as an internal-scroll maximum when long; content-aware columns avoid unnecessary desktop overflow. The frontend does not inject query `groupBy`; backend query grouping remains a separate feature.
 
 ## Exports
 
@@ -36,6 +36,8 @@ Only CSV and Excel are supported.
 | --- | --- | --- |
 | Report | CSV uses AG Grid's presented current page/columns; Excel serializes raw current response rows | The same paged fetch as dashboard tables, with the report's applied filters, filter logic, database, and current sort on every page, and "Preparing export… N of M rows" progress |
 | Dashboard table | Serializes raw rows on the current page | Fetches pages of 1,000 rows (the backend's default `maxPageSize`) until `totalRows`, with progress and cancellation; if the backend refuses the first page size as above its configured maximum, retries with 500, 250, 100, 50, 25, 10, then 1 |
+
+For a configured reporting grid, current-view export is suppressed because its page contains generated presentation rows. All-row export can emit either complete source rows or complete grouped rows according to `grid.grouping.exportMode`.
 
 Current-view actions default on unless `exportCurrentView:false`; all-row actions require `exportAll:true`. Both all-row flows use `fetchAllRowsForExport`. Pages are addressed by `page` and `pageSize`, so a stable result needs a deterministic sort: rows that tie on the sort columns can move between pages if the database orders them differently on different requests. That stays a limitation of offset paging; configure a unique sort column where it matters. Export filenames may be configured. PDF and print export are not implemented.
 
@@ -63,6 +65,15 @@ Until a database is resolved, no report or widget request is sent, so nothing ca
 - **Session restoration:** a manual choice is retained independently for each stable `report:<id>` or `dashboard:<id>` for the current authenticated login session, including browser refresh. It is validated against the authorized listing before use and is cleared on logout, session expiration, a new login, or user change. It never changes the application default or pinned widget databases. Disabling page selection ignores retained choices.
 - **Switching** reruns the report on the chosen database, from page 1, with the same applied filters, filter logic, and sort. Refresh, paging, sorting, saved-view loading, and **All rows** export then all use the chosen database. A request still running for the previous database is aborted, and its late result is ignored. The selector is disabled while an export runs.
 - **Caching:** the cache key includes the database, so rows from one database are never shown for another. Switching back to a database can be answered from its own cached entry.
+
+## Chart customization
+
+Application Administrators can preview and save compatible `bar`, `line`, and
+`pie` chart types from the existing Customize dialog. Doughnut remains a pie
+appearance. Type and both color maps are saved atomically through the existing
+authorized, revision-checked dashboard writer. Reset remains a draft until Save
+and restores the authored presentation captured before the first customization.
+Cancel discards the draft, and chart image exports use the saved rendered type.
 
 ## Notifications
 

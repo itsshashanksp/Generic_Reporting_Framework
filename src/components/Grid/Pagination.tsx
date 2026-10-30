@@ -61,9 +61,9 @@ export default function Pagination({
             </label>
             <nav className="universal-grid__page-buttons" aria-label="Page navigation">
                 {config.showFirstLast === true && (
-                    <button type="button" aria-label="First page" disabled={disabled || safePage <= 1} onClick={() => onPageChange(1)}>First</button>
+                    <button type="button" className="universal-grid__page-button universal-grid__page-button--first" aria-label="First page" disabled={disabled || safePage <= 1} onClick={() => onPageChange(1)}>First</button>
                 )}
-                <button type="button" aria-label="Previous page" disabled={disabled || safePage <= 1} onClick={() => onPageChange(safePage - 1)}>Previous</button>
+                <button type="button" className="universal-grid__page-button universal-grid__page-button--previous" aria-label="Previous page" disabled={disabled || safePage <= 1} onClick={() => onPageChange(safePage - 1)}>Previous</button>
                 {tokens.map(token => typeof token === "number" ? (
                     <button
                         key={token}
@@ -77,9 +77,9 @@ export default function Pagination({
                         {token}
                     </button>
                 ) : <span key={token} className="universal-grid__ellipsis" aria-hidden="true">…</span>)}
-                <button type="button" aria-label="Next page" disabled={disabled || !canGoNext} onClick={() => onPageChange(safePage + 1)}>Next</button>
+                <button type="button" className="universal-grid__page-button universal-grid__page-button--next" aria-label="Next page" disabled={disabled || !canGoNext} onClick={() => onPageChange(safePage + 1)}>Next</button>
                 {config.showFirstLast === true && totalPages !== null && (
-                    <button type="button" aria-label="Last page" disabled={disabled || safePage >= totalPages} onClick={() => onPageChange(totalPages)}>Last</button>
+                    <button type="button" className="universal-grid__page-button universal-grid__page-button--last" aria-label="Last page" disabled={disabled || safePage >= totalPages} onClick={() => onPageChange(totalPages)}>Last</button>
                 )}
             </nav>
         </footer>

@@ -27,28 +27,29 @@ import type { DashboardDefinition } from "../types/dashboard";
 import type { FilterValues } from "../engine/FilterContext";
 import type { FilterDefinition } from "../types/filter";
 
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 
 
 import type { CSSProperties } from "react";
 
 import TableWidget from "../components/Dashboard/TableWidget";
 import ErrorState from "../components/Common/Error";
-import type { ChartColorConfiguration } from "../api/chartConfiguration";
+import type { ChartColorConfiguration, ChartCustomizationDraft } from "../api/chartConfiguration";
 import useDocumentTitle from "../components/Layout/useDocumentTitle";
+import useDashboardRowHeaderAlignment from "../components/Dashboard/useDashboardRowHeaderAlignment";
 
 export default function Dashboard({
     dashboardId = "item-dashboard",
     chartColors = {},
     canCustomizeCharts = false,
     chartConfigurationError = "",
-    onSaveChartColors,
+    onSaveChartConfiguration,
 }: {
     dashboardId?: string;
     chartColors?: Record<string, ChartColorConfiguration>;
     canCustomizeCharts?: boolean;
     chartConfigurationError?: string;
-    onSaveChartColors?: (widgetId: string, colors: Record<string, string>, revision: string) => Promise<ChartColorConfiguration>;
+    onSaveChartConfiguration?: (widgetId: string, customization: ChartCustomizationDraft | null, revision: string) => Promise<ChartColorConfiguration>;
 }) {
 
     const dashboardResult = useMemo(
@@ -113,7 +114,7 @@ export default function Dashboard({
                 chartColors={chartColors}
                 canCustomizeCharts={canCustomizeCharts}
                 chartConfigurationError={chartConfigurationError}
-                onSaveChartColors={onSaveChartColors}
+                onSaveChartConfiguration={onSaveChartConfiguration}
             />
         </DashboardProvider>
     );
@@ -124,13 +125,13 @@ function DashboardContent({
     chartColors,
     canCustomizeCharts,
     chartConfigurationError,
-    onSaveChartColors,
+    onSaveChartConfiguration,
 }: {
     dashboard: DashboardDefinition;
     chartColors: Record<string, ChartColorConfiguration>;
     canCustomizeCharts: boolean;
     chartConfigurationError: string;
-    onSaveChartColors?: (widgetId: string, colors: Record<string, string>, revision: string) => Promise<ChartColorConfiguration>;
+    onSaveChartConfiguration?: (widgetId: string, customization: ChartCustomizationDraft | null, revision: string) => Promise<ChartColorConfiguration>;
 }) {
 
     const [filterError, setFilterError] = useState("");
@@ -149,6 +150,14 @@ function DashboardContent({
             widget =>
                 widget.visible !== false
         );
+    const dashboardGridRef = useRef<HTMLDivElement>(null);
+    const widgetLayoutKey = visibleWidgets.map(widget => [
+        widget.id,
+        widget.width ?? "auto",
+        widget.height ?? "auto",
+        widget.position?.x ?? "auto",
+        widget.position?.y ?? "auto",
+    ].join(":")).join("|");
 
     const {
         filters,
@@ -188,6 +197,10 @@ function DashboardContent({
     // filters complete every required filter, e.g. both dates of a range.
     const missingAppliedFilters = (dashboard.filters ?? []).filter(
         filter => isRequiredFilterIncomplete(filter, appliedFilters[filter.field])
+    );
+    useDashboardRowHeaderAlignment(
+        dashboardGridRef,
+        `${widgetLayoutKey}:${databaseBlocked}:${missingAppliedFilters.length}`,
     );
 
     useEffect(() => {
@@ -327,6 +340,7 @@ function DashboardContent({
                 </div>
             ) : (
                 <div
+                    ref={dashboardGridRef}
                     className="dashboard-grid"
                     style={{
                         display: "grid",
@@ -352,7 +366,7 @@ function DashboardContent({
                             dashboardId={dashboard.id}
                             chartColorConfiguration={chartColors[widget.id]}
                             canCustomizeChart={canCustomizeCharts}
-                            onSaveChartColors={onSaveChartColors}
+                            onSaveChartConfiguration={onSaveChartConfiguration}
                             filterDefinitions={getTargetedDashboardFilters(dashboard.filters ?? [], widget.id)}
                             inheritedDatabase={effectiveInheritedDatabase}
                             columns={columns}
@@ -378,7 +392,7 @@ const DashboardWidgetCard = memo(function DashboardWidgetCard({
     mobileColumns,
     chartColorConfiguration,
     canCustomizeChart,
-    onSaveChartColors,
+    onSaveChartConfiguration,
 }: {
     widget: DashboardDefinition["widgets"][number];
     dashboardId: string;
@@ -389,7 +403,7 @@ const DashboardWidgetCard = memo(function DashboardWidgetCard({
     mobileColumns: number;
     chartColorConfiguration?: ChartColorConfiguration;
     canCustomizeChart: boolean;
-    onSaveChartColors?: (widgetId: string, colors: Record<string, string>, revision: string) => Promise<ChartColorConfiguration>;
+    onSaveChartConfiguration?: (widgetId: string, customization: ChartCustomizationDraft | null, revision: string) => Promise<ChartColorConfiguration>;
 }) {
     const resolved = useMemo(() => {
         const definition = resolveDashboardWidgetDefinition(widget, filterDefinitions);
@@ -413,6 +427,7 @@ const DashboardWidgetCard = memo(function DashboardWidgetCard({
         <div
             key={widgetContextKey}
             className={`dashboard-widget${widget.type === "table" || widget.type === "report" ? " dashboard-widget--table" : ""}`}
+            data-dashboard-widget={widget.id}
             data-fixed-height={widget.height !== undefined ? "true" : undefined}
             style={{
                 gridColumn: positionX !== null ? `${positionX + 1} / span ${widgetWidth}` : `span ${widgetWidth}`,
@@ -438,7 +453,7 @@ const DashboardWidgetCard = memo(function DashboardWidgetCard({
                     pageSizeOptions={widget.pageSizeOptions} pagination={widget.pagination} request={resolved.request}
                     columns={resolved.columns} filterDefinitions={filterDefinitions} filterFields={widget.filterFields}
                     runtimeFilters={widget.runtimeFilters} runtimeFilterDisplay={widget.runtimeFilterDisplay}
-                    cacheScope={cacheScope} exportConfig={widget.export} />
+                    cacheScope={cacheScope} exportConfig={widget.export} grouping={resolved.definition?.grid.grouping} />
             )}
             {widget.type === "chart" && resolved.request && widget.xField && widget.yField && (
                 <ChartWidget title={widget.title} description={widget.description} request={resolved.request}
@@ -448,7 +463,7 @@ const DashboardWidgetCard = memo(function DashboardWidgetCard({
                     filterFields={widget.filterFields} runtimeFilters={widget.runtimeFilters}
                     runtimeFilterDisplay={widget.runtimeFilterDisplay} exportConfig={widget.export} cacheScope={cacheScope}
                     colorConfiguration={chartColorConfiguration} canCustomizeColors={canCustomizeChart}
-                    onSaveColors={onSaveChartColors ? (colors, revision) => onSaveChartColors(widget.id, colors, revision) : undefined} />
+                    onSaveConfiguration={onSaveChartConfiguration ? (customization, revision) => onSaveChartConfiguration(widget.id, customization, revision) : undefined} />
             )}
         </div>
     );

@@ -11,6 +11,7 @@ These documents describe the current frontend implementation. If you are new, re
 | [Query modes](QUERY-MODES.md) | JSON Query versus SQL Resource, database selection, runtime merge rules |
 | [Dashboards and widgets](DASHBOARDS.md) | Layout, widget types, shared filters, date-filter behavior, `filterFields`, refresh |
 | [Feature behavior](FEATURES.md) | Filtering, sorting, paging, columns, grouping, exports, saved views, caching |
+| [Configuration feature registry](CONFIGURATION-FEATURE-REGISTRY.md) | Canonical feature inventory, defaults, compatibility, and coverage audit |
 | [Examples](EXAMPLES.md) | The validated example files and the requests they produce |
 | [Authentication](AUTHENTICATION.md) | Setup gate, sessions, CSRF, roles, user management |
 

@@ -30,9 +30,14 @@ vi.mock("recharts", () => {
         ResponsiveContainer: container,
         BarChart: ({ children, layout, data }: { children: ReactNode; layout?: string; data: unknown[] }) => <svg data-testid="bar-chart" data-layout={layout ?? "horizontal"} data-count={data.length}>{children}</svg>,
         LineChart: ({ children, data }: { children: ReactNode; data: unknown[] }) => <svg data-testid="line-chart" data-count={data.length}>{children}</svg>,
+        AreaChart: ({ children, data }: { children: ReactNode; data: unknown[] }) => <svg data-testid="area-chart" data-count={data.length}>{children}</svg>,
+        FunnelChart: ({ children }: { children: ReactNode }) => <svg data-testid="funnel-chart">{children}</svg>,
+        RadialBarChart: ({ children, data }: { children: ReactNode; data: unknown[] }) => <svg data-testid="radial-bar-chart" data-count={data.length}>{children}</svg>,
         PieChart: ({ children }: { children: ReactNode }) => <svg data-testid="pie-chart">{children}</svg>,
         Pie: ({ children, innerRadius, outerRadius, cy, data, label, isAnimationActive }: { children: ReactNode; innerRadius?: string | number; outerRadius?: string | number; cy?: string | number; data: Array<{ value: number }>; label?: false | ((props: Record<string, unknown>) => ReactNode); isAnimationActive?: boolean }) => <g data-testid="pie" data-animated={String(isAnimationActive)} data-inner-radius={innerRadius} data-outer-radius={outerRadius} data-cy={cy}>{children}{typeof label === "function" && data.map((item, index) => <g data-testid="pie-external-label" key={index}>{label({ index, value: item.value, cx: 100, cy: 100, outerRadius: 100, midAngle: 90 - index * 40 })}</g>)}</g>,
-        Bar: series, Line: series, Cell: ({ fill }: { fill: string }) => <i data-testid="pie-cell" data-color={fill} />, Label: ({ value }: { value: string }) => <text>{value}</text>,
+        Bar: series, Line: series, Area: series, Funnel: series, RadialBar: series,
+        Treemap: ({ children, data }: { children: ReactNode; data: unknown[] }) => <svg data-testid="treemap-chart" data-count={data.length}>{children}</svg>,
+        Cell: ({ fill }: { fill: string }) => <i data-testid="pie-cell" data-color={fill} />, Label: ({ value }: { value: string }) => <text>{value}</text>, LabelList: () => null,
         CartesianGrid: () => null, Legend: () => null,
         Tooltip: ({ formatter }: { formatter?: (value: unknown) => string }) => <text data-testid="tooltip-value">{formatter?.(12908199.939999992)}</text>,
         XAxis: ({ tickFormatter }: { tickFormatter?: (value: unknown) => string }) => <text data-testid="x-axis-value">{tickFormatter?.(12908199.939999992)}</text>,
@@ -55,8 +60,9 @@ describe("modern chart widget", () => {
         mocks.executeRequest.mockResolvedValue(response([{ Category: "A", Amount: 7 }, { Category: "B", Amount: 3 }]));
         const { rerender } = render(<DashboardProvider><ChartWidget title="Sales" request={request} xField="Category" yField="Amount" chartType="pie" chartOptions={{ appearance: "donut", showCenterTotal: true }} /></DashboardProvider>);
         expect(await screen.findByTestId("pie")).toBeTruthy();
-        expect(screen.getByTestId("pie").getAttribute("data-inner-radius")).toBe("50%");
-        expect(screen.getByTestId("pie").getAttribute("data-outer-radius")).toBe("80%");
+        expect(screen.getByTestId("pie").getAttribute("data-inner-radius")).toBe("52%");
+        expect(screen.getByTestId("pie").getAttribute("data-outer-radius")).toBe("70%");
+        expect(screen.getAllByTestId("pie-external-label").filter(label => label.textContent)).toHaveLength(2);
         expect(screen.getByTestId("pie").getAttribute("data-animated")).toBe("false");
         expect(screen.getByText("10")).toBeTruthy();
         expect(screen.getByText("Total")).toBeTruthy();
@@ -71,6 +77,39 @@ describe("modern chart widget", () => {
         expect(screen.getByTestId("chart-series").getAttribute("data-animated")).toBe("false");
     });
 
+    it.each([
+        ["area", "area-chart"],
+        ["treemap", "treemap-chart"],
+        ["doughnut", "pie"],
+        ["radial-bar", "radial-bar-chart"],
+    ] as const)("renders the %s chart using the existing category/value mapping", async (chartType, testId) => {
+        mocks.executeRequest.mockResolvedValue(response([{ Category: "A", Amount: 7 }, { Category: "B", Amount: 3 }]));
+        render(<DashboardProvider><ChartWidget title="Sales" request={request} xField="Category" yField="Amount" chartType={chartType} /></DashboardProvider>);
+        expect(await screen.findByTestId(testId)).toBeTruthy();
+    });
+
+    it("uses the same default labels and proportional tooltip contract for Pie and Doughnut", async () => {
+        mocks.executeRequest.mockResolvedValue(response([{ Category: "A", Amount: 7 }, { Category: "B", Amount: 3 }]));
+        const view = render(<DashboardProvider><ChartWidget title="Share" request={request} xField="Category" yField="Amount" chartType="pie" /></DashboardProvider>);
+        expect((await screen.findAllByTestId("pie-external-label")).filter(label => label.textContent).map(label => label.textContent)).toEqual(["7", "3"]);
+        expect(screen.getByTestId("tooltip-value").textContent).toContain("%");
+
+        view.rerender(<DashboardProvider><ChartWidget title="Share" request={request} xField="Category" yField="Amount" chartType="doughnut" /></DashboardProvider>);
+        expect((await screen.findAllByTestId("pie-external-label")).filter(label => label.textContent).map(label => label.textContent)).toEqual(["7", "3"]);
+        expect(screen.getByTestId("tooltip-value").textContent).toContain("%");
+    });
+
+    it("fails safely for legacy Funnel while preserving source-data export", async () => {
+        mocks.executeRequest.mockResolvedValue(response([{ Category: "Lead", Amount: 7 }]));
+        render(<DashboardProvider><ChartWidget title="Legacy" request={request} xField="Category" yField="Amount" chartType="funnel" exportConfig={{ enabled: true, formats: ["png", "csv"] }} /></DashboardProvider>);
+        expect(await screen.findByText("Legacy Funnel chart is unsupported")).toBeTruthy();
+        expect(screen.queryByTestId("funnel-chart")).toBeNull();
+        fireEvent.click(screen.getByRole("button", { name: "Export" }));
+        expect((screen.getByRole("menuitem", { name: "Download PNG" }) as HTMLButtonElement).disabled).toBe(true);
+        fireEvent.click(screen.getByRole("menuitem", { name: "Download CSV" }));
+        await waitFor(() => expect(mocks.exportCsv).toHaveBeenCalledWith([{ Category: "Lead", Amount: 7 }], "legacy.csv"));
+    });
+
     it("formats donut totals, external labels, tooltips, and horizontal axes", async () => {
         mocks.executeRequest.mockResolvedValue(response([
             { Category: "Large", Amount: 12908199.939999992 },
@@ -78,12 +117,12 @@ describe("modern chart widget", () => {
             ...Array.from({ length: 10 }, (_, index) => ({ Category: `Tiny ${index}`, Amount: 1 })),
         ]));
         const view = render(<DashboardProvider><ChartWidget title="Values" request={request} xField="Category" yField="Amount" chartType="pie" showTooltip chartOptions={{ appearance: "donut", showLabels: true, showCenterTotal: true }} /></DashboardProvider>);
-        expect(await screen.findByText("17.14M")).toBeTruthy();
+        expect(await screen.findByText("1.71 Cr")).toBeTruthy();
         expect(screen.getAllByTestId("pie-external-label").filter(label => label.textContent).length).toBeLessThan(12);
-        expect(screen.getByTestId("tooltip-value").textContent).toBe("12,908,199.94");
+        expect(screen.getByTestId("tooltip-value").textContent).toContain("1,29,08,199.94");
 
         view.rerender(<DashboardProvider><ChartWidget title="Values" request={request} xField="Category" yField="Amount" chartType="bar" showTooltip chartOptions={{ orientation: "horizontal" }} /></DashboardProvider>);
-        expect((await screen.findByTestId("x-axis-value")).textContent).toBe("12.91M");
+        expect((await screen.findByTestId("x-axis-value")).textContent).toBe("1.29 Cr");
         expect(document.querySelector(".dashboard-widget-content__chart-canvas")?.getAttribute("style")).toContain("508px");
         expect(screen.getByTestId("y-axis-value").getAttribute("data-width")).toBe("110");
     });
@@ -107,17 +146,17 @@ describe("modern chart widget", () => {
         const view = render(<DashboardProvider><ChartWidget title="Labels" request={request} xField="Category" yField="Amount" chartType="pie" chartOptions={{ appearance: "donut", showLabels: false, showCenterTotal: false }} /></DashboardProvider>);
         await screen.findByTestId("pie");
         expect(screen.queryByTestId("pie-external-label")).toBeNull();
-        expect(screen.queryByText("1K")).toBeNull();
+        expect(screen.queryByText("1 K")).toBeNull();
 
         view.rerender(<DashboardProvider><ChartWidget title="Labels" request={request} xField="Category" yField="Amount" chartType="pie" chartOptions={{ appearance: "donut", showDataLabels: true, showCenterTotal: true }} /></DashboardProvider>);
-        expect((await screen.findAllByText("1K")).length).toBe(2);
-        expect(screen.getByTestId("pie-external-label").textContent).toBe("1K");
+        expect((await screen.findAllByText("1 K")).length).toBe(2);
+        expect(screen.getByTestId("pie-external-label").textContent).toBe("1 K");
     });
 
     it("explains negative and zero-only pie data without misrepresenting it", async () => {
         mocks.executeRequest.mockResolvedValue(response([{ Category: "Loss", Amount: -2 }]));
         const view = render(<DashboardProvider><ChartWidget title="Losses" request={request} xField="Category" yField="Amount" chartType="pie" /></DashboardProvider>);
-        expect(await screen.findByText("Pie chart cannot display negative values")).toBeTruthy();
+        expect(await screen.findByText("Pie cannot display negative values")).toBeTruthy();
         expect(screen.queryByTestId("pie-chart")).toBeNull();
 
         mocks.executeRequest.mockResolvedValue(response([{ Category: "None", Amount: 0 }]));
@@ -180,7 +219,7 @@ describe("modern chart widget", () => {
         render(
             <ToastProvider><DashboardProvider>
                 <ChartWidget title="Sales" request={request} xField="Category" yField="Amount" chartType="bar"
-                    canCustomizeColors onSaveColors={onSave}
+                    canCustomizeColors onSaveConfiguration={onSave}
                     colorConfiguration={{ dashboardId: "sales", widgetId: "sales-chart", chartType: "bar", revision: "a".repeat(64), seriesColors: { Amount: "#112233" }, categoryColors: {} }} />
             </DashboardProvider></ToastProvider>
         );
@@ -188,25 +227,73 @@ describe("modern chart widget", () => {
 
         expect(screen.getByRole("button", { name: "Customize" })).toBeTruthy();
         fireEvent.click(screen.getByRole("button", { name: "Customize" }));
-        expect(screen.getByRole("dialog", { name: "Customize Chart Colors" })).toBeTruthy();
+        expect(screen.getByRole("dialog", { name: "Customize Chart" })).toBeTruthy();
         expect(document.querySelector(".chart-color-dialog__fields")).not.toBeNull();
         expect(document.querySelector(".chart-color-dialog__actions")).not.toBeNull();
+        expect(document.querySelector(".app-dialog__body > .chart-color-dialog__actions")).toBeNull();
+        expect(document.querySelector(".app-dialog__surface > .chart-color-dialog__actions")).not.toBeNull();
         const picker = screen.getByLabelText("Amount color");
         fireEvent.change(picker, { target: { value: "#abcdef" } });
-        expect(screen.getByTestId("chart-series").getAttribute("data-color")).toBe("#ABCDEF");
+        expect(document.querySelector(".chart-color-dialog__preview [data-testid='chart-series']")?.getAttribute("data-color")).toBe("#ABCDEF");
+        expect(screen.getAllByTestId("chart-series")[0].getAttribute("data-color")).toBe("#112233");
         fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
         expect(screen.getByTestId("chart-series").getAttribute("data-color")).toBe("#112233");
 
         fireEvent.click(screen.getByRole("button", { name: "Customize" }));
         fireEvent.change(screen.getByLabelText("Amount color"), { target: { value: "#abcdef" } });
         fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
-        await waitFor(() => expect(onSave).toHaveBeenCalledWith({ Amount: "#ABCDEF" }, "a".repeat(64)));
-        expect(await screen.findByText("Chart colors saved successfully.")).toBeTruthy();
+        await waitFor(() => expect(onSave).toHaveBeenCalledWith({ chartType: "bar", orientation: "vertical", seriesColors: { Amount: "#ABCDEF" }, categoryColors: {} }, "a".repeat(64)));
+        expect(await screen.findByText("Chart customization saved successfully.")).toBeTruthy();
 
         fireEvent.click(screen.getByRole("button", { name: "Customize" }));
         fireEvent.click(screen.getByRole("button", { name: "Reset to Default" }));
         fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
-        await waitFor(() => expect(onSave).toHaveBeenLastCalledWith({}, "a".repeat(64)));
+        await waitFor(() => expect(onSave).toHaveBeenLastCalledWith(null, "a".repeat(64)));
+    });
+
+    it("previews a compatible chart type without refetching and saves it with both color maps", async () => {
+        mocks.executeRequest.mockResolvedValue(response([{ Category: "A", Amount: 7 }]));
+        const onSave = vi.fn().mockResolvedValue({});
+        render(<ToastProvider><DashboardProvider><ChartWidget title="Sales" request={request} xField="Category" yField="Amount" chartType="bar"
+            canCustomizeColors onSaveConfiguration={onSave}
+            colorConfiguration={{ dashboardId: "sales", widgetId: "sales-chart", chartType: "bar", revision: "a".repeat(64), seriesColors: {}, categoryColors: {} }} />
+        </DashboardProvider></ToastProvider>);
+        await screen.findByTestId("bar-chart");
+        fireEvent.click(screen.getByRole("button", { name: "Customize" }));
+        fireEvent.click(screen.getByRole("button", { name: "Line" }));
+        expect(screen.getByTestId("line-chart")).toBeTruthy();
+        expect(mocks.executeRequest).toHaveBeenCalledTimes(1);
+        fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+        await waitFor(() => expect(onSave).toHaveBeenCalledWith({ chartType: "line", seriesColors: {}, categoryColors: {} }, "a".repeat(64)));
+    });
+
+    it("exposes deterministic Column and Bar choices and persists the previewed orientation", async () => {
+        mocks.executeRequest.mockResolvedValue(response([{ Category: "A", Amount: 7 }]));
+        const onSave = vi.fn().mockResolvedValue({});
+        render(<ToastProvider><DashboardProvider><ChartWidget title="Sales" request={request} xField="Category" yField="Amount" chartType="bar"
+            canCustomizeColors onSaveConfiguration={onSave}
+            colorConfiguration={{ dashboardId: "sales", widgetId: "sales-chart", chartType: "bar", orientation: "vertical", revision: "a".repeat(64), seriesColors: {}, categoryColors: {} }} />
+        </DashboardProvider></ToastProvider>);
+        await screen.findByTestId("bar-chart");
+        fireEvent.click(screen.getByRole("button", { name: "Customize" }));
+        expect(screen.getByRole("button", { name: "Column" }).getAttribute("aria-pressed")).toBe("true");
+        fireEvent.click(screen.getByRole("button", { name: "Bar" }));
+        expect(document.querySelector(".chart-color-dialog__preview [data-testid='bar-chart']")?.getAttribute("data-layout")).toBe("vertical");
+        fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+        await waitFor(() => expect(onSave).toHaveBeenCalledWith({ chartType: "bar", orientation: "horizontal", seriesColors: {}, categoryColors: {} }, "a".repeat(64)));
+    });
+
+    it("disables incompatible pie customization for signed data", async () => {
+        mocks.executeRequest.mockResolvedValue(response([{ Category: "Loss", Amount: -7 }]));
+        render(<ToastProvider><DashboardProvider><ChartWidget title="Losses" request={request} xField="Category" yField="Amount" chartType="bar"
+            canCustomizeColors onSaveConfiguration={vi.fn()}
+            colorConfiguration={{ dashboardId: "sales", widgetId: "loss-chart", chartType: "bar", revision: "a".repeat(64), seriesColors: {}, categoryColors: {} }} />
+        </DashboardProvider></ToastProvider>);
+        await screen.findByTestId("bar-chart");
+        fireEvent.click(screen.getByRole("button", { name: "Customize" }));
+        const pie = screen.getByRole("button", { name: "Pie" }) as HTMLButtonElement;
+        expect(pie.disabled).toBe(true);
+        expect(pie.title).toContain("negative values");
     });
 
     it("keeps pie category colors stable when categories appear or disappear", async () => {

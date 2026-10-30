@@ -23,7 +23,12 @@ export type WidgetFormat =
 export type ChartType =
     | "bar"
     | "line"
-    | "pie";
+    | "area"
+    | "pie"
+    | "doughnut"
+    | "treemap"
+    | "funnel"
+    | "radial-bar";
 
 export interface ChartOptions {
     appearance?: "pie" | "donut";
@@ -38,9 +43,22 @@ export interface ChartOptions {
     topN?: number;
     showOthers?: boolean;
     othersLabel?: string;
+    /** Axis notation; defaults to Indian compact notation for dashboard readability. */
+    numberFormat?: "full" | "compact" | "compact-indian";
+    /** Numeric value presentation shared by axes, labels and tooltips. */
+    valueFormat?: "number" | "decimal" | "currency";
     /** Stable data-series keys mapped to six-digit HEX colors. */
     seriesColors?: Record<string, string>;
     /** Stable pie category values mapped to six-digit HEX colors. */
+    categoryColors?: Record<string, string>;
+}
+
+export interface ChartCustomizationDefaults {
+    chartType: ChartType;
+    orientation?: ChartOptions["orientation"];
+    numberFormat?: ChartOptions["numberFormat"];
+    valueFormat?: ChartOptions["valueFormat"];
+    seriesColors?: Record<string, string>;
     categoryColors?: Record<string, string>;
 }
 
@@ -80,6 +98,9 @@ export interface DashboardWidgetPresentation {
     chartType?: ChartType;
 
     chartOptions?: ChartOptions;
+
+    /** Backend-owned snapshot used to restore authored chart presentation. */
+    chartCustomizationDefaults?: ChartCustomizationDefaults;
 
     showLegend?: boolean;
     showTooltip?: boolean;

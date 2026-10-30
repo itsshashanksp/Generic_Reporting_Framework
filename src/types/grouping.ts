@@ -23,4 +23,13 @@ export interface GroupingConfig {
     groups?: GroupDefinition[];
 
     aggregates?: AggregateDefinition[];
+
+    expandedByDefault?: boolean;
+    showSubtotals?: boolean;
+    showGrandTotal?: boolean;
+    /** Shows the already-calculated aggregate values in expanded and collapsed group headers. */
+    showGroupTotalsInHeader?: boolean;
+    subtotalPosition?: "top" | "bottom";
+    /** Source keeps ordinary records; grouped adds headers, subtotals and grand total. */
+    exportMode?: "source" | "grouped";
 }

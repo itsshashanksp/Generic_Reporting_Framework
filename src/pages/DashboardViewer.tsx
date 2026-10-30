@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 
 import Dashboard from "./Dashboard";
 import { useAuth } from "../auth";
-import { getDashboardChartColors, updateDashboardChartColors, type ChartColorConfiguration } from "../api/chartConfiguration";
+import { getDashboardChartColors, updateDashboardChartConfiguration, type ChartColorConfiguration, type ChartCustomizationDraft } from "../api/chartConfiguration";
 
 export default function DashboardViewer() {
 
@@ -31,8 +31,8 @@ export default function DashboardViewer() {
         return () => { active = false; };
     }, [id]);
 
-    const saveColors = useCallback(async (widgetId: string, colors: Record<string, string>, revision: string) => {
-        await updateDashboardChartColors(id, widgetId, colors, revision);
+    const saveConfiguration = useCallback(async (widgetId: string, customization: ChartCustomizationDraft | null, revision: string) => {
+        await updateDashboardChartConfiguration(id, widgetId, customization, revision);
         const configurations = await loadColors();
         const saved = configurations.find(configuration => configuration.widgetId === widgetId);
         if (!saved) throw new Error("Saved chart colors could not be reloaded.");
@@ -45,7 +45,7 @@ export default function DashboardViewer() {
             chartColors={chartColors}
             canCustomizeCharts={authentication.status === "authenticated" && authentication.user.frontendRole === "application-administrator"}
             chartConfigurationError={configurationError}
-            onSaveChartColors={saveColors}
+            onSaveChartConfiguration={saveConfiguration}
         />
     );
 }

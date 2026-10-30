@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import type { ChartType } from "../../types/widget";
 import { resolveTableLayout, type ResolvedTableLayout } from "../Grid/tableLayout";
 
 type SkeletonKind = "text" | "stat" | "chart" | "table" | "filter";
@@ -11,7 +12,7 @@ interface SkeletonColumn {
 interface SkeletonProps {
     kind?: SkeletonKind;
     label?: string;
-    chartType?: "bar" | "line" | "pie";
+    chartType?: ChartType;
     columns?: number;
     tableColumns?: SkeletonColumn[];
     rows?: number;
@@ -49,11 +50,11 @@ export default function Skeleton({
     );
 }
 
-function ChartPlaceholder({ type }: { type: "bar" | "line" | "pie" }) {
-    if (type === "pie") {
+function ChartPlaceholder({ type }: { type: ChartType }) {
+    if (["pie", "doughnut", "treemap", "funnel", "radial-bar"].includes(type)) {
         return <div className="skeleton__chart skeleton__chart--pie"><span className="skeleton__shape skeleton__ring" /></div>;
     }
-    if (type === "line") {
+    if (type === "line" || type === "area") {
         return (
             <div className="skeleton__chart skeleton__chart--line">
                 <span className="skeleton__shape skeleton__line skeleton__line--one" />

@@ -51,6 +51,16 @@ describe("GenericGrid shared configuration", () => {
         expect(props.rowSelection).toBe("multiple");
     });
 
+    it("lets ordinary columns share available width while preserving authored widths", () => {
+        render(<GridProvider><GenericGrid rows={[{ Auto: "A", Fixed: "B" }]} columns={[
+            { field: "Auto", header: "Automatic", visible: true, sortable: true },
+            { field: "Fixed", header: "Fixed", visible: true, sortable: true, width: 220 },
+        ]} gridConfig={gridConfig} /></GridProvider>);
+        const definitions = agGridProps.mock.calls.at(-1)?.[0].columnDefs;
+        expect(definitions[0]).toMatchObject({ flex: 1, initialWidth: undefined });
+        expect(definitions[1]).toMatchObject({ flex: undefined, initialWidth: 220 });
+    });
+
     it("initializes AG Grid sort indicators in configured multi-sort order", () => {
         render(
             <GridProvider>
@@ -228,6 +238,10 @@ describe("GenericGrid shared configuration", () => {
         fireEvent.click(screen.getByLabelText("Next page"));
         expect(within(records).getAllByRole("option")).toHaveLength(2);
         expect(screen.getByRole("button", { name: "Page 2" }).getAttribute("aria-current")).toBe("page");
+
+        fireEvent.change(screen.getByLabelText("Rows per page"), { target: { value: "25" } });
+        expect(within(records).getAllByRole("option")).toHaveLength(12);
+        expect(agGridProps.mock.calls.at(-1)?.[0].paginationPageSize).toBe(25);
     });
 
     it("defines resizable and movable defaults", () => {
@@ -256,6 +270,13 @@ describe("GenericGrid shared configuration", () => {
         expect(getContentMinWidth(rows, "Code", "Code", true, measureText)).toBe(150);
         expect(getContentMinWidth(rows, "Category", "Category", true, measureText)).toBe(150);
         expect(getContentMinWidth(rows, "Description", "Description", true, measureText)).toBeGreaterThan(400);
+    });
+
+    it("samples large result sets when calculating content widths", () => {
+        const measureText = vi.fn((value: string) => value.length * 8);
+        const rows = Array.from({ length: 10_000 }, (_, index) => ({ Value: `Row ${index}` }));
+        getContentMinWidth(rows, "Value", "Value", true, measureText);
+        expect(measureText).toHaveBeenCalledTimes(201);
     });
 
     it("renders every configured field in the generic mobile record presentation", () => {

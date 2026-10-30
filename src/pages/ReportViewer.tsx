@@ -29,6 +29,7 @@ import { getReport, getReportError } from "../engine/ReportEngine/reportLoader";
 import { createRequestCacheKey, getCachedResponse, getOrCreateInFlightRequest, setCachedResponse } from "../engine/RequestCache";
 import { saveSavedReport } from "../engine/SavedReportEngine";
 import { ExportFileError, ExportIntegrityError, exportExcel, exportRowsCSV, fetchAllRowsForExport } from "../engine/ExportEngine";
+import { buildReportingExportRows } from "../engine/GridEngine";
 import type { ApiResponse } from "../types/api";
 import type { FilterValue } from "../engine/FilterContext/FilterContext";
 import type { SavedReport } from "../types/savedReport";
@@ -163,7 +164,8 @@ export default function ReportViewer() {
         };
         const cacheKey = createRequestCacheKey(`report:${report.id}`, requestPayload);
 
-        if (!bypassCache) {
+        const reportingEnabled = report.grid.grouping?.enabled === true;
+        if (!bypassCache && !reportingEnabled) {
             const cachedResponse = getCachedResponse(cacheKey);
             if (cachedResponse) {
                 setResult(cachedResponse);
@@ -184,11 +186,19 @@ export default function ReportViewer() {
         setGridError("");
 
         try {
-            const response = await getOrCreateInFlightRequest(
-                cacheKey,
-                signal => executeRequest(requestPayload, { signal }),
-                controller.signal
-            );
+            const response: ApiResponse = reportingEnabled
+                ? await fetchAllRowsForExport({ ...requestPayload, pagination: undefined }, { signal: controller.signal })
+                    .then(data => ({
+                        success: true,
+                        message: "OK",
+                        data,
+                        meta: { page: 1, pageSize: data.length, totalRows: data.length, rowsReturned: data.length, executionTime: null },
+                    }))
+                : await getOrCreateInFlightRequest(
+                    cacheKey,
+                    signal => executeRequest(requestPayload, { signal }),
+                    controller.signal
+                );
 
             if (sequence !== requestSequence.current) {
                 return;
@@ -200,9 +210,9 @@ export default function ReportViewer() {
             }
 
             setResult(response);
-            setCachedResponse(cacheKey, response);
+            if (!reportingEnabled) setCachedResponse(cacheKey, response);
             setLoadedReportId(report.id);
-            setCurrentPage(activePage);
+            setCurrentPage(reportingEnabled ? 1 : activePage);
             setCurrentPageSize(activePageSize);
             setCurrentSorting(activeSorting);
         } catch (error: unknown) {
@@ -442,10 +452,13 @@ export default function ReportViewer() {
 
             if (controller.signal.aborted) return;
 
+            const rowsForExport = report.grid.grouping?.enabled && report.grid.grouping.exportMode === "grouped"
+                ? buildReportingExportRows(exportRows, report.grid.grouping, report.columns, currentSorting)
+                : exportRows;
             if (format === "csv") {
                 try {
                     exportRowsCSV(
-                        exportRows,
+                        rowsForExport,
                         report.export?.filename ? `${report.export.filename}.csv` : "report.csv"
                     );
                 } catch (cause: unknown) {
@@ -453,7 +466,7 @@ export default function ReportViewer() {
                 }
             } else {
                 await exportExcel(
-                    exportRows,
+                    rowsForExport,
                     report.export?.filename
                         ? `${report.export.filename}.xlsx`
                         : "report.xlsx"
@@ -482,6 +495,12 @@ export default function ReportViewer() {
             />
         );
     }
+
+    const reportingGrid = report.grid.grouping?.enabled === true;
+    const naturalGridHeight = resolveTableLayout(Math.max(1, rows.length), { pagination: false }).gridHeight;
+    const reportGridHeight = reportingGrid
+        ? "clamp(320px, 58dvh, 720px)"
+        : `min(${naturalGridHeight}px, max(300px, calc(100dvh - 320px)))`;
 
     return (
         <main ref={reportPageRef} className="report-page">
@@ -546,7 +565,9 @@ export default function ReportViewer() {
                         )}
                         <ReportToolbar
                             config={report.toolbar}
-                            exportConfig={report.export}
+                            exportConfig={report.grid.grouping?.enabled && report.export
+                                ? { ...report.export, exportCurrentView: false }
+                                : report.export}
                             onRefresh={handleRefresh}
                             isRefreshing={isGridLoading}
                             isExporting={isExporting}
@@ -578,8 +599,11 @@ export default function ReportViewer() {
                             rows={rows}
                             columns={report.columns}
                             gridConfig={report.grid}
+                            height={reportGridHeight}
+                            autoHeight={false}
+                            stableViewport={reportingGrid}
                             initialSort={report.sort}
-                            serverPagination={{
+                            serverPagination={report.grid.grouping?.enabled ? undefined : {
                                 page: currentPage,
                                 pageSize: currentPageSize,
                                 totalRows: result?.meta?.totalRows ?? result?.meta?.rowsReturned ?? rows.length,

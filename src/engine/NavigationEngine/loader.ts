@@ -1,4 +1,5 @@
 import type { NavigationIcon, NavigationItem } from "../../types/navigation";
+import { unknownPropertyMessage } from "../configurationValidation";
 
 const icons: NavigationIcon[] = ["dashboard", "reports", "report", "settings", "user"];
 const itemKeys = ["id", "title", "icon", "visible", "route", "reportId", "dashboardId", "children"];
@@ -58,7 +59,7 @@ function loadItem(
 ): NavigationItem {
     if (!isRecord(value)) throw new Error(`${label} must be an object.`);
     const unknown = Object.keys(value).filter(key => !itemKeys.includes(key));
-    if (unknown.length) throw new Error(`${label} contains unknown property "${unknown[0]}".`);
+    if (unknown.length) throw new Error(unknownPropertyMessage(label, unknown[0], itemKeys));
     if (!isNonEmptyString(value.id)) throw new Error(`${label} requires id.`);
     if (ids.has(value.id)) throw new Error(`Duplicate navigation id: ${value.id}.`);
     ids.add(value.id);

@@ -3,11 +3,13 @@ import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "re
 export default function AccessibleDialog({
   title,
   children,
+  footer,
   onClose,
   className = "",
 }: {
   title: string;
   children: ReactNode;
+  footer?: ReactNode;
   onClose: () => void;
   className?: string;
 }) {
@@ -73,6 +75,7 @@ export default function AccessibleDialog({
           </button>
         </header>
         <div className="app-dialog__body">{children}</div>
+        {footer}
       </div>
     </dialog>
   );

@@ -1,5 +1,6 @@
 import type { FilterType } from "../../types/filter";
 import { allowedOperators } from "../FilterEngine/validator";
+import { unknownPropertyMessage } from "../configurationValidation";
 
 const REPORT_KEYS = ["id", "title", "description", "queryDefinition", "request", "columns", "filters", "sort", "filterLogic", "grid", "toolbar", "export", "databaseSelection"];
 const REQUEST_KEYS = ["action", "database", "source", "fields", "filters", "joins", "groupBy", "having", "sort", "pagination", "distinct", "limit", "filterLogic", "with"];
@@ -75,7 +76,7 @@ export function getReportValidationErrors(
         errors.push("Report filterLogic must be AND or OR.");
     }
     if (hasQueryDefinition) validateSqlPresentationCompatibility(report, errors);
-    validateGrid(report.grid, errors);
+    validateGrid(report.grid, report.columns, errors);
     validateToolbar(report.toolbar, errors);
     validateExport(report.export, "Report export", errors);
     validateDatabaseSelection(report, errors);
@@ -275,7 +276,7 @@ function validateDynamicOptions(value: unknown, type: unknown, operator: unknown
     getJsonQueryRequestValidationErrors(value.request).forEach(error => errors.push(`${label} dynamicOptions: ${error}`));
 }
 
-function validateGrid(value: unknown, errors: string[]) {
+function validateGrid(value: unknown, columns: unknown, errors: string[]) {
     if (value === undefined) return;
     if (!isRecord(value)) return errors.push("Report grid must be an object.");
     rejectUnknown(value, ["pagination", "rowSelection", "grouping"], "Report grid", errors);
@@ -297,17 +298,28 @@ function validateGrid(value: unknown, errors: string[]) {
         }
     }
     if (value.rowSelection !== undefined && value.rowSelection !== "single" && value.rowSelection !== "multiple") errors.push("Report grid rowSelection must be single or multiple.");
-    if (value.grouping !== undefined) validateGrouping(value.grouping, errors);
+    if (value.grouping !== undefined) validateGrouping(value.grouping, columns, errors);
 }
 
-function validateGrouping(value: unknown, errors: string[]) {
+function validateGrouping(value: unknown, columns: unknown, errors: string[]) {
     if (!isRecord(value)) return errors.push("Report grid grouping must be an object.");
-    rejectUnknown(value, ["enabled", "groups", "aggregates"], "Report grid grouping", errors);
+    rejectUnknown(value, ["enabled", "groups", "aggregates", "expandedByDefault", "showSubtotals", "showGrandTotal", "showGroupTotalsInHeader", "subtotalPosition", "exportMode"], "Report grid grouping", errors);
     if (typeof value.enabled !== "boolean") errors.push("Report grid grouping enabled must be a boolean.");
     if (value.groups !== undefined) validateNamedFields(value.groups, "Report grid grouping groups", errors);
+    if (value.enabled === true && (!Array.isArray(value.groups) || value.groups.length === 0)) errors.push("Report grid grouping groups must be a non-empty array when grouping is enabled.");
+    if (Array.isArray(value.groups)) {
+        const fields = value.groups.filter(isRecord).map(group => group.field).filter((field): field is string => typeof field === "string");
+        if (new Set(fields.map(field => field.toLowerCase())).size !== fields.length) errors.push("Report grid grouping groups must not contain duplicate fields.");
+    }
+    for (const key of ["expandedByDefault", "showSubtotals", "showGrandTotal", "showGroupTotalsInHeader"] as const) optionalBoolean(value[key], `Report grid grouping ${key}`, errors);
+    if (value.subtotalPosition !== undefined && value.subtotalPosition !== "top" && value.subtotalPosition !== "bottom") errors.push("Report grid grouping subtotalPosition must be top or bottom.");
+    if (value.exportMode !== undefined && value.exportMode !== "source" && value.exportMode !== "grouped") errors.push("Report grid grouping exportMode must be source or grouped.");
     if (value.aggregates !== undefined) {
         if (!Array.isArray(value.aggregates)) errors.push("Report grid grouping aggregates must be an array.");
-        else value.aggregates.forEach((entry, index) => {
+        else {
+            const aggregateFields = value.aggregates.filter(isRecord).map(aggregate => aggregate.field).filter((field): field is string => typeof field === "string");
+            if (new Set(aggregateFields.map(field => field.toLowerCase())).size !== aggregateFields.length) errors.push("Report grid grouping aggregates must not contain duplicate fields.");
+            value.aggregates.forEach((entry, index) => {
             const label = `Report grid grouping aggregate at index ${index}`;
             if (!isRecord(entry)) return errors.push(`${label} must be an object.`);
             rejectUnknown(entry, ["field", "function", "alias", "header"], label, errors);
@@ -315,6 +327,18 @@ function validateGrouping(value: unknown, errors: string[]) {
             if (!["COUNT", "SUM", "AVG", "MIN", "MAX"].includes(String(entry.function))) errors.push(`${label} function is invalid.`);
             optionalString(entry.alias, `${label} alias`, errors);
             optionalString(entry.header, `${label} header`, errors);
+            });
+        }
+    }
+    const columnFields = new Set(Array.isArray(columns)
+        ? columns.filter(isRecord).map(column => column.field).filter((field): field is string => typeof field === "string").map(field => field.toLowerCase())
+        : []);
+    if (columnFields.size > 0) {
+        if (Array.isArray(value.groups)) value.groups.forEach((group, index) => {
+            if (isRecord(group) && typeof group.field === "string" && !columnFields.has(group.field.toLowerCase())) errors.push(`Report grid grouping group at index ${index} field must reference a configured column.`);
+        });
+        if (Array.isArray(value.aggregates)) value.aggregates.forEach((aggregate, index) => {
+            if (isRecord(aggregate) && typeof aggregate.field === "string" && !columnFields.has(aggregate.field.toLowerCase())) errors.push(`Report grid grouping aggregate at index ${index} field must reference a configured column.`);
         });
     }
 }
@@ -559,7 +583,7 @@ export function validateDatabaseId(value: unknown, label: string, errors: string
 }
 
 function rejectUnknown(value: Record<string, unknown>, allowed: string[], label: string, errors: string[]) {
-    Object.keys(value).filter(key => !allowed.includes(key)).forEach(key => errors.push(`${label} contains unknown property "${key}".`));
+    Object.keys(value).filter(key => !allowed.includes(key)).forEach(key => errors.push(unknownPropertyMessage(label, key, allowed)));
 }
 function requireString(value: unknown, label: string, errors: string[]) { if (typeof value !== "string" || !value.trim()) errors.push(`${label} must be a non-empty string.`); }
 function optionalString(value: unknown, label: string, errors: string[]) { if (value !== undefined && (typeof value !== "string" || !value.trim())) errors.push(`${label} must be a non-empty string.`); }

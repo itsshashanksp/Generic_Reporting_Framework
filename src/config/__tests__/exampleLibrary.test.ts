@@ -120,7 +120,9 @@ describe("version-controlled example library", () => {
             showTotalRecords: true,
             showPageNumbers: true,
         });
-        expect(charts.some(widget => (widget.chartOptions as Record<string, unknown>)?.appearance === "donut")).toBe(true);
+        expect(charts.some(widget => widget.chartType === "doughnut")).toBe(true);
+        expect(charts.some(widget => widget.chartType === "funnel")).toBe(false);
+        expect(charts.some(widget => (widget.chartOptions as Record<string, unknown>)?.numberFormat === "compact-indian")).toBe(true);
         expect(charts.some(widget => (widget.chartOptions as Record<string, unknown>)?.orientation === "horizontal")).toBe(true);
         expect(charts.filter(widget => widget.id === "bar-chart" || widget.id === "pie-chart").every(widget => widget.height === 440)).toBe(true);
         expect(charts.every(widget => (widget.export as { formats?: string[] })?.formats?.join(",") === "png,svg,csv,excel")).toBe(true);

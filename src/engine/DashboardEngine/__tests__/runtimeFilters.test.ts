@@ -115,6 +115,49 @@ describe("dashboard widget runtimeFilters validation", () => {
         ]));
     });
 
+    it("accepts the backend-owned authored chart defaults snapshot", () => {
+        const chart = widget({
+            type: "chart", xField: "Status", yField: "Total", chartType: "line",
+            chartCustomizationDefaults: { chartType: "bar", orientation: "horizontal", numberFormat: "full", valueFormat: "currency", seriesColors: {}, categoryColors: { Open: "#16A34A" } },
+        });
+        expect(validateDashboard(dashboard([chart])).errors).toEqual([]);
+        expect(validateDashboard(dashboard([widget({
+            type: "chart", xField: "Status", yField: "Total",
+            chartCustomizationDefaults: { chartType: "radar" },
+        })])).errors).toContain('Chart widget "orders" chartCustomizationDefaults chartType must be bar, line, area, pie, doughnut, treemap, funnel, or radial-bar.');
+        expect(validateDashboard(dashboard([widget({
+            type: "chart", xField: "Status", yField: "Total",
+            chartCustomizationDefaults: { chartType: "bar", orientation: "diagonal", numberFormat: "short", valueFormat: "money" },
+        })])).errors).toEqual(expect.arrayContaining([
+            'Chart widget "orders" chartCustomizationDefaults numberFormat must be full, compact, or compact-indian.',
+            'Chart widget "orders" chartCustomizationDefaults valueFormat must be number, decimal, or currency.',
+            'Chart widget "orders" chartCustomizationDefaults orientation must be vertical or horizontal.',
+        ]));
+    });
+
+    it("validates chart numeric presentation and warns without rejecting legacy Funnel", () => {
+        const modern = widget({
+            type: "chart", xField: "Status", yField: "Total", chartType: "doughnut",
+            chartOptions: { numberFormat: "compact-indian", valueFormat: "currency" },
+        });
+        expect(validateDashboard(dashboard([modern])).errors).toEqual([]);
+
+        const invalid = validateDashboard(dashboard([widget({
+            type: "chart", xField: "Status", yField: "Total", chartType: "bar",
+            chartOptions: { numberFormat: "short", valueFormat: "money" },
+        })]));
+        expect(invalid.errors).toEqual(expect.arrayContaining([
+            'Chart widget "orders" chartOptions numberFormat must be full, compact, or compact-indian.',
+            'Chart widget "orders" chartOptions valueFormat must be number, decimal, or currency.',
+        ]));
+
+        const legacy = validateDashboard(dashboard([widget({
+            type: "chart", xField: "Stage", yField: "Total", chartType: "funnel",
+        })]));
+        expect(legacy.errors).toEqual([]);
+        expect(legacy.warnings).toContain('Chart widget "orders" uses legacy Funnel rendering, which is no longer supported. Source data and mappings are preserved.');
+    });
+
     it("keeps CSV/Excel export on table data definitions and accepts legacy pageSize", () => {
         const table = widget({
             type: "table",

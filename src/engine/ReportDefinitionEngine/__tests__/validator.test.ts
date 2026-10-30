@@ -11,6 +11,50 @@ const presentation = {
 };
 
 describe("report request contract alignment", () => {
+    it("validates reporting-grid grouping and aggregation configuration", () => {
+        const report = {
+            ...presentation,
+            queryDefinition: { format: "sql", resource: "reports/customer" },
+            grid: {
+                grouping: {
+                    enabled: true,
+                    groups: [{ field: "CustomerName" }],
+                    aggregates: [{ field: "TotalAmount", function: "SUM" }],
+                    expandedByDefault: true,
+                    showSubtotals: true,
+                    showGrandTotal: true,
+                    showGroupTotalsInHeader: true,
+                    subtotalPosition: "bottom",
+                    exportMode: "grouped",
+                },
+            },
+        };
+        expect(getReportValidationErrors(report)).toEqual([]);
+        expect(getReportValidationErrors({
+            ...report,
+            grid: { grouping: { ...report.grid.grouping, showGroupTotalsInHeader: "yes" } },
+        })).toContain("Report grid grouping showGroupTotalsInHeader must be a boolean.");
+        const invalid = getReportValidationErrors({
+            ...report,
+            grid: { grouping: {
+                enabled: true,
+                groups: [{ field: "Missing" }, { field: "Missing" }],
+                aggregates: [{ field: "Unknown", function: "MEDIAN" }, { field: "Unknown", function: "SUM" }],
+                subtotalPosition: "middle",
+                exportMode: "visible",
+            } },
+        });
+        expect(invalid).toEqual(expect.arrayContaining([
+            "Report grid grouping groups must not contain duplicate fields.",
+            "Report grid grouping aggregates must not contain duplicate fields.",
+            "Report grid grouping aggregate at index 0 function is invalid.",
+            "Report grid grouping subtotalPosition must be top or bottom.",
+            "Report grid grouping exportMode must be source or grouped.",
+            "Report grid grouping group at index 0 field must reference a configured column.",
+            "Report grid grouping aggregate at index 0 field must reference a configured column.",
+        ]));
+    });
+
     it("accepts currency columns while rejecting unsupported data types", () => {
         const report = {
             ...presentation,

@@ -7,6 +7,20 @@ import { getPageTokens } from "../paginationTokens";
 const config = { showTotalRecords: true, showPageNumbers: true, showFirstLast: false };
 
 describe("Pagination", () => {
+    it("renders record count, page size, and navigation as separate shared layout regions", () => {
+        const { container } = render(
+            <Pagination page={1} pageSize={10} pageSizeOptions={[10, 25, 50]} totalRows={80} rowsOnPage={10}
+                config={config} onPageChange={vi.fn()} onPageSizeChange={vi.fn()} className="universal-grid__pagination--client" />
+        );
+
+        const footer = container.querySelector(".universal-grid__pagination");
+        expect(footer?.classList.contains("universal-grid__pagination--client")).toBe(true);
+        expect(footer?.children).toHaveLength(3);
+        expect(footer?.children[0].classList.contains("universal-grid__range")).toBe(true);
+        expect(footer?.children[1].classList.contains("universal-grid__page-size")).toBe(true);
+        expect(footer?.children[2].classList.contains("universal-grid__page-buttons")).toBe(true);
+    });
+
     it("renders a bounded numbered window for large totals", () => {
         const onPageChange = vi.fn();
         render(
@@ -29,6 +43,10 @@ describe("Pagination", () => {
         );
         expect((screen.getByRole("button", { name: "Next page" }) as HTMLButtonElement).disabled).toBe(true);
         expect((screen.getByRole("button", { name: "Last page" }) as HTMLButtonElement).disabled).toBe(true);
+        expect(screen.getByRole("button", { name: "First page" }).classList.contains("universal-grid__page-button--first")).toBe(true);
+        expect(screen.getByRole("button", { name: "Previous page" }).classList.contains("universal-grid__page-button--previous")).toBe(true);
+        expect(screen.getByRole("button", { name: "Next page" }).classList.contains("universal-grid__page-button--next")).toBe(true);
+        expect(screen.getByRole("button", { name: "Last page" }).classList.contains("universal-grid__page-button--last")).toBe(true);
         fireEvent.click(screen.getByRole("button", { name: "First page" }));
         expect(onPageChange).toHaveBeenCalledWith(1);
     });

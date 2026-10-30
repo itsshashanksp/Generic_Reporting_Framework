@@ -4,16 +4,20 @@ import { applyChartTopN, formatChartNumber, formatChartTooltipValue, getHorizont
 
 describe("chart data presentation", () => {
     it("formats chart values without changing their numeric precision", () => {
-        expect(formatChartNumber(12908199.939999992)).toBe("12.91M");
-        expect(formatChartNumber(4235826.41)).toBe("4.24M");
-        expect(formatChartNumber(2500000)).toBe("2.5M");
-        expect(formatChartNumber(12500)).toBe("12.5K");
+        expect(formatChartNumber(12908199.939999992)).toBe("1.29 Cr");
+        expect(formatChartNumber(4235826.41)).toBe("42.36 L");
+        expect(formatChartNumber(2500000)).toBe("25 L");
+        expect(formatChartNumber(12500)).toBe("12.5 K");
         expect(formatChartNumber(950)).toBe("950");
-        expect(formatChartNumber(-12500)).toBe("-12.5K");
+        expect(formatChartNumber(-12500)).toBe("-12.5 K");
         expect(formatChartNumber(0)).toBe("0");
-        expect(formatChartNumber(0.1254)).toBe("0.13");
+        expect(formatChartNumber(0.1254)).toBe("0.1254");
         expect(formatChartNumber(null)).toBe("—");
-        expect(formatChartTooltipValue(12908199.939999992)).toBe("12,908,199.94");
+        expect(formatChartTooltipValue(12908199.939999992)).toBe("1,29,08,199.94");
+        expect(formatChartNumber(42010000, { numberFormat: "compact-indian" })).toBe("4.2 Cr");
+        expect(formatChartNumber(6020000, { numberFormat: "compact-indian" })).toBe("60.2 L");
+        expect(formatChartNumber(12910000, { numberFormat: "full" })).toBe("1,29,10,000");
+        expect(formatChartTooltipValue(12910000, { valueFormat: "currency" })).toBe("₹1,29,10,000.00");
     });
 
     it("suppresses colliding and tiny pie labels as the available radius shrinks", () => {

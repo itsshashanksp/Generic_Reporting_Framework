@@ -25,7 +25,7 @@ This inventory was verified against the backend documentation and the public val
 | SELECT aliases | Type support, shallow validation | Identifier validation | Supported in configured JSON |
 | DISTINCT / TOP (`limit`) | Passed through | Validated | Supported in configured JSON |
 | INNER/LEFT/RIGHT joins | Passed through | Shape/type/equality validation | One equality predicate only |
-| GROUP BY | Passed through | Identifier validation | Query grouping is backend-side; grid `grouping` is presentation-only |
+| GROUP BY | Passed through | Identifier validation | Query grouping is backend-side; optional grid `grouping` independently builds presentation groups from complete result rows |
 | Aggregates | Field objects | Function allowlist validation | COUNT, SUM, AVG, MIN, MAX, STRING_AGG |
 | HAVING | Passed through | Aggregate/operator validation | Conditions are combined with AND by backend |
 | CASE / binary arithmetic | Passed through | Shape/operator validation | One binary arithmetic level; CASE comparison form |

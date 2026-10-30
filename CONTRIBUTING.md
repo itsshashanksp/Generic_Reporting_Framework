@@ -2,6 +2,23 @@
 
 Thank you for contributing to the Generic Reporting Framework frontend.
 
+## Configuration feature contract
+
+Any change that adds, changes, aliases, or deprecates a JSON configuration property must update all applicable parts of the configuration contract in the same change:
+
+1. TypeScript configuration types.
+2. Runtime validator and conditional dependencies.
+3. Loader/parser/resolver behavior and defaults.
+4. Public focused JSON example.
+5. Applicable complete reference example.
+6. `src/config/featureRegistry.ts`.
+7. Configuration documentation.
+8. Validator and loader regression tests.
+9. Configuration coverage audit.
+10. Relevant ignored runtime JSON only when locally necessary; never force-add it.
+
+Run `npm run config:audit`, the full tests, type checking, lint, production build, and `git diff --check`. Missing registry example/document references or invalid public configurations fail the audit.
+
 ## Before You Start
 
 - Keep changes scoped to the frontend repository.
