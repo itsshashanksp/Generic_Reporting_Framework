@@ -39,15 +39,6 @@
     color: #991b1b;
 }
 
-.ui-spinner {
-    width: 26px;
-    height: 26px;
-    border: 3px solid #dbeafe;
-    border-top-color: #2563eb;
-    border-radius: 50%;
-    animation: ui-spinner-rotate 0.8s linear infinite;
-}
-
 .ui-state__action {
     margin-top: 6px;
 }
@@ -337,14 +328,7 @@
     }
 }
 
-@keyframes ui-spinner-rotate {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
 @media (prefers-reduced-motion: reduce) {
-    .ui-spinner,
     .skeleton__shape {
         animation: none;
     }

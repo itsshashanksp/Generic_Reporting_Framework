@@ -11,6 +11,11 @@ const dashboards = import.meta.glob("../../../examples/dashboards/*.json", { eag
 const widgets = import.meta.glob("../../../examples/widgets/*.json", { eager: true, import: "default" }) as Record<string, unknown>;
 const menus = import.meta.glob("../../../examples/menu.json", { eager: true, import: "default" }) as Record<string, unknown>;
 const documentation = import.meta.glob("../../../docs/*.md", { eager: true, query: "?raw", import: "default" }) as Record<string, string>;
+// Absolute project paths intentionally bypass the test alias so ignored local
+// deployment JSON is covered by config:audit as well as tracked fixtures.
+const runtimeReports = import.meta.glob("/src/config/reports/*.json", { eager: true, import: "default" }) as Record<string, unknown>;
+const runtimeDashboards = import.meta.glob("/src/config/dashboards/*.json", { eager: true, import: "default" }) as Record<string, unknown>;
+const runtimeMenus = import.meta.glob("/src/config/menu.json", { eager: true, import: "default" }) as Record<string, unknown>;
 
 const examplePaths = new Set([
     ...Object.keys(reports).map(path => path.replace("../../../examples/", "")),
@@ -65,5 +70,29 @@ describe("configuration coverage report", () => {
         const deprecated = configurationFeatureRegistry.flatMap(feature => feature.deprecatedProperties);
         expect(deprecated).toContain("databaseSelection");
         expect(new Set(deprecated).size).toBe(deprecated.length);
+    });
+
+    it("PASS — ignored local runtime configurations and menu pass their real validators", () => {
+        const localReportIds = Object.values(runtimeReports).flatMap(value => typeof value === "object" && value && "id" in value ? [String(value.id)] : []);
+        const localDashboardIds = Object.values(runtimeDashboards).flatMap(value => typeof value === "object" && value && "id" in value ? [String(value.id)] : []);
+        for (const [path, report] of Object.entries(runtimeReports)) expect(getReportValidationErrors(report), path).toEqual([]);
+        for (const [path, dashboard] of Object.entries(runtimeDashboards)) {
+            expect(validateDashboard(dashboard, { reportIds: localReportIds, widgetIds }).errors, path).toEqual([]);
+        }
+        for (const [path, menu] of Object.entries(runtimeMenus)) {
+            expect(() => loadNavigation(menu, { reportIds: localReportIds, dashboardIds: localDashboardIds }), path).not.toThrow();
+        }
+    });
+
+    it("PASS — maintained configurations contain no obsolete alignment or generated row-number properties", () => {
+        const serialized = JSON.stringify([
+            ...Object.values(runtimeReports),
+            ...Object.values(runtimeDashboards),
+            ...Object.values(reports),
+            ...Object.values(dashboards),
+            ...Object.values(widgets),
+        ]);
+        expect(serialized).not.toMatch(/"align"\s*:/);
+        expect(serialized).not.toMatch(/"(?:rowNumber|row_number|serialNumber|showRowNumbers)"\s*:/i);
     });
 });

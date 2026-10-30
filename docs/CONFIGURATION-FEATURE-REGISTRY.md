@@ -14,9 +14,9 @@ The framework currently uses one canonical configuration format. It has no versi
 | Database context | request/application | none | explicit request database overrides session/global/backend defaults | database-selector examples |
 | Report source | report | id, title, exactly one data source, columns, grid, toolbar | filters, sorting and export optional | JSON Query and SQL Resource reports |
 | JSON Query | request | action, source, fields | joins, grouping, HAVING, CTE, filters and limit optional | JSON Query report |
-| Columns/currency | grid | field, header | visibility, sizing, type and alignment optional | filter and reporting-grid reports |
+| Columns/currency | grid | field, header | visibility, sizing and semantic type optional; alignment is automatic | filter and reporting-grid reports |
 | Runtime filters | filter | field, label, type | operator, static/dynamic options and presentation optional | filter catalog and widget-filter dashboards |
-| Targeted filters | filter | none | `targetGrids` and `filterFields` opt in | combined widget-filter dashboard |
+| Targeted filters | filter | none | `targetGrids`, `pageFilterExclusions`, and `filterFields` opt in | combined widget-filter dashboard |
 | Pagination/sorting | grid | report pagination core | modern presentation controls optional | filter and widget catalogs |
 | Reporting Grid | grid | enabled plus non-empty groups when enabled | expansion, group-header totals, subtotals, grand total and export behavior have documented defaults | reporting-grid report |
 | Widgets | widget | id, type, title and data definition/reference | layout and visibility optional | widget catalog and reusable widget |

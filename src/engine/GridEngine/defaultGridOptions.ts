@@ -9,8 +9,4 @@ export const defaultGridOptions: GridOptions = {
 
     pagination: true,
     paginationPageSize: 50,
-
-    suppressRowClickSelection: false,
-
-    rowSelection: "multiple",
 };

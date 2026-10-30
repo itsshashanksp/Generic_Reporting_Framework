@@ -38,6 +38,16 @@ export default function Pagination({
     const tokens = config.showPageNumbers !== false && totalPages !== null
         ? getPageTokens(safePage, totalPages)
         : [];
+    const commitPageDraft = (input: HTMLInputElement) => {
+        const parsed = Number(input.value);
+        if (!Number.isInteger(parsed) || parsed < 1) {
+            input.value = String(safePage);
+            return;
+        }
+        const nextPage = totalPages === null ? parsed : Math.min(parsed, totalPages);
+        input.value = String(nextPage);
+        if (nextPage !== safePage) onPageChange(nextPage);
+    };
 
     return (
         <footer className={`universal-grid__pagination${className ? ` ${className}` : ""}`} aria-label="Grid pagination">
@@ -77,6 +87,24 @@ export default function Pagination({
                         {token}
                     </button>
                 ) : <span key={token} className="universal-grid__ellipsis" aria-hidden="true">…</span>)}
+                <label className="universal-grid__page-indicator">
+                    <span>Page</span>
+                    <input
+                        type="number"
+                        aria-label="Current page"
+                        min={1}
+                        max={totalPages ?? undefined}
+                        defaultValue={safePage}
+                        disabled={disabled}
+                        key={safePage}
+                        onBlur={event => commitPageDraft(event.currentTarget)}
+                        onKeyDown={event => {
+                            if (event.key === "Enter") event.currentTarget.blur();
+                            else if (event.key === "Escape") event.currentTarget.value = String(safePage);
+                        }}
+                    />
+                    {totalPages === null ? "" : <span>of <strong>{totalPages.toLocaleString()}</strong></span>}
+                </label>
                 <button type="button" className="universal-grid__page-button universal-grid__page-button--next" aria-label="Next page" disabled={disabled || !canGoNext} onClick={() => onPageChange(safePage + 1)}>Next</button>
                 {config.showFirstLast === true && totalPages !== null && (
                     <button type="button" className="universal-grid__page-button universal-grid__page-button--last" aria-label="Last page" disabled={disabled || safePage >= totalPages} onClick={() => onPageChange(totalPages)}>Last</button>

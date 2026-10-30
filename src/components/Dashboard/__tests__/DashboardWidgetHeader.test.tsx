@@ -21,6 +21,7 @@ describe("shared dashboard widget header", () => {
 
         expect(header).not.toBeNull();
         expect(heading?.querySelector("h2")?.textContent).toBe("Total Sales Month Wise");
+        expect(heading?.querySelector("h2")?.getAttribute("title")).toBe("Total Sales Month Wise");
         expect(heading?.querySelector("p")?.textContent).toContain("Sales by calendar month");
         expect(actions?.querySelectorAll("button")).toHaveLength(2);
         expect(header?.children[0]).toBe(heading);

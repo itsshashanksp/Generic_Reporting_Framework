@@ -14,16 +14,16 @@ export function validateColumns(columns: ColumnDefinition[]): ColumnDefinition[]
 
         if (
             column.dataType !== undefined &&
-            !["text", "number", "currency", "boolean", "date", "datetime"].includes(column.dataType)
+            !["text", "number", "currency", "percentage", "boolean", "date", "datetime"].includes(column.dataType)
         ) {
             throw new Error(`Invalid data type for column '${column.field}'.`);
         }
 
-        if (
-            column.align !== undefined &&
-            !["left", "center", "right"].includes(column.align)
-        ) {
-            throw new Error(`Invalid alignment for column '${column.field}'.`);
+        if (column.currency !== undefined && !/^[A-Z]{3}$/.test(column.currency)) {
+            throw new Error(`Invalid currency code for column '${column.field}'.`);
+        }
+        if (column.currency !== undefined && column.dataType !== "currency") {
+            throw new Error(`Currency is only supported for currency column '${column.field}'.`);
         }
 
     });

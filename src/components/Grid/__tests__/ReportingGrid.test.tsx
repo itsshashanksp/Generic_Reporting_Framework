@@ -30,14 +30,14 @@ describe("ReportingGrid", () => {
             { Month: "April", Category: "Grocery", Sales: 15000 },
             { Month: "April", Category: "Electronics", Sales: 25000 },
         ]} columns={columns} grouping={{ ...grouping, showGroupTotalsInHeader: true }} gridConfig={gridConfig} />);
-        expect(screen.getAllByText("40,000.00")).toHaveLength(3);
+        expect(screen.getAllByText("₹40,000.00")).toHaveLength(3);
         fireEvent.click(screen.getByRole("button", { name: "Collapse April group" }));
-        expect(screen.getAllByText("40,000.00")).toHaveLength(2);
+        expect(screen.getAllByText("₹40,000.00")).toHaveLength(2);
         expect(screen.queryByLabelText("April subtotal")).toBeNull();
     });
 
     it("aligns multiple aggregate values in nested group headers without changing totals", () => {
-        const nestedColumns = [...columns, { field: "Quantity", header: "Quantity", visible: true, dataType: "number" as const, align: "right" as const }];
+        const nestedColumns = [...columns, { field: "Quantity", header: "Quantity", visible: true, dataType: "number" as const }];
         render(<ReportingGrid rows={[
             { Month: "April", Category: "Grocery", Sales: 10, Quantity: 2 },
             { Month: "April", Category: "Grocery", Sales: 20, Quantity: 3 },
@@ -49,7 +49,7 @@ describe("ReportingGrid", () => {
         }} gridConfig={gridConfig} />);
         expect(screen.getByRole("button", { name: "Collapse April group" })).not.toBeNull();
         expect(screen.getByRole("button", { name: "Collapse Grocery group" })).not.toBeNull();
-        expect(screen.getAllByText("30.00").length).toBeGreaterThanOrEqual(2);
+        expect(screen.getAllByText("₹30.00").length).toBeGreaterThanOrEqual(2);
         expect(screen.getAllByText("2").length).toBeGreaterThanOrEqual(2);
         expect(screen.getByLabelText("Grand Total")).not.toBeNull();
     });
@@ -138,8 +138,8 @@ describe("ReportingGrid", () => {
         expect(table.style.getPropertyValue("--reporting-grid-min-width")).not.toBe("620px");
         expect((cols[2] as HTMLElement).style.width).not.toBe("");
         expect(screen.getByTitle(longCategory)).not.toBeNull();
-        expect(screen.getByTitle("12,34,56,78,90,123.45")).not.toBeNull();
-        expect(screen.getAllByText("12,34,56,78,90,123.45").length).toBeGreaterThanOrEqual(2);
+        expect(screen.getByTitle("₹1,23,456.79 Cr")).not.toBeNull();
+        expect(screen.getAllByText("₹1,23,456.79 Cr").length).toBeGreaterThanOrEqual(2);
     });
 
     it("renders formatted details, subtotals, and a grand total with accessible expansion", () => {
@@ -149,7 +149,7 @@ describe("ReportingGrid", () => {
         ]} columns={columns} grouping={grouping} gridConfig={gridConfig} />);
         const toggle = screen.getByRole("button", { name: "Collapse April group" });
         expect(toggle.getAttribute("aria-expanded")).toBe("true");
-        expect(screen.getAllByText("40,000.00")).toHaveLength(2);
+        expect(screen.getAllByText("₹40,000.00")).toHaveLength(2);
         expect(screen.getByLabelText("April subtotal")).not.toBeNull();
         expect(screen.getByLabelText("Grand Total")).not.toBeNull();
         fireEvent.click(toggle);

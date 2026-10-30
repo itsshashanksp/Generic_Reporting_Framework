@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Label, Legend, Line, LineChart, Pie, PieChart, RadialBar, RadialBarChart, ResponsiveContainer, Tooltip, Treemap, XAxis, YAxis } from "recharts";
 
 import { getRequestErrorMessage } from "../../api/request";
@@ -16,7 +16,7 @@ import AccessibleDialog from "../Common/AccessibleDialog";
 import { useToast } from "../Notifications/ToastProvider";
 import DashboardWidgetFrame from "./DashboardWidgetFrame";
 import WidgetFilterController, { type WidgetFilterControls } from "./WidgetFilterController";
-import { applyChartTopN, formatChartNumber, formatChartTooltipValue, getHorizontalBarChartHeight, getHorizontalCategoryAxisWidth, getVisiblePieLabelIndexes, isLikelyOrderedChartDimension, mapChartData, type ChartDatum } from "./chartData";
+import { applyChartTopN, describeChartData, formatChartCategoryLabel, formatChartNumber, formatChartPercentage, formatChartTooltipValue, getChartOverflowLayout, getChartValueDomain, getHorizontalCategoryAxisWidth, getProportionalChartTotal, getVisiblePieLabelIndexes, isLikelyOrderedChartDimension, mapChartData, resolveChartLabelVisibility, type ChartDatum } from "./chartData";
 import { useDashboardWidgetRequest } from "./useDashboardWidgetRequest";
 import { CHART_CAPABILITIES, getChartCapability } from "./chartCapabilities";
 
@@ -24,11 +24,6 @@ const EMPTY_FILTER_DEFINITIONS: FilterDefinition[] = [];
 const CHART_COLORS = ["#3274d9", "#2f9e8f", "#8b5cf6", "#e07a32", "#d94f8a", "#5b8def", "#73a857", "#c49a32"];
 const AXIS_COLOR = "#64748b";
 const GRID_COLOR = "#e2e8f0";
-const axisDomain = [
-    (value: number) => Math.min(0, value),
-    (value: number) => Math.max(0, value),
-] as const;
-
 type ChartSelection = {
     capability: (typeof CHART_CAPABILITIES)[number];
     label: string;
@@ -41,6 +36,12 @@ function chartSelectionsForCategory(category: (typeof CHART_CAPABILITIES)[number
         : [{ capability, label: capability.label }]);
 }
 
+function resolveChartType(type: ChartType, options: ChartOptions | undefined, applyLegacyAppearance: boolean): ChartType {
+    return type === "pie" && options?.appearance === "donut" && applyLegacyAppearance
+        ? "doughnut"
+        : type;
+}
+
 interface PieLabelProps {
     cx?: number;
     cy?: number;
@@ -48,6 +49,7 @@ interface PieLabelProps {
     midAngle?: number;
     index?: number;
     value?: unknown;
+    name?: unknown;
     points?: Array<{ x: number; y: number }>;
 }
 
@@ -80,7 +82,9 @@ function renderPieLabel(props: PieLabelProps, getVisibility: PieLabelVisibility,
     const radians = -(Number(props.midAngle) || 0) * Math.PI / 180;
     const x = cx + Math.cos(radians) * radius;
     const y = cy + Math.sin(radians) * radius;
-    return <text x={x} y={y} dy="0.35em" textAnchor={x >= cx ? "start" : "end"} className="dashboard-chart-external-label">{formatChartNumber(props.value, options)}</text>;
+    const value = formatChartNumber(props.value, options);
+    const category = formatChartCategoryLabel(String(props.name ?? "").trim(), 18);
+    return <text x={x} y={y} dy="0.35em" textAnchor={x >= cx ? "start" : "end"} className="dashboard-chart-external-label">{category ? `${category}: ${value}` : value}</text>;
 }
 
 function renderPieLabelLine(props: PieLabelProps, getVisibility: PieLabelVisibility) {
@@ -90,54 +94,106 @@ function renderPieLabelLine(props: PieLabelProps, getVisibility: PieLabelVisibil
 
 function formatTooltipPresentation(value: unknown, options: ChartOptions, proportionalTotal = 0) {
     const fullValue = formatChartTooltipValue(value, options);
-    if (proportionalTotal <= 0) return fullValue;
-    const percentage = Number(value) / proportionalTotal * 100;
-    return `${fullValue} (${percentage.toLocaleString("en-IN", { maximumFractionDigits: 2 })}%)`;
+    const percentage = formatChartPercentage(value, proportionalTotal);
+    return percentage ? `${fullValue} (${percentage})` : fullValue;
 }
 
-function ChartCustomizationPreview({ type, data, yField, seriesColors, categoryColors, options }: {
+interface ChartViewportProps {
     type: ChartType;
     data: ChartDatum[];
     yField: string;
     seriesColors: Record<string, string>;
     categoryColors: Record<string, string>;
     options: ChartOptions;
-}) {
+    showLegend?: boolean;
+    showLabels?: boolean;
+    showTooltip?: boolean;
+    showGrid?: boolean;
+    className: string;
+    ariaLabel: string;
+}
+
+const ChartViewport = forwardRef<HTMLDivElement, ChartViewportProps>(function ChartViewport({
+    type, data, yField, seriesColors, categoryColors, options,
+    showLegend, showLabels, showTooltip = true, showGrid = true,
+    className, ariaLabel,
+}, forwardedRef) {
     const horizontal = type === "bar" && options.orientation === "horizontal";
-    const proportionalTotal = getChartCapability(type).tooltipMode === "proportional"
-        ? data.reduce((sum, item) => sum + Math.max(0, item.value ?? 0), 0)
+    const capability = getChartCapability(type);
+    const proportionalTotal = capability.tooltipMode === "proportional"
+        ? getProportionalChartTotal(data)
         : 0;
     const proportional = proportionalTotal > 0;
-    const labels = options.showLabels ?? options.showDataLabels ?? proportional;
-    const legend = options.showLegend ? <Legend /> : null;
+    const labels = resolveChartLabelVisibility(type, data.length, options, showLabels);
+    const legend = options.showLegend ?? showLegend ?? proportional;
+    const grid = options.showGrid ?? showGrid;
+    const overflow = getChartOverflowLayout(type, options.orientation ?? "vertical", data, capability.overflow, options);
+    const [availableWidth, setAvailableWidth] = useState(0);
+    const viewportRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (!viewportRef.current) return;
+        viewportRef.current.scrollLeft = 0;
+        viewportRef.current.scrollTop = 0;
+    }, [type, options.orientation]);
+    const pieLabels = labels && (availableWidth === 0 || availableWidth >= 380);
     const labelVisibility: PieLabelVisibility = outerRadius => getCachedPieLabelVisibility(data, outerRadius);
-    const tooltip = <Tooltip formatter={value => formatTooltipPresentation(value, options, proportionalTotal)} labelFormatter={label => String(label ?? "")} />;
+    const tooltip = showTooltip
+        ? <Tooltip formatter={value => formatTooltipPresentation(value, options, proportionalTotal)} labelFormatter={label => String(label ?? "")} allowEscapeViewBox={{ x: false, y: false }} contentStyle={{ border: `1px solid ${GRID_COLOR}`, borderRadius: 8, boxShadow: "0 8px 24px rgb(15 23 42 / 12%)" }} />
+        : null;
     const categoryCells = data.map((entry, index) => <Cell key={`${entry.name}-${index}`} fill={categoryColors[entry.name] ?? CHART_COLORS[index % CHART_COLORS.length]} />);
-    return <div className="chart-color-dialog__preview" role="img" aria-label={`${type} chart preview`}>
-        <ResponsiveContainer width="100%" height="100%">
-            {type === "line" ? <LineChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
-                <XAxis dataKey="name" hide /><YAxis hide domain={axisDomain} />
-                {tooltip}{legend}
-                <Line type="linear" dataKey="value" stroke={seriesColors[yField] ?? CHART_COLORS[0]} strokeWidth={2.5} dot={false} label={labels} isAnimationActive={false} />
-            </LineChart> : type === "area" ? <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
-                <XAxis dataKey="name" hide /><YAxis hide domain={axisDomain} />
-                {tooltip}{legend}
-                <Area type="linear" dataKey="value" stroke={seriesColors[yField] ?? CHART_COLORS[0]} fill={seriesColors[yField] ?? CHART_COLORS[0]} fillOpacity={0.25} label={labels} isAnimationActive={false} />
+    const valueLabel = labels ? { formatter: (value: unknown) => formatChartNumber(value, options) } : false;
+    const sharedLegend = legend
+        ? <Legend wrapperStyle={{ paddingTop: 10 }} formatter={value => <span title={String(value)}>{String(value)}</span>} />
+        : null;
+    const categoryAxisWidth = horizontal ? getHorizontalCategoryAxisWidth(data) : 110;
+    const valueAxisWidth = Math.min(104, Math.max(58, ...data.map(item => formatChartNumber(item.value, options).length * 7 + 12)));
+    const endpointLabelWidth = Math.min(112, Math.max(24, ...data.map(item => formatChartNumber(item.value, options).length * 7 + 14)));
+    const valueDomain = getChartValueDomain(data, labels);
+    const cartesianMargin = horizontal
+        ? { top: 12, right: labels ? endpointLabelWidth : 16, bottom: 8, left: 8 }
+        : { top: labels ? 28 : 12, right: 18, bottom: 8, left: 8 };
+    const categoryTick = (value: unknown) => formatChartCategoryLabel(value, 18);
+    const canvasStyle = {
+        ...(overflow.minimumHeight ? { height: `${overflow.minimumHeight}px` } : {}),
+        ...(overflow.minimumWidth ? { width: `max(100%, ${overflow.minimumWidth}px)` } : {}),
+    };
+
+    return <div ref={viewportRef} className={`${className} chart-presentation chart-presentation--overflow-${overflow.axis}${overflow.axis === "vertical" ? " dashboard-widget-content__chart--scrollable" : ""}`} role="img" aria-label={ariaLabel}>
+        <div ref={forwardedRef} className="dashboard-widget-content__chart-canvas" style={canvasStyle}>
+        <ResponsiveContainer key={`${type}-${options.orientation ?? "vertical"}`} width="100%" height="100%" onResize={(width) => setAvailableWidth(previous => previous === Math.round(width) ? previous : Math.round(width))}>
+            {type === "line" ? <LineChart data={data} margin={cartesianMargin}>
+                {grid && <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" vertical={false} />}
+                <XAxis dataKey="name" stroke={AXIS_COLOR} tickLine={false} axisLine={false} minTickGap={18} padding={{ left: 24, right: 24 }} tickFormatter={categoryTick} />
+                <YAxis stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={valueDomain} tickFormatter={value => formatChartNumber(value, options)} width={valueAxisWidth} />
+                {tooltip}{sharedLegend}
+                <Line type={options.smooth ? "monotone" : "linear"} dataKey="value" name={yField} stroke={seriesColors[yField] ?? CHART_COLORS[0]} strokeWidth={2.5} dot={options.showPoints !== false ? { r: 3 } : false} activeDot={{ r: 5 }} connectNulls={false} label={valueLabel} isAnimationActive={false} />
+            </LineChart> : type === "area" ? <AreaChart data={data} margin={cartesianMargin}>
+                {grid && <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" vertical={false} />}
+                <XAxis dataKey="name" stroke={AXIS_COLOR} tickLine={false} axisLine={false} minTickGap={18} padding={{ left: 24, right: 24 }} tickFormatter={categoryTick} />
+                <YAxis stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={valueDomain} tickFormatter={value => formatChartNumber(value, options)} width={valueAxisWidth} />
+                {tooltip}{sharedLegend}
+                <Area type={options.smooth ? "monotone" : "linear"} dataKey="value" name={yField} stroke={seriesColors[yField] ?? CHART_COLORS[0]} fill={seriesColors[yField] ?? CHART_COLORS[0]} fillOpacity={0.22} strokeWidth={2.5} connectNulls={false} label={valueLabel} isAnimationActive={false} />
             </AreaChart> : type === "pie" || type === "doughnut" ? <PieChart>
-                <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius="68%" innerRadius={type === "doughnut" ? "48%" : 0} label={labels ? entry => renderPieLabel(entry, labelVisibility, options) : false} labelLine={labels ? entry => renderPieLabelLine(entry, labelVisibility) : false} isAnimationActive={false}>
+                <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy={legend ? "43%" : "50%"} outerRadius={pieLabels ? "64%" : "80%"} innerRadius={type === "doughnut" ? "52%" : 0} paddingAngle={type === "doughnut" ? 2 : 1} label={pieLabels ? entry => renderPieLabel(entry, labelVisibility, options) : false} labelLine={pieLabels ? entry => renderPieLabelLine(entry, labelVisibility) : false} isAnimationActive={false}>
                     {categoryCells}
+                    {type === "doughnut" && options.showCenterTotal && <>
+                        <Label value={formatChartNumber(data.reduce((sum, item) => sum + (item.value ?? 0), 0), options)} position="center" dy={-5} className="dashboard-chart-center-total" />
+                        <Label value="Total" position="center" dy={15} className="dashboard-chart-center-caption" />
+                    </>}
                 </Pie>
-                {tooltip}{legend}
-            </PieChart> : type === "treemap" ? <Treemap data={data} dataKey="value" nameKey="name" isAnimationActive={false}>{categoryCells}{tooltip}{legend}</Treemap>
-            : type === "radial-bar" ? <RadialBarChart data={data} innerRadius="20%" outerRadius="90%"><RadialBar dataKey="value" background label={labels} isAnimationActive={false}>{categoryCells}</RadialBar>{tooltip}{legend}</RadialBarChart>
-            : <BarChart data={data} layout={horizontal ? "vertical" : "horizontal"} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
-                {horizontal ? <><XAxis type="number" hide domain={axisDomain} /><YAxis type="category" dataKey="name" hide /></> : <><XAxis dataKey="name" hide /><YAxis hide domain={axisDomain} /></>}
-                {tooltip}{legend}
-                <Bar dataKey="value" fill={seriesColors[yField] ?? CHART_COLORS[0]} radius={[4, 4, 0, 0]} label={labels} isAnimationActive={false} />
+                {tooltip}{sharedLegend}
+            </PieChart> : type === "treemap" ? <Treemap data={data} dataKey="value" nameKey="name" isAnimationActive={false}>{categoryCells}{tooltip}{sharedLegend}</Treemap>
+            : type === "radial-bar" ? <RadialBarChart data={data} innerRadius="20%" outerRadius="90%" startAngle={90} endAngle={-270}><RadialBar dataKey="value" name={yField} background label={labels ? { formatter: (value: unknown) => formatChartNumber(value, options), position: "insideStart", fill: "#fff" } : false} isAnimationActive={false}>{categoryCells}</RadialBar>{tooltip}{sharedLegend}</RadialBarChart>
+            : <BarChart data={data} layout={horizontal ? "vertical" : "horizontal"} margin={cartesianMargin}>
+                {grid && <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" horizontal={!horizontal} vertical={horizontal} />}
+                {horizontal ? <><XAxis type="number" stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={valueDomain} tickFormatter={value => formatChartNumber(value, options)} /><YAxis type="category" dataKey="name" width={categoryAxisWidth} stroke={AXIS_COLOR} tickLine={false} axisLine={false} interval={0} /></> : <><XAxis dataKey="name" stroke={AXIS_COLOR} tickLine={false} axisLine={false} minTickGap={16} padding={{ left: 24, right: 24 }} tickFormatter={categoryTick} /><YAxis stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={valueDomain} tickFormatter={value => formatChartNumber(value, options)} width={valueAxisWidth} /></>}
+                {tooltip}{sharedLegend}
+                <Bar dataKey="value" name={yField} fill={seriesColors[yField] ?? CHART_COLORS[0]} radius={horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]} label={labels ? { formatter: (value: unknown) => formatChartNumber(value, options), position: horizontal ? "right" : "top" } : false} isAnimationActive={false} />
             </BarChart>}
         </ResponsiveContainer>
+        </div>
     </div>;
-}
+});
 
 interface ChartWidgetProps {
     title: string;
@@ -172,7 +228,7 @@ export default function ChartWidget({ runtimeFilters = EMPTY_FILTER_DEFINITIONS,
 
 function ChartWidgetContent({
     title, description, request, xField, yField, chartType = "bar", chartOptions,
-    showLegend = false, showTooltip = true, showGrid = true, showLabels,
+    showLegend, showTooltip = true, showGrid = true, showLabels,
     exportConfig, filterDefinitions = EMPTY_FILTER_DEFINITIONS, filterFields, cacheScope,
     runtimeFilters = EMPTY_FILTER_DEFINITIONS, widgetFilterControls,
     colorConfiguration, canCustomizeColors = false, onSaveConfiguration,
@@ -194,17 +250,13 @@ function ChartWidgetContent({
     const [savingColors, setSavingColors] = useState(false);
     const sourceData = useMemo(() => mapChartData(response?.data ?? [], xField, yField), [response, xField, yField]);
     const data = useMemo(() => applyChartTopN(sourceData, chartOptions), [sourceData, chartOptions]);
-    const pieLabelVisibility = useMemo<PieLabelVisibility>(
-        () => outerRadius => getCachedPieLabelVisibility(data, outerRadius),
-        [data]
-    );
     const hasNumericData = data.some(item => item.value !== null);
     const savedChartType = colorConfiguration?.chartType ?? chartType;
-    const renderedChartType: ChartType = savedChartType === "pie"
-        && chartOptions?.appearance === "donut"
-        && colorConfiguration?.customized !== true
-        ? "doughnut"
-        : savedChartType;
+    const renderedChartType = resolveChartType(
+        savedChartType,
+        chartOptions,
+        !colorConfiguration || colorConfiguration.customized === false,
+    );
     const renderedCapability = getChartCapability(renderedChartType);
     const effectiveChartOptions = {
         ...chartOptions,
@@ -216,23 +268,12 @@ function ChartWidgetContent({
     const proportionalChart = renderedCapability.tooltipMode === "proportional";
     const pieHasNegative = proportionalChart && data.some(item => (item.value ?? 0) < 0);
     const pieHasPositive = data.some(item => (item.value ?? 0) > 0);
-    const legend = chartOptions?.showLegend ?? showLegend;
-    const labels = chartOptions?.showLabels ?? chartOptions?.showDataLabels ?? showLabels ?? proportionalChart;
-    const grid = chartOptions?.showGrid ?? showGrid;
-    const horizontalBars = renderedChartType === "bar" && effectiveChartOptions.orientation === "horizontal";
-    const chartContentHeight = horizontalBars ? getHorizontalBarChartHeight(data.length) : undefined;
-    const categoryAxisWidth = horizontalBars ? getHorizontalCategoryAxisWidth(data) : 110;
-    const valueAxisWidth = Math.min(104, Math.max(58, ...data.map(item => formatChartNumber(item.value, effectiveChartOptions).length * 7 + 12)));
-    const categoryTick = (value: unknown) => {
-        const label = String(value ?? "");
-        return label.length > 18 ? `${label.slice(0, 17)}…` : label;
-    };
+    const configuredLegend = chartOptions?.showLegend ?? showLegend;
+    const configuredLabels = chartOptions?.showLabels ?? chartOptions?.showDataLabels ?? showLabels;
     const filename = exportConfig?.filename?.trim() || title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "chart";
     const sourceRows = useMemo(() => sourceData.map(item => ({ [xField]: item.name, [yField]: item.value })), [sourceData, xField, yField]);
     const configuredSeriesColors = colorConfiguration?.seriesColors ?? chartOptions?.seriesColors ?? {};
     const configuredCategoryColors = colorConfiguration?.categoryColors ?? chartOptions?.categoryColors ?? {};
-    const configuredColors = renderedCapability.colorMode === "category" ? configuredCategoryColors : configuredSeriesColors;
-    const activeColors = configuredColors;
     const colorEntries = useMemo(() => {
         if (getChartCapability(draftChartType).colorMode !== "category") return [{ key: yField, label: yField }];
         const keys = new Set([...data.map(item => item.name), ...Object.keys(draftCategoryColors)]);
@@ -246,7 +287,17 @@ function ChartWidgetContent({
             if (format === "png" && chartRef.current) await exportChartPNG(chartRef.current, `${filename}.png`);
             else if (format === "svg" && chartRef.current) exportChartSVG(chartRef.current, `${filename}.svg`);
             else if (format === "csv") exportRowsCSV(sourceRows, `${filename}.csv`);
-            else await exportExcel(sourceRows, `${filename}.xlsx`);
+            else await exportExcel(sourceRows, `${filename}.xlsx`, [
+                { field: xField, header: xField, dataType: "text" },
+                {
+                    field: yField,
+                    header: yField,
+                    dataType: effectiveChartOptions.valueFormat === "currency" ? "currency" : "number",
+                    ...(effectiveChartOptions.valueFormat === "currency" && effectiveChartOptions.currency
+                        ? { currency: effectiveChartOptions.currency }
+                        : {}),
+                },
+            ]);
         } catch (cause: unknown) {
             toast.notify("error", getRequestErrorMessage(cause, `Unable to export ${format.toUpperCase()}.`));
         } finally {
@@ -267,7 +318,7 @@ function ChartWidgetContent({
         : [];
     const customizationAvailable = renderedCapability.supported && canCustomizeColors && Boolean(colorConfiguration && onSaveConfiguration);
     const openColorDialog = () => {
-        setDraftChartType(savedChartType);
+        setDraftChartType(renderedChartType);
         setDraftOrientation(colorConfiguration?.orientation ?? chartOptions?.orientation ?? "vertical");
         setDraftSeriesColors({ ...configuredSeriesColors });
         setDraftCategoryColors({ ...configuredCategoryColors });
@@ -276,18 +327,12 @@ function ChartWidgetContent({
         setDraftReset(false);
         setColorDialogOpen(true);
     };
-    const proportionalTotal = data.reduce((sum, item) => sum + Math.max(0, item.value ?? 0), 0);
+    const accessibleChartData = describeChartData(data, effectiveChartOptions, proportionalChart);
     const trendRecommendation = (renderedChartType === "line" || renderedChartType === "area")
         && !isLikelyOrderedChartDimension(data);
-    const tooltip = showTooltip && <Tooltip
-        formatter={value => formatTooltipPresentation(value, effectiveChartOptions, proportionalChart ? proportionalTotal : 0)}
-        labelFormatter={label => String(label ?? "")}
-        allowEscapeViewBox={{ x: false, y: false }}
-        contentStyle={{ border: `1px solid ${GRID_COLOR}`, borderRadius: 8, boxShadow: "0 8px 24px rgb(15 23 42 / 12%)" }}
-    />;
     const customizationFooter = colorConfiguration && onSaveConfiguration ? <footer className="chart-color-dialog__actions">
         <button type="button" className="app-button" disabled={savingColors} onClick={() => {
-            setDraftChartType(colorConfiguration.authoredChartType ?? chartType);
+            setDraftChartType(resolveChartType(colorConfiguration.authoredChartType ?? chartType, chartOptions, true));
             setDraftOrientation(colorConfiguration.authoredOrientation ?? chartOptions?.orientation ?? "vertical");
             setDraftSeriesColors({ ...(colorConfiguration.authoredSeriesColors ?? {}) });
             setDraftCategoryColors({ ...(colorConfiguration.authoredCategoryColors ?? {}) });
@@ -347,68 +392,21 @@ function ChartWidgetContent({
             {!loading && renderedCapability.supported && proportionalChart && hasNumericData && !pieHasNegative && !pieHasPositive && <Empty title={`No positive ${renderedCapability.label.toLowerCase()} values`} message="All displayed values are zero, so no proportional marks can be drawn." compact />}
             {!loading && !proportionalChart && sourceData.length > 0 && hasNumericData && renderingIncompatibility && <Empty title={`${renderedCapability.label} is unavailable`} message={renderingIncompatibility} compact />}
             {sourceData.length > 0 && renderingIncompatibility === null && (
-                <div className={`dashboard-widget-content__chart dashboard-widget-content__chart--${renderedChartType}${horizontalBars ? " dashboard-widget-content__chart--scrollable" : ""}`} role="img" aria-label={`${title} ${renderedChartType} chart`}>
-                    <div ref={chartRef} className="dashboard-widget-content__chart-canvas" style={chartContentHeight ? { height: chartContentHeight } : undefined}>
-                    <ResponsiveContainer width="100%" height="100%">
-                        {renderedChartType === "line" ? (
-                            <LineChart data={data} margin={{ top: 12, right: 18, bottom: 12, left: 4 }}>
-                                {grid && <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" vertical={false} />}
-                                <XAxis dataKey="name" stroke={AXIS_COLOR} tickLine={false} axisLine={false} minTickGap={18} padding={{ left: 14, right: 14 }} tickFormatter={categoryTick} />
-                                <YAxis stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={axisDomain} tickFormatter={value => formatChartNumber(value, effectiveChartOptions)} width={valueAxisWidth} />
-                                {tooltip}{legend && <Legend wrapperStyle={{ paddingTop: 10 }} />}
-                                <Line type={chartOptions?.smooth ? "monotone" : "linear"} dataKey="value" name={yField} stroke={activeColors[yField] ?? CHART_COLORS[0]} strokeWidth={2.5} dot={chartOptions?.showPoints !== false ? { r: 3 } : false} activeDot={{ r: 5 }} connectNulls={false} label={labels} isAnimationActive={false} />
-                            </LineChart>
-                        ) : renderedChartType === "area" ? (
-                            <AreaChart data={data} margin={{ top: 12, right: 18, bottom: 12, left: 4 }}>
-                                {grid && <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" vertical={false} />}
-                                <XAxis dataKey="name" stroke={AXIS_COLOR} tickLine={false} axisLine={false} minTickGap={18} padding={{ left: 14, right: 14 }} tickFormatter={categoryTick} />
-                                <YAxis stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={axisDomain} tickFormatter={value => formatChartNumber(value, effectiveChartOptions)} width={valueAxisWidth} />
-                                {tooltip}{legend && <Legend wrapperStyle={{ paddingTop: 10 }} />}
-                                <Area type={chartOptions?.smooth ? "monotone" : "linear"} dataKey="value" name={yField} stroke={activeColors[yField] ?? CHART_COLORS[0]} fill={activeColors[yField] ?? CHART_COLORS[0]} fillOpacity={0.22} strokeWidth={2.5} connectNulls={false} label={labels} isAnimationActive={false} />
-                            </AreaChart>
-                        ) : renderedChartType === "pie" || renderedChartType === "doughnut" ? (
-                            <PieChart margin={{ top: 4, right: 8, bottom: legend ? 24 : 4, left: 8 }}>
-                                <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy={legend ? "43%" : "50%"} outerRadius={labels ? "70%" : "82%"} innerRadius={renderedChartType === "doughnut" ? "52%" : 0} paddingAngle={renderedChartType === "doughnut" ? 2 : 1} label={labels ? props => renderPieLabel(props, pieLabelVisibility, effectiveChartOptions) : false} labelLine={labels ? props => renderPieLabelLine(props, pieLabelVisibility) : false} isAnimationActive={false}>
-                                    {data.map((entry, index) => <Cell key={`${entry.name}-${index}`} fill={activeColors[entry.name] ?? CHART_COLORS[index % CHART_COLORS.length]} stroke="#fff" strokeWidth={2} />)}
-                                    {renderedChartType === "doughnut" && chartOptions?.showCenterTotal && <>
-                                        <Label value={formatChartNumber(data.reduce((sum, item) => sum + (item.value ?? 0), 0), effectiveChartOptions)} position="center" dy={-5} className="dashboard-chart-center-total" />
-                                        <Label value="Total" position="center" dy={15} className="dashboard-chart-center-caption" />
-                                    </>}
-                                </Pie>
-                                {tooltip}{legend && <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: 10 }} formatter={value => <span title={String(value)}>{String(value)}</span>} />}
-                            </PieChart>
-                        ) : renderedChartType === "treemap" ? (
-                            <Treemap data={data} dataKey="value" nameKey="name" isAnimationActive={false}>
-                                {data.map((entry, index) => <Cell key={`${entry.name}-${index}`} fill={activeColors[entry.name] ?? CHART_COLORS[index % CHART_COLORS.length]} />)}
-                                {tooltip}
-                            </Treemap>
-                        ) : renderedChartType === "radial-bar" ? (
-                            <RadialBarChart data={data} innerRadius="20%" outerRadius="90%" startAngle={90} endAngle={-270}>
-                                <RadialBar dataKey="value" name={yField} background label={labels ? { position: "insideStart", fill: "#fff" } : false} isAnimationActive={false}>
-                                    {data.map((entry, index) => <Cell key={`${entry.name}-${index}`} fill={activeColors[entry.name] ?? CHART_COLORS[index % CHART_COLORS.length]} />)}
-                                </RadialBar>
-                                {tooltip}{legend && <Legend />}
-                            </RadialBarChart>
-                        ) : effectiveChartOptions.orientation === "horizontal" ? (
-                            <BarChart data={data} layout="vertical" margin={{ top: 8, right: 20, bottom: 12, left: 8 }}>
-                                {grid && <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" horizontal={false} />}
-                                <XAxis type="number" stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={axisDomain} tickFormatter={value => formatChartNumber(value, effectiveChartOptions)} minTickGap={18} />
-                                <YAxis type="category" dataKey="name" width={categoryAxisWidth} stroke={AXIS_COLOR} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} interval={0} />
-                                {tooltip}{legend && <Legend />}
-                                <Bar dataKey="value" name={yField} fill={activeColors[yField] ?? CHART_COLORS[0]} radius={[0, 4, 4, 0]} label={labels ? { formatter: (value: unknown) => formatChartNumber(value, effectiveChartOptions), position: "right" } : false} isAnimationActive={false} />
-                            </BarChart>
-                        ) : (
-                            <BarChart data={data} margin={{ top: 12, right: 18, bottom: 12, left: 4 }}>
-                                {grid && <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" vertical={false} />}
-                                <XAxis dataKey="name" stroke={AXIS_COLOR} tickLine={false} axisLine={false} minTickGap={16} padding={{ left: 12, right: 12 }} tickFormatter={categoryTick} />
-                                <YAxis stroke={AXIS_COLOR} tickLine={false} axisLine={false} domain={axisDomain} tickFormatter={value => formatChartNumber(value, effectiveChartOptions)} width={valueAxisWidth} />
-                                {tooltip}{legend && <Legend />}
-                                <Bar dataKey="value" name={yField} fill={activeColors[yField] ?? CHART_COLORS[0]} radius={[4, 4, 0, 0]} label={labels ? { formatter: (value: unknown) => formatChartNumber(value, effectiveChartOptions), position: "top" } : false} isAnimationActive={false} />
-                            </BarChart>
-                        )}
-                    </ResponsiveContainer>
-                    </div>
-                </div>
+                <ChartViewport
+                    ref={chartRef}
+                    type={renderedChartType}
+                    data={data}
+                    yField={yField}
+                    seriesColors={configuredSeriesColors}
+                    categoryColors={configuredCategoryColors}
+                    options={effectiveChartOptions}
+                    showLegend={configuredLegend}
+                    showLabels={configuredLabels}
+                    showTooltip={showTooltip}
+                    showGrid={showGrid}
+                    className={`dashboard-widget-content__chart dashboard-widget-content__chart--${renderedChartType}`}
+                    ariaLabel={`${title} ${renderedChartType} chart. ${accessibleChartData}`}
+                />
             )}
             {colorDialogOpen && colorConfiguration && onSaveConfiguration && (
                 <AccessibleDialog title="Customize Chart" className="chart-color-dialog" onClose={() => setColorDialogOpen(false)} footer={customizationFooter}>
@@ -434,7 +432,20 @@ function ChartWidgetContent({
                         </div>
                         {getChartCapability(draftChartType).incompatibility(data) && <p role="note">{getChartCapability(draftChartType).incompatibility(data)}</p>}
                     </fieldset>
-                    <ChartCustomizationPreview type={draftChartType} data={data} yField={yField} seriesColors={draftSeriesColors} categoryColors={draftCategoryColors} options={{ ...effectiveChartOptions, orientation: draftOrientation, numberFormat: draftNumberFormat, valueFormat: draftValueFormat, showLegend: legend, showLabels: labels }} />
+                    <ChartViewport
+                        type={draftChartType}
+                        data={data}
+                        yField={yField}
+                        seriesColors={draftSeriesColors}
+                        categoryColors={draftCategoryColors}
+                        options={{ ...effectiveChartOptions, orientation: draftOrientation, numberFormat: draftNumberFormat, valueFormat: draftValueFormat }}
+                        showLegend={configuredLegend}
+                        showLabels={configuredLabels}
+                        showTooltip={showTooltip}
+                        showGrid={showGrid}
+                        className="chart-color-dialog__preview dashboard-widget-content__chart"
+                        ariaLabel={`${draftChartType} chart preview. ${describeChartData(data, { ...effectiveChartOptions, numberFormat: draftNumberFormat, valueFormat: draftValueFormat }, getChartCapability(draftChartType).tooltipMode === "proportional")}`}
+                    />
                     <section className="chart-color-dialog__presentation" aria-labelledby="chart-presentation-title">
                         <h3 id="chart-presentation-title">Number Presentation</h3>
                         <div>

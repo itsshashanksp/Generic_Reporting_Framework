@@ -1,5 +1,7 @@
 # Feature behavior
 
+See [Runtime feature coverage](FEATURE-COVERAGE.md) for the maintained demo matrix, including ignored local deployment configurations exercised by `npm run config:audit`.
+
 ## Filtering and Search
 
 Reports and dashboards render only configured filter controls. Editing a control does not fetch data; **Search** validates required controls and applies the form as a batch. **Clear** applies an empty state. Dashboard filters are appended to every visible widget request.
@@ -14,7 +16,7 @@ Clicking a sortable report column updates the API sort and returns to page 1. Re
 
 ## Pagination
 
-Reports use configured server pagination and show the current row range, rows-per-page choice, and first/previous/next/last controls. Dashboard table widgets always use server pagination. Paginated SQL Resources should define a deterministic top-level `sort`. A report with pagination disabled has no paging footer or injected runtime page. Authored `request.pagination` is rejected; runtime paging is generated from grid/widget state.
+Reports use configured server pagination and show the current row range, rows-per-page choice, and first/previous/next/last controls. The shared pager responds to its own grid width, wrapping at medium sizes and using a compact `Page X of Y` presentation in narrow dashboard or report containers without changing paging state. Dashboard table widgets always use server pagination. Paginated SQL Resources should define a deterministic top-level `sort`. A report with pagination disabled has no paging footer or injected runtime page. Authored `request.pagination` is rejected; runtime paging is generated from grid/widget state.
 
 Configured `date` and `datetime` columns format ISO-style values for display in desktop and mobile grids. Formatting does not mutate response rows or shift encoded wall-clock values between timezones; null remains an em dash.
 
@@ -74,6 +76,18 @@ appearance. Type and both color maps are saved atomically through the existing
 authorized, revision-checked dashboard writer. Reset remains a draft until Save
 and restores the authored presentation captured before the first customization.
 Cancel discards the draft, and chart image exports use the saved rendered type.
+
+Proportional charts identify categories automatically: Pie and Doughnut use
+collision-aware category/value labels, while Pie, Doughnut, Treemap, and Radial
+Bar show category legends by default. Full values and percentages remain in
+tooltips and accessible chart summaries. Authored label and legend flags still
+override these presentation defaults.
+
+The dashboard and customization preview use the same capability-driven renderer.
+Type changes remount chart geometry, so Pie, Doughnut, Column, Bar, Line, Area,
+Treemap, and Radial Bar previews cannot retain stale geometry. Dense cartesian
+charts scroll only along their readable category axis; proportional charts adapt
+their direct-label density while retaining legends, tooltips, and accessible data.
 
 ## Notifications
 

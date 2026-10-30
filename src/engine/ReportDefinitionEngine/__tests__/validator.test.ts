@@ -64,21 +64,29 @@ describe("report request contract alignment", () => {
         expect(getReportValidationErrors(report)).toEqual([]);
         expect(getReportValidationErrors({
             ...report,
+            columns: [{ field: "TotalAmount", header: "Total", dataType: "currency", currency: "USD" }],
+        })).toEqual([]);
+        expect(getReportValidationErrors({
+            ...report,
+            columns: [{ field: "TotalAmount", header: "Total", dataType: "currency", currency: "usd" }],
+        })).toContain("Report column at index 0 currency must be a three-letter uppercase ISO 4217 code.");
+        expect(getReportValidationErrors({
+            ...report,
             columns: [{ field: "TotalAmount", header: "Total", dataType: "money" }],
         })).toContain("Report column at index 0 dataType is invalid.");
     });
 
-    it("accepts optional column alignment and rejects unsupported values", () => {
+    it("derives alignment from semantic data types and rejects obsolete overrides", () => {
         const report = {
             ...presentation,
             queryDefinition: { format: "sql", resource: "reports/customer" },
             columns: [{ field: "CustomerName", header: "Customer", align: "left" }],
         };
-        expect(getReportValidationErrors(report)).toEqual([]);
+        expect(getReportValidationErrors(report)).toContain('Report column at index 0 contains unknown property "align".');
         expect(getReportValidationErrors({
             ...report,
-            columns: [{ field: "CustomerName", header: "Customer", align: "justify" }],
-        })).toContain("Report column at index 0 align must be left, center, or right.");
+            columns: [{ field: "TaxRate", header: "Tax", dataType: "percentage" }],
+        })).toEqual([]);
     });
 
     it("accepts CSV/Excel report exports and rejects chart or empty format lists", () => {

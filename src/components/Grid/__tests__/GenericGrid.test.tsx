@@ -48,7 +48,14 @@ describe("GenericGrid shared configuration", () => {
         expect(props.defaultColDef).toMatchObject({ resizable: true, suppressMovable: false });
         expect(props.maintainColumnOrder).toBe(true);
         expect(props.suppressMovableColumns).toBe(false);
-        expect(props.rowSelection).toBe("multiple");
+        expect(props.rowSelection).toEqual({
+            mode: "multiRow",
+            checkboxes: false,
+            enableClickSelection: true,
+            enableSelectionWithoutKeys: false,
+            headerCheckbox: false,
+        });
+        expect(props.columnDefs.every((column: object) => !("dataType" in column) && !("align" in column))).toBe(true);
     });
 
     it("lets ordinary columns share available width while preserving authored widths", () => {
@@ -119,13 +126,12 @@ describe("GenericGrid shared configuration", () => {
     });
 
     it("aligns typed numeric values and headers without treating text identifiers as numbers", () => {
-        const row = { Code: "00123", Integer: 7, Currency: -1250.5, Percentage: null, Override: 42 };
+        const row = { Code: "00123", Integer: 7, Currency: -1250.5, Percentage: 18 };
         render(<GridProvider><GenericGrid rows={[row]} columns={[
             { field: "Code", header: "Code", dataType: "text", visible: true },
             { field: "Integer", header: "Integer", dataType: "number", visible: true },
-            { field: "Currency", header: "Currency", dataType: "number", visible: true },
-            { field: "Percentage", header: "Percentage", dataType: "number", visible: true },
-            { field: "Override", header: "Override", dataType: "number", align: "left", visible: true },
+            { field: "Currency", header: "Currency", dataType: "currency", visible: true },
+            { field: "Percentage", header: "Percentage", dataType: "percentage", visible: true },
         ]} gridConfig={gridConfig} /></GridProvider>);
         const definitions = agGridProps.mock.calls.at(-1)?.[0].columnDefs;
 
@@ -134,18 +140,56 @@ describe("GenericGrid shared configuration", () => {
             "universal-grid__cell--right",
             "universal-grid__cell--right",
             "universal-grid__cell--right",
-            "universal-grid__cell--left",
         ]);
         expect(definitions.map((column: { headerClass: string }) => column.headerClass)).toEqual([
             "universal-grid__header--left",
-            "universal-grid__header--right",
-            "universal-grid__header--right",
-            "universal-grid__header--right",
+            "universal-grid__header--left",
+            "universal-grid__header--left",
             "universal-grid__header--left",
         ]);
         expect(definitions[0].valueFormatter({ value: row.Code })).toBe("00123");
-        expect(definitions[2].valueFormatter({ value: row.Currency })).toBe("-1,250.5");
-        expect(definitions[3].valueFormatter({ value: row.Percentage })).toBe("—");
+        expect(definitions[2].valueFormatter({ value: row.Currency })).toBe("-₹1,250.50");
+        expect(definitions[3].valueFormatter({ value: row.Percentage })).toBe("18.00%");
+        expect(definitions.map((column: { cellDataType: unknown }) => column.cellDataType)).toEqual([
+            "text", "number", "number", "number",
+        ]);
+    });
+
+    it("uses safe AG Grid cell types for native values and opts SQL strings out of inference", () => {
+        render(<GridProvider><GenericGrid rows={[{
+            Amount: "12.50",
+            Active: true,
+            BillDate: "2026-10-30",
+            EmptyNumber: null,
+        }]} columns={[
+            { field: "Amount", header: "Amount", dataType: "number", visible: true },
+            { field: "Active", header: "Active", dataType: "boolean", visible: true },
+            { field: "BillDate", header: "Bill Date", dataType: "date", visible: true },
+            { field: "EmptyNumber", header: "Empty Number", dataType: "number", visible: true },
+        ]} gridConfig={{ ...gridConfig, rowSelection: "single" }} /></GridProvider>);
+        const props = agGridProps.mock.calls.at(-1)?.[0];
+
+        expect(props.columnDefs.map((column: { cellDataType: unknown }) => column.cellDataType))
+            .toEqual([false, "boolean", "dateString", false]);
+        expect(props.rowSelection).toEqual({
+            mode: "singleRow",
+            checkboxes: false,
+            enableClickSelection: true,
+        });
+    });
+
+    it.each([10, 25, 50, 100])("uses natural AG Grid height for a standalone %i-row page", pageSize => {
+        const rows = Array.from({ length: pageSize }, (_, index) => ({ Code: `A${index + 1}` }));
+        const pageGridConfig = {
+            ...gridConfig,
+            pagination: { enabled: true, pageSize, pageSizeOptions: [10, 25, 50, 100] },
+        };
+        const view = render(<GridProvider><GenericGrid rows={rows} columns={columns} gridConfig={pageGridConfig} autoHeight /></GridProvider>);
+        expect(agGridProps.mock.calls.at(-1)?.[0].domLayout).toBe("autoHeight");
+        expect(agGridProps.mock.calls.at(-1)?.[0].paginationPageSize).toBe(pageSize);
+
+        view.rerender(<GridProvider><GenericGrid rows={rows} columns={columns} gridConfig={pageGridConfig} height={420} /></GridProvider>);
+        expect(agGridProps.mock.calls.at(-1)?.[0].domLayout).toBe("normal");
     });
 
     it("passes the declared column type to the desktop grid comparator", () => {

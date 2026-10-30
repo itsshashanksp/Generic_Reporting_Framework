@@ -15,6 +15,7 @@ const gridConfig: GridConfig = { pagination: { enabled: false, pageSize: 10 }, r
 describe("GenericGrid on AG Grid Community", () => {
     it("renders headers and formatted rows without Enterprise modules or console errors", async () => {
         const consoleError = vi.spyOn(console, "error");
+        const consoleWarn = vi.spyOn(console, "warn");
 
         render(
             <GridProvider>
@@ -26,5 +27,8 @@ describe("GenericGrid on AG Grid Community", () => {
         expect((await screen.findAllByText("A1")).length).toBeGreaterThan(0);
         expect((await screen.findAllByText("12,34,567")).length).toBeGreaterThan(0);
         expect(consoleError.mock.calls.flat().join(" ")).not.toMatch(/enterprise|license/i);
+        expect(consoleWarn.mock.calls.flat().join(" ")).not.toMatch(
+            /invalid colDef property|suppressRowClickSelection|rowSelection.*deprecated/i,
+        );
     });
 });

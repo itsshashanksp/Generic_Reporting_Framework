@@ -5,7 +5,7 @@
   "columns": [
     { "field": "CustomerName", "header": "Customer" },
     { "field": "OrderCount", "header": "Orders", "dataType": "number" },
-    { "field": "TotalAmount", "header": "Total Amount", "dataType": "number", "align": "right" }
+    { "field": "TotalAmount", "header": "Total Amount", "dataType": "currency" }
   ],
   "sort": [{ "field": "TotalAmount", "direction": "DESC" }],
   "filters": [{ "field": "CustomerName", "label": "Customer", "type": "text", "operator": "contains" }]

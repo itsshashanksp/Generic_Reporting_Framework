@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,6 +9,7 @@ import { ToastProvider } from "../../Notifications/ToastProvider";
 
 const mocks = vi.hoisted(() => ({
     executeRequest: vi.fn(), exportPng: vi.fn(), exportSvg: vi.fn(), exportCsv: vi.fn(), exportExcel: vi.fn(),
+    responsiveProps: vi.fn(),
 }));
 vi.mock("../../../api/request", () => ({
     executeRequest: mocks.executeRequest,
@@ -22,26 +23,30 @@ vi.mock("../../../engine/ExportEngine", () => ({
     exportExcel: mocks.exportExcel,
 }));
 vi.mock("recharts", () => {
-    const container = ({ children }: { children: ReactNode }) => <div data-testid="responsive-chart">{children}</div>;
-    const series = ({ children, isAnimationActive, fill, stroke }: { children?: ReactNode; isAnimationActive?: boolean; fill?: string; stroke?: string }) => (
-        <g data-testid="chart-series" data-animated={String(isAnimationActive)} data-color={fill ?? stroke}>{children}</g>
+    const container = (props: { children: ReactNode; onResize?: (width: number, height: number) => void }) => {
+        mocks.responsiveProps(props);
+        return <div data-testid="responsive-chart">{props.children}</div>;
+    };
+    const series = ({ children, isAnimationActive, fill, stroke, label }: { children?: ReactNode; isAnimationActive?: boolean; fill?: string; stroke?: string; label?: false | { formatter?: (value: unknown) => string; position?: string } }) => (
+        <g data-testid="chart-series" data-animated={String(isAnimationActive)} data-color={fill ?? stroke}
+            data-has-label={String(Boolean(label))} data-label-position={label ? label.position : undefined} data-label-value={label ? label.formatter?.(6024000) : undefined}>{children}</g>
     );
     return {
         ResponsiveContainer: container,
-        BarChart: ({ children, layout, data }: { children: ReactNode; layout?: string; data: unknown[] }) => <svg data-testid="bar-chart" data-layout={layout ?? "horizontal"} data-count={data.length}>{children}</svg>,
-        LineChart: ({ children, data }: { children: ReactNode; data: unknown[] }) => <svg data-testid="line-chart" data-count={data.length}>{children}</svg>,
-        AreaChart: ({ children, data }: { children: ReactNode; data: unknown[] }) => <svg data-testid="area-chart" data-count={data.length}>{children}</svg>,
+        BarChart: ({ children, layout, data, margin }: { children: ReactNode; layout?: string; data: unknown[]; margin?: object }) => <svg data-testid="bar-chart" data-layout={layout ?? "horizontal"} data-count={data.length} data-margin={JSON.stringify(margin)}>{children}</svg>,
+        LineChart: ({ children, data, margin }: { children: ReactNode; data: unknown[]; margin?: object }) => <svg data-testid="line-chart" data-count={data.length} data-margin={JSON.stringify(margin)}>{children}</svg>,
+        AreaChart: ({ children, data, margin }: { children: ReactNode; data: unknown[]; margin?: object }) => <svg data-testid="area-chart" data-count={data.length} data-margin={JSON.stringify(margin)}>{children}</svg>,
         FunnelChart: ({ children }: { children: ReactNode }) => <svg data-testid="funnel-chart">{children}</svg>,
         RadialBarChart: ({ children, data }: { children: ReactNode; data: unknown[] }) => <svg data-testid="radial-bar-chart" data-count={data.length}>{children}</svg>,
         PieChart: ({ children }: { children: ReactNode }) => <svg data-testid="pie-chart">{children}</svg>,
-        Pie: ({ children, innerRadius, outerRadius, cy, data, label, isAnimationActive }: { children: ReactNode; innerRadius?: string | number; outerRadius?: string | number; cy?: string | number; data: Array<{ value: number }>; label?: false | ((props: Record<string, unknown>) => ReactNode); isAnimationActive?: boolean }) => <g data-testid="pie" data-animated={String(isAnimationActive)} data-inner-radius={innerRadius} data-outer-radius={outerRadius} data-cy={cy}>{children}{typeof label === "function" && data.map((item, index) => <g data-testid="pie-external-label" key={index}>{label({ index, value: item.value, cx: 100, cy: 100, outerRadius: 100, midAngle: 90 - index * 40 })}</g>)}</g>,
+        Pie: ({ children, innerRadius, outerRadius, cy, data, label, isAnimationActive }: { children: ReactNode; innerRadius?: string | number; outerRadius?: string | number; cy?: string | number; data: Array<{ name: string; value: number }>; label?: false | ((props: Record<string, unknown>) => ReactNode); isAnimationActive?: boolean }) => <g data-testid="pie" data-animated={String(isAnimationActive)} data-inner-radius={innerRadius} data-outer-radius={outerRadius} data-cy={cy}>{children}{typeof label === "function" && data.map((item, index) => <g data-testid="pie-external-label" key={index}>{label({ index, name: item.name, value: item.value, cx: 100, cy: 100, outerRadius: 100, midAngle: 90 - index * 40 })}</g>)}</g>,
         Bar: series, Line: series, Area: series, Funnel: series, RadialBar: series,
         Treemap: ({ children, data }: { children: ReactNode; data: unknown[] }) => <svg data-testid="treemap-chart" data-count={data.length}>{children}</svg>,
         Cell: ({ fill }: { fill: string }) => <i data-testid="pie-cell" data-color={fill} />, Label: ({ value }: { value: string }) => <text>{value}</text>, LabelList: () => null,
-        CartesianGrid: () => null, Legend: () => null,
+        CartesianGrid: () => null, Legend: () => <g data-testid="chart-legend" />,
         Tooltip: ({ formatter }: { formatter?: (value: unknown) => string }) => <text data-testid="tooltip-value">{formatter?.(12908199.939999992)}</text>,
-        XAxis: ({ tickFormatter }: { tickFormatter?: (value: unknown) => string }) => <text data-testid="x-axis-value">{tickFormatter?.(12908199.939999992)}</text>,
-        YAxis: ({ tickFormatter, width }: { tickFormatter?: (value: unknown) => string; width?: number }) => <text data-testid="y-axis-value" data-width={width}>{tickFormatter?.(12908199.939999992)}</text>,
+        XAxis: ({ tickFormatter, domain, padding }: { tickFormatter?: (value: unknown) => string; domain?: [number, number]; padding?: object }) => <text data-testid="x-axis-value" data-domain={JSON.stringify(domain)} data-padding={JSON.stringify(padding)}>{tickFormatter?.(12908199.939999992)}</text>,
+        YAxis: ({ tickFormatter, width, domain }: { tickFormatter?: (value: unknown) => string; width?: number; domain?: [number, number] }) => <text data-testid="y-axis-value" data-width={width} data-domain={JSON.stringify(domain)}>{tickFormatter?.(12908199.939999992)}</text>,
     };
 });
 
@@ -61,7 +66,7 @@ describe("modern chart widget", () => {
         const { rerender } = render(<DashboardProvider><ChartWidget title="Sales" request={request} xField="Category" yField="Amount" chartType="pie" chartOptions={{ appearance: "donut", showCenterTotal: true }} /></DashboardProvider>);
         expect(await screen.findByTestId("pie")).toBeTruthy();
         expect(screen.getByTestId("pie").getAttribute("data-inner-radius")).toBe("52%");
-        expect(screen.getByTestId("pie").getAttribute("data-outer-radius")).toBe("70%");
+        expect(screen.getByTestId("pie").getAttribute("data-outer-radius")).toBe("64%");
         expect(screen.getAllByTestId("pie-external-label").filter(label => label.textContent)).toHaveLength(2);
         expect(screen.getByTestId("pie").getAttribute("data-animated")).toBe("false");
         expect(screen.getByText("10")).toBeTruthy();
@@ -75,6 +80,39 @@ describe("modern chart widget", () => {
         rerender(<DashboardProvider><ChartWidget title="Sales" request={request} xField="Category" yField="Amount" chartType="line" chartOptions={{ smooth: true, showPoints: true }} /></DashboardProvider>);
         expect(await screen.findByTestId("line-chart")).toBeTruthy();
         expect(screen.getByTestId("chart-series").getAttribute("data-animated")).toBe("false");
+    });
+
+    it("shows shared formatted values by default for Column and Bar while respecting explicit overrides", async () => {
+        mocks.executeRequest.mockResolvedValue(response([{ Category: "Loss", Amount: -50 }, { Category: "High", Amount: 100 }]));
+        const view = render(<DashboardProvider><ChartWidget title="Comparison" request={request} xField="Category" yField="Amount" chartType="bar" /></DashboardProvider>);
+
+        expect(await screen.findByTestId("bar-chart")).toBeTruthy();
+        expect(screen.getByTestId("chart-series").getAttribute("data-has-label")).toBe("true");
+        expect(screen.getByTestId("chart-series").getAttribute("data-label-position")).toBe("top");
+        expect(screen.getByTestId("chart-series").getAttribute("data-label-value")).toBe("60.24 L");
+        expect(screen.getByTestId("bar-chart").getAttribute("data-margin")).toContain('"top":28');
+        expect(screen.getByTestId("x-axis-value").getAttribute("data-padding")).toBe('{"left":24,"right":24}');
+        expect(screen.getByTestId("y-axis-value").getAttribute("data-domain")).toBe("[-68,118]");
+
+        view.rerender(<DashboardProvider><ChartWidget title="Comparison" request={request} xField="Category" yField="Amount" chartType="bar" chartOptions={{ orientation: "horizontal" }} /></DashboardProvider>);
+        expect((await screen.findByTestId("chart-series")).getAttribute("data-label-position")).toBe("right");
+        expect(screen.getByTestId("bar-chart").getAttribute("data-margin")).toContain('"right":35');
+        expect(screen.getByTestId("x-axis-value").getAttribute("data-domain")).toBe("[-68,118]");
+
+        view.rerender(<DashboardProvider><ChartWidget title="Comparison" request={request} xField="Category" yField="Amount" chartType="bar" chartOptions={{ showLabels: false }} /></DashboardProvider>);
+        expect((await screen.findByTestId("chart-series")).getAttribute("data-has-label")).toBe("false");
+        expect(screen.getByTestId("bar-chart").getAttribute("data-margin")).toContain('"top":12');
+    });
+
+    it("uses direct labels for readable trend datasets and the persistent accessible summary for dense trends", async () => {
+        mocks.executeRequest.mockResolvedValue(response(Array.from({ length: 9 }, (_, index) => ({ Category: `Point ${index + 1}`, Amount: index }))));
+        const view = render(<DashboardProvider><ChartWidget title="Trend" request={request} xField="Category" yField="Amount" chartType="line" /></DashboardProvider>);
+        expect((await screen.findByTestId("chart-series")).getAttribute("data-has-label")).toBe("false");
+        expect(screen.getByRole("img", { name: /Point 1: 0.*Point 9: 8/ })).toBeTruthy();
+
+        mocks.executeRequest.mockResolvedValue(response([{ Category: "Start", Amount: 0 }, { Category: "End", Amount: 10 }]));
+        view.rerender(<DashboardProvider><ChartWidget title="Trend" request={{ ...request, database: "short" }} xField="Category" yField="Amount" chartType="area" /></DashboardProvider>);
+        expect((await screen.findByTestId("chart-series")).getAttribute("data-has-label")).toBe("true");
     });
 
     it.each([
@@ -91,12 +129,35 @@ describe("modern chart widget", () => {
     it("uses the same default labels and proportional tooltip contract for Pie and Doughnut", async () => {
         mocks.executeRequest.mockResolvedValue(response([{ Category: "A", Amount: 7 }, { Category: "B", Amount: 3 }]));
         const view = render(<DashboardProvider><ChartWidget title="Share" request={request} xField="Category" yField="Amount" chartType="pie" /></DashboardProvider>);
-        expect((await screen.findAllByTestId("pie-external-label")).filter(label => label.textContent).map(label => label.textContent)).toEqual(["7", "3"]);
+        expect((await screen.findAllByTestId("pie-external-label")).filter(label => label.textContent).map(label => label.textContent)).toEqual(["A: 7", "B: 3"]);
         expect(screen.getByTestId("tooltip-value").textContent).toContain("%");
+        expect(screen.getByTestId("chart-legend")).toBeTruthy();
+        expect(screen.getByRole("img", { name: /A: 7 \(70%\).*B: 3 \(30%\)/ })).toBeTruthy();
 
         view.rerender(<DashboardProvider><ChartWidget title="Share" request={request} xField="Category" yField="Amount" chartType="doughnut" /></DashboardProvider>);
-        expect((await screen.findAllByTestId("pie-external-label")).filter(label => label.textContent).map(label => label.textContent)).toEqual(["7", "3"]);
+        expect((await screen.findAllByTestId("pie-external-label")).filter(label => label.textContent).map(label => label.textContent)).toEqual(["A: 7", "B: 3"]);
         expect(screen.getByTestId("tooltip-value").textContent).toContain("%");
+        expect(screen.getByTestId("chart-legend")).toBeTruthy();
+
+        view.rerender(<DashboardProvider><ChartWidget title="Share" request={request} xField="Category" yField="Amount" chartType="doughnut" chartOptions={{ showLegend: false }} /></DashboardProvider>);
+        expect(await screen.findByTestId("pie")).toBeTruthy();
+        expect(screen.queryByTestId("chart-legend")).toBeNull();
+    });
+
+    it("adapts proportional labels to container resize while preserving category identification", async () => {
+        mocks.executeRequest.mockResolvedValue(response([{ Category: "A very long category", Amount: 7 }, { Category: "B", Amount: 3 }]));
+        render(<DashboardProvider><ChartWidget title="Share" request={request} xField="Category" yField="Amount" chartType="pie" /></DashboardProvider>);
+        expect((await screen.findAllByTestId("pie-external-label")).filter(label => label.textContent)).toHaveLength(2);
+
+        const resize = mocks.responsiveProps.mock.calls.at(-1)?.[0].onResize as (width: number, height: number) => void;
+        act(() => resize(320, 240));
+        expect(screen.queryByTestId("pie-external-label")).toBeNull();
+        expect(screen.getByTestId("chart-legend")).toBeTruthy();
+        expect(screen.getByRole("img", { name: /A very long category: 7 \(70%\)/ })).toBeTruthy();
+
+        const resizedAgain = mocks.responsiveProps.mock.calls.at(-1)?.[0].onResize as (width: number, height: number) => void;
+        act(() => resizedAgain(640, 320));
+        expect((await screen.findAllByTestId("pie-external-label")).filter(label => label.textContent)).toHaveLength(2);
     });
 
     it("fails safely for legacy Funnel while preserving source-data export", async () => {
@@ -141,6 +202,23 @@ describe("modern chart widget", () => {
         expect(screen.getByTestId("bar-chart").getAttribute("data-count")).toBe("12");
     });
 
+    it("uses horizontal overflow for dense cartesian charts but adaptive fit for proportional charts", async () => {
+        mocks.executeRequest.mockResolvedValue(response(Array.from({ length: 12 }, (_, index) => ({
+            Category: `Long enterprise category ${index + 1}`,
+            Amount: index + 1,
+        }))));
+        const view = render(<DashboardProvider><ChartWidget title="Categories" request={request} xField="Category" yField="Amount" chartType="bar" /></DashboardProvider>);
+
+        expect(await screen.findByTestId("bar-chart")).toBeTruthy();
+        expect(document.querySelector(".chart-presentation--overflow-horizontal")).not.toBeNull();
+        expect(document.querySelector(".dashboard-widget-content__chart-canvas")?.getAttribute("style")).toContain("max(100%");
+
+        view.rerender(<DashboardProvider><ChartWidget title="Categories" request={request} xField="Category" yField="Amount" chartType="pie" /></DashboardProvider>);
+        expect(await screen.findByTestId("pie")).toBeTruthy();
+        expect(document.querySelector(".chart-presentation--overflow-none")).not.toBeNull();
+        expect(document.querySelector(".dashboard-widget-content__chart-canvas")?.getAttribute("style") ?? "").not.toContain("max(100%");
+    });
+
     it("honors both label flags and center-total visibility", async () => {
         mocks.executeRequest.mockResolvedValue(response([{ Category: "A", Amount: 1000 }]));
         const view = render(<DashboardProvider><ChartWidget title="Labels" request={request} xField="Category" yField="Amount" chartType="pie" chartOptions={{ appearance: "donut", showLabels: false, showCenterTotal: false }} /></DashboardProvider>);
@@ -149,8 +227,8 @@ describe("modern chart widget", () => {
         expect(screen.queryByText("1 K")).toBeNull();
 
         view.rerender(<DashboardProvider><ChartWidget title="Labels" request={request} xField="Category" yField="Amount" chartType="pie" chartOptions={{ appearance: "donut", showDataLabels: true, showCenterTotal: true }} /></DashboardProvider>);
-        expect((await screen.findAllByText("1 K")).length).toBe(2);
-        expect(screen.getByTestId("pie-external-label").textContent).toBe("1 K");
+        expect(await screen.findByText("1 K")).toBeTruthy();
+        expect(screen.getByTestId("pie-external-label").textContent).toBe("A: 1 K");
     });
 
     it("explains negative and zero-only pie data without misrepresenting it", async () => {
@@ -193,7 +271,10 @@ describe("modern chart widget", () => {
         expect(mocks.exportCsv).toHaveBeenCalledWith(completeSource, "sales-chart.csv");
         openMenu();
         fireEvent.click(screen.getByRole("menuitem", { name: "Download Excel — complete filtered source" }));
-        await waitFor(() => expect(mocks.exportExcel).toHaveBeenCalledWith(completeSource, "sales-chart.xlsx"));
+        await waitFor(() => expect(mocks.exportExcel).toHaveBeenCalledWith(completeSource, "sales-chart.xlsx", [
+            { field: "Category", header: "Category", dataType: "text" },
+            { field: "Amount", header: "Amount", dataType: "number" },
+        ]));
     });
 
     it("hides disabled export and surfaces export failures", async () => {
@@ -265,6 +346,58 @@ describe("modern chart widget", () => {
         expect(mocks.executeRequest).toHaveBeenCalledTimes(1);
         fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
         await waitFor(() => expect(onSave).toHaveBeenCalledWith({ chartType: "line", seriesColors: {}, categoryColors: {} }, "a".repeat(64)));
+    });
+
+    it("switches shared preview geometry and presentation immediately without retaining stale type state", async () => {
+        mocks.executeRequest.mockResolvedValue(response([{ Category: "A", Amount: 7 }, { Category: "B", Amount: 3 }]));
+        render(<ToastProvider><DashboardProvider><ChartWidget title="Sales" request={request} xField="Category" yField="Amount" chartType="bar"
+            canCustomizeColors onSaveConfiguration={vi.fn().mockResolvedValue({})}
+            colorConfiguration={{ dashboardId: "sales", widgetId: "sales-chart", chartType: "bar", revision: "a".repeat(64), seriesColors: {}, categoryColors: {} }} />
+        </DashboardProvider></ToastProvider>);
+        await screen.findByTestId("bar-chart");
+        fireEvent.click(screen.getByRole("button", { name: "Customize" }));
+
+        fireEvent.click(screen.getByRole("button", { name: "Pie" }));
+        let preview = document.querySelector(".chart-color-dialog__preview");
+        expect(preview?.querySelector("[data-testid='pie']")?.getAttribute("data-inner-radius")).toBe("0");
+        expect(preview?.textContent).toContain("A: 7");
+        expect(preview?.querySelector("[data-testid='chart-legend']")).not.toBeNull();
+
+        fireEvent.click(screen.getByRole("button", { name: "Doughnut" }));
+        preview = document.querySelector(".chart-color-dialog__preview");
+        expect(preview?.querySelector("[data-testid='pie']")?.getAttribute("data-inner-radius")).toBe("52%");
+
+        fireEvent.click(screen.getByRole("button", { name: "Pie" }));
+        expect(preview?.querySelector("[data-testid='pie']")?.getAttribute("data-inner-radius")).toBe("0");
+        fireEvent.click(screen.getByRole("button", { name: "Column" }));
+        expect(preview?.querySelector("[data-testid='bar-chart']")?.getAttribute("data-layout")).toBe("horizontal");
+        fireEvent.click(screen.getByRole("button", { name: "Bar" }));
+        expect(preview?.querySelector("[data-testid='bar-chart']")?.getAttribute("data-layout")).toBe("vertical");
+        fireEvent.click(screen.getByRole("button", { name: "Line" }));
+        expect(preview?.querySelector("[data-testid='line-chart']")).not.toBeNull();
+        fireEvent.click(screen.getByRole("button", { name: "Area" }));
+        expect(preview?.querySelector("[data-testid='area-chart']")).not.toBeNull();
+        fireEvent.click(screen.getByRole("button", { name: "Treemap" }));
+        expect(preview?.querySelector("[data-testid='treemap-chart']")).not.toBeNull();
+        fireEvent.click(screen.getByRole("button", { name: "Radial Bar" }));
+        expect(preview?.querySelector("[data-testid='radial-bar-chart']")).not.toBeNull();
+
+        fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+        fireEvent.click(screen.getByRole("button", { name: "Customize" }));
+        expect(document.querySelector(".chart-color-dialog__preview [data-testid='bar-chart']")).not.toBeNull();
+    });
+
+    it("renders persisted Pie and Doughnut geometry distinctly across reload-style updates", async () => {
+        mocks.executeRequest.mockResolvedValue(response([{ Category: "A", Amount: 7 }, { Category: "B", Amount: 3 }]));
+        const baseConfiguration = { dashboardId: "sales", widgetId: "sales-chart", revision: "a".repeat(64), seriesColors: {}, categoryColors: {}, customized: true } as const;
+        const view = render(<DashboardProvider><ChartWidget title="Sales" request={request} xField="Category" yField="Amount" chartType="pie" chartOptions={{ appearance: "donut" }} colorConfiguration={{ ...baseConfiguration, chartType: "pie" }} /></DashboardProvider>);
+        expect((await screen.findByTestId("pie")).getAttribute("data-inner-radius")).toBe("0");
+
+        view.rerender(<DashboardProvider><ChartWidget title="Sales" request={request} xField="Category" yField="Amount" chartType="pie" chartOptions={{ appearance: "donut" }} colorConfiguration={{ ...baseConfiguration, chartType: "doughnut" }} /></DashboardProvider>);
+        expect((await screen.findByTestId("pie")).getAttribute("data-inner-radius")).toBe("52%");
+
+        view.rerender(<DashboardProvider><ChartWidget title="Sales" request={request} xField="Category" yField="Amount" chartType="pie" chartOptions={{ appearance: "donut" }} colorConfiguration={{ ...baseConfiguration, chartType: "pie" }} /></DashboardProvider>);
+        expect((await screen.findByTestId("pie")).getAttribute("data-inner-radius")).toBe("0");
     });
 
     it("exposes deterministic Column and Bar choices and persists the previewed orientation", async () => {

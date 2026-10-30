@@ -367,7 +367,7 @@ function DashboardContent({
                             chartColorConfiguration={chartColors[widget.id]}
                             canCustomizeChart={canCustomizeCharts}
                             onSaveChartConfiguration={onSaveChartConfiguration}
-                            filterDefinitions={getTargetedDashboardFilters(dashboard.filters ?? [], widget.id)}
+                            filterDefinitions={getTargetedDashboardFilters(dashboard.filters ?? [], widget.id, widget.pageFilterExclusions)}
                             inheritedDatabase={effectiveInheritedDatabase}
                             columns={columns}
                             tabletColumns={tabletColumns}
@@ -444,7 +444,7 @@ const DashboardWidgetCard = memo(function DashboardWidgetCard({
             )}
             {widget.type === "stat" && resolved.request && (
                 <StatWidget title={widget.title} description={widget.description} request={resolved.request}
-                    valueField={widget.valueField} format={widget.format} filterDefinitions={filterDefinitions}
+                    valueField={widget.valueField} format={widget.format} currency={widget.currency} filterDefinitions={filterDefinitions}
                     filterFields={widget.filterFields} runtimeFilters={widget.runtimeFilters}
                     runtimeFilterDisplay={widget.runtimeFilterDisplay} cacheScope={cacheScope} />
             )}

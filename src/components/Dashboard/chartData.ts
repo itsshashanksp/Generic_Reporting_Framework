@@ -1,5 +1,5 @@
 import { formatCurrencyForDisplay, formatNumberForDisplay } from "../../engine/ValueFormatter";
-import type { ChartOptions } from "../../types/widget";
+import type { ChartOptions, ChartType } from "../../types/widget";
 
 export interface ChartDatum {
     [key: string]: string | number | null;
@@ -23,6 +23,60 @@ export function getHorizontalCategoryAxisWidth(data: ChartDatum[]): number {
     return Math.min(190, Math.max(110, longest * 6.5 + 18));
 }
 
+export interface ChartOverflowLayout {
+    axis: "none" | "horizontal" | "vertical";
+    minimumWidth?: number;
+    minimumHeight?: number;
+}
+
+export interface ChartPresentationItem {
+    category: string;
+    originalValue: number | null;
+    formattedValue: string;
+    percentage: string | null;
+}
+
+/**
+ * Keeps category marks readable without changing the dashboard card size.
+ * Proportional, hierarchical and radial charts adapt in place; cartesian
+ * charts get a bounded scrolling canvas only after category density exceeds
+ * the space an ordinary widget can reasonably display.
+ */
+export function getChartOverflowLayout(
+    type: "bar" | "line" | "area" | "pie" | "doughnut" | "treemap" | "funnel" | "radial-bar",
+    orientation: "vertical" | "horizontal",
+    data: ChartDatum[],
+    policy: "orientation-aware" | "horizontal" | "adapt" = type === "bar"
+        ? "orientation-aware"
+        : type === "line" || type === "area" ? "horizontal" : "adapt",
+    options?: ChartOptions,
+): ChartOverflowLayout {
+    if (policy === "adapt") return { axis: "none" };
+    if (policy === "orientation-aware" && orientation === "horizontal") {
+        return data.length > 6
+            ? { axis: "vertical", minimumHeight: getHorizontalBarChartHeight(data.length) }
+            : { axis: "none" };
+    }
+    if (policy === "orientation-aware" || policy === "horizontal") {
+        if (data.length <= 8) return { axis: "none" };
+        const longestLabel = data.reduce((length, item) => Math.max(length, item.name.length), 0);
+        const longestValue = data.reduce((length, item) => Math.max(length, formatChartNumber(item.value, options).length), 0);
+        const categoryWidth = type === "bar" ? 62 : 48;
+        const longLabelAllowance = Math.min(24, Math.max(0, longestLabel - 12));
+        const endpointAllowance = Math.min(96, Math.max(24, longestValue * 7 + 12));
+        return {
+            axis: "horizontal",
+            minimumWidth: Math.min(2400, data.length * (categoryWidth + longLabelAllowance) + 72 + endpointAllowance),
+        };
+    }
+    return { axis: "none" };
+}
+
+export function formatChartCategoryLabel(value: unknown, maximumLength = 18): string {
+    const label = String(value ?? "");
+    return label.length > maximumLength ? `${label.slice(0, Math.max(1, maximumLength - 1))}…` : label;
+}
+
 const compactNumber = new Intl.NumberFormat("en-IN", {
     notation: "compact",
     maximumFractionDigits: 2,
@@ -39,7 +93,7 @@ function formatIndianCompact(value: number): string {
 }
 
 function formatChartFullValue(value: number, options?: ChartOptions): string {
-    if (options?.valueFormat === "currency") return `₹${formatCurrencyForDisplay(value)}`;
+    if (options?.valueFormat === "currency") return formatCurrencyForDisplay(value, "standard", options.currency);
     if (options?.valueFormat === "decimal") return value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     return formatNumberForDisplay(value);
 }
@@ -50,8 +104,9 @@ export function formatChartNumber(value: unknown, options?: ChartOptions): strin
     if (!Number.isFinite(numeric)) return "—";
     if (Object.is(numeric, -0)) return "0";
     if (options?.numberFormat === "full") return formatChartFullValue(numeric, options);
+    if (options?.valueFormat === "currency") return formatCurrencyForDisplay(numeric, "compact-indian", options.currency);
     const formatted = options?.numberFormat === "compact" ? compactNumber.format(numeric) : formatIndianCompact(numeric);
-    return options?.valueFormat === "currency" ? `₹${formatted}` : formatted;
+    return formatted;
 }
 
 export function formatChartTooltipValue(value: unknown, options?: ChartOptions): string {
@@ -60,6 +115,71 @@ export function formatChartTooltipValue(value: unknown, options?: ChartOptions):
     if (!Number.isFinite(numeric)) return String(value);
     if (Object.is(numeric, -0)) return "0";
     return formatChartFullValue(numeric, options);
+}
+
+/** Explicit flags win; otherwise each visualization receives a readable framework default. */
+export function resolveChartLabelVisibility(
+    type: ChartType,
+    dataLength: number,
+    options?: ChartOptions,
+    configured?: boolean,
+): boolean {
+    const explicit = options?.showLabels ?? options?.showDataLabels ?? configured;
+    if (explicit !== undefined) return explicit;
+    if (type === "bar" || type === "pie" || type === "doughnut" || type === "radial-bar") return true;
+    if (type === "line" || type === "area") return dataLength <= 8;
+    return false;
+}
+
+/**
+ * Adds bounded plot headroom for persistent labels without changing source values.
+ * Zero remains an anchor for one-sided datasets; signed datasets receive room at
+ * both ends so negative and positive labels stay inside the SVG viewport.
+ */
+export function getChartValueDomain(data: ChartDatum[], labelsVisible: boolean): [number, number] {
+    const values = data.flatMap(item => item.value === null || !Number.isFinite(item.value) ? [] : [item.value]);
+    if (!values.length) return [0, 1];
+    const minimum = Math.min(...values, 0);
+    const maximum = Math.max(...values, 0);
+    if (minimum === 0 && maximum === 0) return [0, 1];
+    if (!labelsVisible) return [minimum, maximum || 1];
+    const span = Math.max(1, maximum - minimum, Math.abs(maximum), Math.abs(minimum));
+    const padding = span * 0.12;
+    return [minimum < 0 ? minimum - padding : 0, maximum > 0 ? maximum + padding : 0];
+}
+
+export function getProportionalChartTotal(data: ChartDatum[]): number {
+    return data.reduce((sum, item) => sum + Math.max(0, item.value ?? 0), 0);
+}
+
+export function formatChartPercentage(value: unknown, total: number): string | null {
+    const numeric = Number(value);
+    if (!(total > 0) || !Number.isFinite(numeric) || numeric < 0) return null;
+    return `${(numeric / total * 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}%`;
+}
+
+export function buildChartPresentation(
+    data: ChartDatum[],
+    options?: ChartOptions,
+    proportional = false,
+): ChartPresentationItem[] {
+    const total = proportional ? getProportionalChartTotal(data) : 0;
+    return data.map(item => ({
+        category: item.name,
+        originalValue: item.value,
+        formattedValue: formatChartTooltipValue(item.value, options),
+        percentage: proportional ? formatChartPercentage(item.value, total) : null,
+    }));
+}
+
+/** Bounded text alternative shared by every chart renderer. */
+export function describeChartData(data: ChartDatum[], options?: ChartOptions, proportional = false): string {
+    const presentation = buildChartPresentation(data, options, proportional);
+    const entries = presentation.slice(0, 20).map(item => {
+        return `${item.category}: ${item.formattedValue}${item.percentage ? ` (${item.percentage})` : ""}`;
+    });
+    if (data.length > entries.length) entries.push(`${data.length - entries.length} additional categories`);
+    return entries.join("; ");
 }
 
 /**

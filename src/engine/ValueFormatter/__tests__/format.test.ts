@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatNumberForDisplay, formatValueForDisplay } from "..";
+import { formatCurrencyForDisplay, formatNumberForDisplay, formatValueForDisplay } from "..";
 
 describe("formatNumberForDisplay", () => {
     it.each([
@@ -40,15 +40,29 @@ describe("formatValueForDisplay", () => {
     });
 
     it.each([
-        [190, "190.00"],
-        [2850, "2,850.00"],
-        [95.5, "95.50"],
-        [1234.567, "1,234.57"],
-        [-1520, "-1,520.00"],
-        ["1200", "1,200.00"],
-        [0, "0.00"],
+        [190, "₹190.00"],
+        [2850, "₹2,850.00"],
+        [95.5, "₹95.50"],
+        [1234.567, "₹1,234.57"],
+        [-1520, "-₹1,520.00"],
+        ["1200", "₹1,200.00"],
+        [0, "₹0.00"],
     ])("formats currency value %s with exactly two decimals", (value, expected) => {
         expect(formatValueForDisplay(value, "currency")).toBe(expected);
+    });
+
+    it("uses Indian lakh and crore notation without changing the numeric value", () => {
+        expect(formatCurrencyForDisplay(125000)).toBe("₹1.25 L");
+        expect(formatCurrencyForDisplay(12500000)).toBe("₹1.25 Cr");
+        expect(formatCurrencyForDisplay(-125000)).toBe("-₹1.25 L");
+        expect(formatCurrencyForDisplay(125000, "standard")).toBe("₹1,25,000.00");
+        expect(formatCurrencyForDisplay(2500, "compact-indian", "USD")).toBe("$2,500.00");
+        expect(formatValueForDisplay(2500, "currency", "EUR")).toBe("€2,500.00");
+    });
+
+    it("formats percentage numbers and numeric SQL strings", () => {
+        expect(formatValueForDisplay(18, "percentage")).toBe("18.00%");
+        expect(formatValueForDisplay("12.5", "percentage")).toBe("12.50%");
     });
 
     it("handles empty and invalid currency values without NaN or Infinity formatting", () => {

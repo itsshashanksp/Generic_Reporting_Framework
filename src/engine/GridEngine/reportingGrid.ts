@@ -35,7 +35,7 @@ function stableValue(value: unknown) {
 
 function displayGroupValue(value: unknown, column?: ColumnDefinition) {
     if (value === null || value === undefined || value === "") return "(Blank)";
-    return formatValueForDisplay(value, column?.dataType);
+    return formatValueForDisplay(value, column?.dataType, column?.currency);
 }
 
 /** Kahan summation limits avoidable binary drift without changing source values. */

@@ -4,6 +4,7 @@ import { validateDashboard } from "../../DashboardValidator";
 import { getTargetedDashboardFilters, loadDashboardConfiguration, mapWidgetFilters, resolveDashboardWidgetDefinition } from "..";
 import type { DashboardWidget } from "../../../types/widget";
 import type { FilterDefinition } from "../../../types/filter";
+import { buildFilters, composeRequestFilters } from "../../FilterQueryBuilder";
 
 const filter = (field = "Status"): FilterDefinition => ({ field, label: field, type: "text", operator: "equals" });
 const widget = (extra: Record<string, unknown> = {}): DashboardWidget => ({
@@ -26,6 +27,38 @@ describe("dashboard widget runtimeFilters validation", () => {
         expect(untargeted.map(entry => entry.field)).toEqual(["Status"]);
         expect(mapWidgetFilters(untargeted, { Status: "open", BillDate: "2026-01-01" }).values)
             .toEqual({ Status: "open" });
+    });
+
+    it("excludes selected page filters per widget without mutating shared definitions", () => {
+        const filters = [filter("Status"), filter("Branch"), filter("Category")];
+        expect(getTargetedDashboardFilters(filters, "orders", ["Branch"]).map(entry => entry.field))
+            .toEqual(["Status", "Category"]);
+        const resolved = resolveDashboardWidgetDefinition(widget({ pageFilterExclusions: ["Branch"] }), filters);
+        expect(resolved?.filters.map(entry => entry.field)).toEqual(["Status", "Category"]);
+        expect(filters.map(entry => entry.field)).toEqual(["Status", "Branch", "Category"]);
+    });
+
+    it.each(["select", "sql"] as const)("omits excluded values from %s request filters", action => {
+        const filters = [filter("Status"), filter("Branch")];
+        const applicable = getTargetedDashboardFilters(filters, "orders", ["Branch"]);
+        const mapped = mapWidgetFilters(applicable, { Status: "open", Branch: "north" });
+        const runtime = buildFilters(mapped.values, mapped.filters, action === "sql");
+        expect(composeRequestFilters([], runtime)).toEqual([{
+            field: "Status",
+            operator: "=",
+            value: "open",
+        }]);
+    });
+
+    it("validates unknown, duplicate and malformed page filter exclusions while allowing an empty list", () => {
+        const filters = [filter("Status"), filter("Branch")];
+        expect(validateDashboard(dashboard([widget({ pageFilterExclusions: [] })], filters)).errors).toEqual([]);
+        const errors = validateDashboard(dashboard([widget({
+            pageFilterExclusions: ["Branch", "Branch", "Missing", 1],
+        })], filters)).errors.join(" ");
+        expect(errors).toContain('duplicate field "Branch"');
+        expect(errors).toContain('unknown dashboard filter "Missing"');
+        expect(errors).toContain("must be a non-empty field name");
     });
 
     it("validates unknown, duplicate, empty, and non-grid target ids", () => {
@@ -55,6 +88,9 @@ describe("dashboard widget runtimeFilters validation", () => {
         }
         expect(validateDashboard(dashboard([widget({ format: "ratio" })])).errors)
             .toContain('Stat widget "orders" has invalid format.');
+        expect(validateDashboard(dashboard([widget({ format: "currency", currency: "USD" })])).errors).toEqual([]);
+        expect(validateDashboard(dashboard([widget({ format: "number", currency: "USD" })])).errors)
+            .toContain('Stat widget "orders" currency is only supported when format is currency.');
     });
 
     it("accepts dialog display and rejects unsupported runtime filter displays", () => {

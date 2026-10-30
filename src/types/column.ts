@@ -1,5 +1,4 @@
-export type ColumnDataType = "text" | "number" | "currency" | "boolean" | "date" | "datetime";
-export type ColumnAlignment = "left" | "center" | "right";
+export type ColumnDataType = "text" | "number" | "currency" | "percentage" | "boolean" | "date" | "datetime";
 
 export interface ColumnDefinition {
     field: string;
@@ -14,6 +13,7 @@ export interface ColumnDefinition {
     /** Explicit presentation type; required to format numeric values returned as strings. */
     dataType?: ColumnDataType;
 
-    /** Optional presentation override. Numeric columns default to right; all others to left. */
-    align?: ColumnAlignment;
+    /** ISO 4217 display code for currency columns; defaults to INR. */
+    currency?: string;
+
 }

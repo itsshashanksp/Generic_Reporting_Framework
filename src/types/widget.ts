@@ -47,6 +47,8 @@ export interface ChartOptions {
     numberFormat?: "full" | "compact" | "compact-indian";
     /** Numeric value presentation shared by axes, labels and tooltips. */
     valueFormat?: "number" | "decimal" | "currency";
+    /** ISO 4217 display code when valueFormat is currency; defaults to INR. */
+    currency?: string;
     /** Stable data-series keys mapped to six-digit HEX colors. */
     seriesColors?: Record<string, string>;
     /** Stable pie category values mapped to six-digit HEX colors. */
@@ -87,6 +89,9 @@ export interface DashboardWidgetPresentation {
     widgetId?: string;
 
     format?: WidgetFormat;
+
+    /** ISO 4217 display code for a currency stat; defaults to INR. */
+    currency?: string;
 
     /** Response field displayed by a stat widget. */
     valueField?: string;
@@ -131,6 +136,9 @@ export interface DashboardWidgetPresentation {
      * whose column has another name. A field-name mapping, never SQL.
      */
     filterFields?: Record<string, string>;
+
+    /** Shared page-filter fields omitted from this widget's requests. */
+    pageFilterExclusions?: string[];
 
     /** Runtime controls whose values apply only to this dashboard widget. */
     runtimeFilters?: FilterDefinition[];

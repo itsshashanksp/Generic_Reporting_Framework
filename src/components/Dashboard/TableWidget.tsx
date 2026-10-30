@@ -20,6 +20,7 @@ import { ExportFileError, exportExcel, exportRowsCSV, fetchAllRowsForExport } fr
 import type { ExportConfig, ExportFormat } from "../../types/export";
 import type { FilterDefinition } from "../../types/filter";
 import type { ColumnDefinition } from "../../types/column";
+import { inferColumnDataType } from "../../engine/ColumnEngine";
 import type { GridConfig, PaginationPresentationConfig } from "../../types/report";
 import type { WidgetRequest } from "../../types/widget";
 import type { GroupingConfig } from "../../types/grouping";
@@ -400,6 +401,7 @@ function TableWidgetContent({
             ? Object.keys(columnRows[0]).map(field => ({
                 field,
                 header: formatHeader(field),
+                dataType: inferColumnDataType(field),
                 visible: true,
                 sortable: true,
                 width: getColumnWidth(field, columnRows),
@@ -433,7 +435,7 @@ function TableWidgetContent({
     const exportFileName = exportConfig?.filename || title.replace(/\s+/g, "-").toLowerCase();
     const exportRows = useCallback(async (data: Record<string, unknown>[], format: ExportFormat) => {
         if (format === "excel") {
-            await exportExcel(data, `${exportFileName}.xlsx`);
+            await exportExcel(data, `${exportFileName}.xlsx`, columns);
             return;
         }
         try {
@@ -441,7 +443,7 @@ function TableWidgetContent({
         } catch (cause: unknown) {
             throw new ExportFileError("The CSV file could not be created.", { cause });
         }
-    }, [exportFileName]);
+    }, [columns, exportFileName]);
 
     const handleExportAll = useCallback(async (format: ExportFormat) => {
         const controller = new AbortController();

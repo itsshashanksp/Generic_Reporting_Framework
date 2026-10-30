@@ -40,8 +40,8 @@ function measureGridText(value: string, fontWeight: number) {
     return context.measureText(value).width;
 }
 
-function displayText(value: unknown, dataType?: ColumnDataType) {
-    return formatValueForDisplay(value, dataType);
+function displayText(value: unknown, dataType?: ColumnDataType, currency?: string) {
+    return formatValueForDisplay(value, dataType, currency);
 }
 
 /**
@@ -55,6 +55,7 @@ export function getContentMinWidth(
     sortable: boolean,
     measureText: TextMeasurer = measureGridText,
     dataType?: ColumnDataType,
+    currency?: string,
 ) {
     const headerWidth = measureText(header, 650)
         + HEADER_HORIZONTAL_SPACE
@@ -65,7 +66,7 @@ export function getContentMinWidth(
     const cellWidth = sample.reduce(
         (longest, row) => Math.max(
             longest,
-            measureText(displayText(row[field], dataType), 400) + CELL_HORIZONTAL_SPACE,
+            measureText(displayText(row[field], dataType, currency), 400) + CELL_HORIZONTAL_SPACE,
         ),
         0,
     );

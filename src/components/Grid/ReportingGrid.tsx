@@ -3,6 +3,7 @@ import { useMemo, useState, type CSSProperties } from "react";
 import { buildReportingGridModel, compareGridValues, type ReportingGroupNode } from "../../engine/GridEngine";
 import { getContentMinWidth } from "../../engine/GridEngine/contentWidth";
 import { formatValueForDisplay } from "../../engine/ValueFormatter";
+import { isNumericColumnType } from "../../engine/GridEngine/agGridAdapter";
 import type { ColumnDefinition } from "../../types/column";
 import type { GroupingConfig } from "../../types/grouping";
 import type { GridConfig, SortDefinition } from "../../types/report";
@@ -91,6 +92,7 @@ export default function ReportingGrid({
             column.sortable !== false,
             undefined,
             column.dataType,
+            column.currency,
         );
         if (grouping.groups?.some(group => group.field === column.field)) return Math.min(170, Math.max(110, contentWidth));
         if (grouping.aggregates?.some(aggregate => aggregate.field === column.field)) return Math.max(140, contentWidth);
@@ -98,8 +100,8 @@ export default function ReportingGrid({
     });
     const minimumTableWidth = columnWidths.reduce<number>((total, width) => total + (width ?? 120), 0);
     const renderAggregateCells = (values: Record<string, number | null>, label: string) => visibleColumns.map(column => (
-        <td key={column.field} className={`reporting-grid__cell reporting-grid__cell--${column.align ?? (column.dataType === "number" || column.dataType === "currency" ? "right" : "left")}`}>
-            {column.field === labelColumn?.field ? label : Object.prototype.hasOwnProperty.call(values, column.field) ? formatValueForDisplay(values[column.field], column.dataType) : ""}
+        <td key={column.field} className={`reporting-grid__cell reporting-grid__cell--${isNumericColumnType(column.dataType) ? "right" : "left"}`}>
+            {column.field === labelColumn?.field ? label : Object.prototype.hasOwnProperty.call(values, column.field) ? formatValueForDisplay(values[column.field], column.dataType, column.currency) : ""}
         </td>
     ));
 
@@ -122,8 +124,8 @@ export default function ReportingGrid({
             </th>;
             const hasAggregate = grouping.showGroupTotalsInHeader === true
                 && Object.prototype.hasOwnProperty.call(node.aggregates, column.field);
-            return <td key={column.field} className={`reporting-grid__group-total reporting-grid__cell reporting-grid__cell--${column.align ?? (column.dataType === "number" || column.dataType === "currency" ? "right" : "left")}`}>
-                {hasAggregate ? formatValueForDisplay(node.aggregates[column.field], column.dataType) : ""}
+            return <td key={column.field} className={`reporting-grid__group-total reporting-grid__cell reporting-grid__cell--${isNumericColumnType(column.dataType) ? "right" : "left"}`}>
+                {hasAggregate ? formatValueForDisplay(node.aggregates[column.field], column.dataType, column.currency) : ""}
             </td>;
         });
     };
@@ -166,8 +168,8 @@ export default function ReportingGrid({
                         </tr>;
                         return <tr className="reporting-grid__detail" key={`detail-${(activePage - 1) * pageSize + index}`}>
                             {visibleColumns.map(column => {
-                                const formatted = formatValueForDisplay(entry.row[column.field], column.dataType);
-                                return <td key={column.field} title={formatted} className={`reporting-grid__cell reporting-grid__cell--${column.align ?? (column.dataType === "number" || column.dataType === "currency" ? "right" : "left")}`}>{formatted}</td>;
+                                const formatted = formatValueForDisplay(entry.row[column.field], column.dataType, column.currency);
+                                return <td key={column.field} title={formatted} className={`reporting-grid__cell reporting-grid__cell--${isNumericColumnType(column.dataType) ? "right" : "left"}`}>{formatted}</td>;
                             })}
                         </tr>;
                     })}

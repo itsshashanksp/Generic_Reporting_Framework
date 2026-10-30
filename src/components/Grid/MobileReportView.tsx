@@ -1,13 +1,14 @@
 import type { KeyboardEvent } from "react";
 import { formatNumberForDisplay, formatValueForDisplay, NULL_DISPLAY_VALUE } from "../../engine/ValueFormatter";
-import type { ColumnAlignment, ColumnDataType } from "../../types/column";
+import type { ColumnDataType } from "../../types/column";
+import { isNumericColumnType } from "../../engine/GridEngine/agGridAdapter";
 
 interface MobileColumn {
     field: string;
     headerName: string;
     sortable: boolean;
     dataType?: ColumnDataType;
-    align?: ColumnAlignment;
+    currency?: string;
 }
 
 interface MobileSort {
@@ -26,13 +27,15 @@ interface MobileReportViewProps {
     onSortDirectionChange: () => void;
 }
 
-function formatValue(value: unknown, dataType?: ColumnDataType) {
+function formatValue(value: unknown, dataType?: ColumnDataType, currency?: string) {
     if (value === null) return NULL_DISPLAY_VALUE;
     if (value === undefined) return "";
-    if (typeof value === "number") return formatNumberForDisplay(value);
-    if ((dataType === "number" || dataType === "currency") && typeof value === "string") return formatValueForDisplay(value, dataType);
+    if (typeof value === "number") return isNumericColumnType(dataType)
+        ? formatValueForDisplay(value, dataType, currency)
+        : formatNumberForDisplay(value);
+    if (isNumericColumnType(dataType) && typeof value === "string") return formatValueForDisplay(value, dataType, currency);
     if ((dataType === "date" || dataType === "datetime") && typeof value === "string") {
-        return formatValueForDisplay(value, dataType);
+        return formatValueForDisplay(value, dataType, currency);
     }
     if (typeof value === "boolean") return value ? "Yes" : "No";
     if (typeof value === "object") {
@@ -127,17 +130,17 @@ export default function MobileReportView({
                                     {primaryColumn && (
                                         <div
                                             className="mobile-report-record__primary"
-                                            aria-label={`${primaryColumn.headerName}: ${formatValue(row[primaryColumn.field], primaryColumn.dataType)}`}
+                                            aria-label={`${primaryColumn.headerName}: ${formatValue(row[primaryColumn.field], primaryColumn.dataType, primaryColumn.currency)}`}
                                         >
-                                            {formatValue(row[primaryColumn.field], primaryColumn.dataType)}
+                                            {formatValue(row[primaryColumn.field], primaryColumn.dataType, primaryColumn.currency)}
                                         </div>
                                     )}
                                     {secondaryColumn && (
                                         <div
                                             className="mobile-report-record__secondary"
-                                            aria-label={`${secondaryColumn.headerName}: ${formatValue(row[secondaryColumn.field], secondaryColumn.dataType)}`}
+                                            aria-label={`${secondaryColumn.headerName}: ${formatValue(row[secondaryColumn.field], secondaryColumn.dataType, secondaryColumn.currency)}`}
                                         >
-                                            {formatValue(row[secondaryColumn.field], secondaryColumn.dataType)}
+                                            {formatValue(row[secondaryColumn.field], secondaryColumn.dataType, secondaryColumn.currency)}
                                         </div>
                                     )}
                                 </header>
@@ -146,9 +149,9 @@ export default function MobileReportView({
                             {detailColumns.length > 0 && (
                                 <dl className="mobile-report-record__details">
                                     {detailColumns.map(column => (
-                                        <div key={column.field} className={`mobile-report-record__field mobile-report-record__field--${column.align ?? (column.dataType === "number" || column.dataType === "currency" ? "right" : "left")}`}>
+                                        <div key={column.field} className={`mobile-report-record__field mobile-report-record__field--${isNumericColumnType(column.dataType) ? "right" : "left"}`}>
                                             <dt>{column.headerName}</dt>
-                                            <dd>{formatValue(row[column.field], column.dataType)}</dd>
+                                            <dd>{formatValue(row[column.field], column.dataType, column.currency)}</dd>
                                         </div>
                                     ))}
                                 </dl>

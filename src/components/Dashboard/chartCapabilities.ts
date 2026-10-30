@@ -16,6 +16,8 @@ export interface ChartCapability {
     supportsNegativeValues: boolean;
     supportsZeroValues: boolean;
     tooltipMode: "series" | "proportional";
+    presentation: "cartesian" | "proportional" | "hierarchical" | "radial";
+    overflow: "orientation-aware" | "horizontal" | "adapt";
     supported: boolean;
     exportFormats: readonly ["png", "svg", "csv", "excel"];
     incompatibility: (data: ChartDatum[]) => string | null;
@@ -51,6 +53,11 @@ const capability = (
     supportsNegativeValues: colorMode === "series",
     supportsZeroValues: colorMode === "series",
     tooltipMode: colorMode === "category" ? "proportional" : "series",
+    presentation: type === "treemap" ? "hierarchical"
+        : type === "radial-bar" ? "radial"
+            : colorMode === "category" ? "proportional"
+                : "cartesian",
+    overflow: type === "bar" ? "orientation-aware" : type === "line" || type === "area" ? "horizontal" : "adapt",
     supported: true,
     exportFormats: ["png", "svg", "csv", "excel"],
     incompatibility,

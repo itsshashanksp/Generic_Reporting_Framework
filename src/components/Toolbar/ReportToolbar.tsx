@@ -11,6 +11,7 @@ import {
 } from "../../engine/ExportEngine";
 import type { ToolbarConfig } from "../../types/report";
 import type { ExportConfig } from "../../types/export";
+import type { ColumnDefinition } from "../../types/column";
 import { isSavedReportsEnabled } from "../../engine/ReportDefinitionEngine";
 
 interface ReportToolbarProps {
@@ -20,6 +21,7 @@ interface ReportToolbarProps {
     exportConfig?: ExportConfig;
 
     rows?: Record<string, unknown>[];
+    columns?: ColumnDefinition[];
 
     onExportAll?: (
         format: "csv" | "excel"
@@ -40,6 +42,7 @@ export default function ReportToolbar({
     config,
     exportConfig,
     rows = [],
+    columns,
     onExportAll,
     onExportMessage,
     onSaveReport,
@@ -86,7 +89,8 @@ export default function ReportToolbar({
                 rows,
                 exportConfig?.filename
                     ? `${exportConfig.filename}.xlsx`
-                    : "report.xlsx"
+                    : "report.xlsx",
+                columns
             );
             onExportMessage?.("");
         } catch (error: unknown) {

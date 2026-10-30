@@ -46,7 +46,15 @@ export function mapWidgetFilters(
     };
 }
 
-/** Page filters applicable to one stable dashboard grid id. */
-export function getTargetedDashboardFilters(filters: FilterDefinition[], widgetId: string) {
-    return filters.filter(filter => !filter.targetGrids || filter.targetGrids.includes(widgetId));
+/** Page filters applicable to one stable widget after positive targets and exclusions. */
+export function getTargetedDashboardFilters(
+    filters: FilterDefinition[],
+    widgetId: string,
+    exclusions: string[] = []
+) {
+    const excluded = new Set(exclusions);
+    return filters.filter(filter =>
+        (!filter.targetGrids || filter.targetGrids.includes(widgetId))
+        && !excluded.has(filter.field)
+    );
 }

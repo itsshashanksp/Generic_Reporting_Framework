@@ -5,7 +5,7 @@ import { unknownPropertyMessage } from "../configurationValidation";
 const REPORT_KEYS = ["id", "title", "description", "queryDefinition", "request", "columns", "filters", "sort", "filterLogic", "grid", "toolbar", "export", "databaseSelection"];
 const REQUEST_KEYS = ["action", "database", "source", "fields", "filters", "joins", "groupBy", "having", "sort", "pagination", "distinct", "limit", "filterLogic", "with"];
 const REQUEST_FIELD_KEYS = ["field", "fields", "function", "alias", "sort", "case", "expression", "buckets", "offset", "default", "separator", "datatype", "style", "value", "values", "index", "datepart", "number", "start", "end", "year", "month", "day", "hour", "minute", "second", "millisecond", "precision", "power", "part", "length", "search", "replace", "pattern", "format", "condition", "true", "false"];
-const COLUMN_KEYS = ["field", "header", "visible", "sortable", "width", "dataType", "align"];
+const COLUMN_KEYS = ["field", "header", "visible", "sortable", "width", "dataType", "currency"];
 const FILTER_KEYS = ["field", "label", "type", "operator", "options", "dynamicOptions", "visible", "required", "placeholder"];
 const FILTER_TYPES: FilterType[] = ["text", "number", "select", "multiselect", "boolean", "date", "daterange"];
 const QUERY_OPERATORS = ["=", "!=", "<>", ">", "<", ">=", "<=", "LIKE", "NOT LIKE", "IN", "NOT IN", "BETWEEN", "NOT BETWEEN", "IS NULL", "IS NOT NULL", "EXISTS", "NOT EXISTS"];
@@ -193,11 +193,14 @@ function validateColumns(value: unknown, errors: string[], required: boolean) {
         optionalBoolean(entry.visible, `${label} visible`, errors);
         optionalBoolean(entry.sortable, `${label} sortable`, errors);
         positiveInteger(entry.width, `${label} width`, errors);
-        if (entry.dataType !== undefined && !["text", "number", "currency", "boolean", "date", "datetime"].includes(String(entry.dataType))) {
+        if (entry.dataType !== undefined && !["text", "number", "currency", "percentage", "boolean", "date", "datetime"].includes(String(entry.dataType))) {
             errors.push(`${label} dataType is invalid.`);
         }
-        if (entry.align !== undefined && !["left", "center", "right"].includes(String(entry.align))) {
-            errors.push(`${label} align must be left, center, or right.`);
+        if (entry.currency !== undefined && (typeof entry.currency !== "string" || !/^[A-Z]{3}$/.test(entry.currency))) {
+            errors.push(`${label} currency must be a three-letter uppercase ISO 4217 code.`);
+        }
+        if (entry.currency !== undefined && entry.dataType !== "currency") {
+            errors.push(`${label} currency is only supported when dataType is currency.`);
         }
     });
 }

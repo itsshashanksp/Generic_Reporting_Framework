@@ -12,8 +12,8 @@
     { "field": "OrderYear", "header": "Year", "dataType": "number", "visible": true, "sortable": true },
     { "field": "OrderMonth", "header": "Month", "visible": true, "sortable": true },
     { "field": "Category", "header": "Category", "visible": true, "sortable": true },
-    { "field": "Amount", "header": "Sales", "dataType": "currency", "align": "right", "visible": true, "sortable": true },
-    { "field": "Quantity", "header": "Quantity", "dataType": "number", "align": "right", "visible": true, "sortable": true }
+    { "field": "Amount", "header": "Sales", "dataType": "currency", "visible": true, "sortable": true },
+    { "field": "Quantity", "header": "Quantity", "dataType": "number", "visible": true, "sortable": true }
   ],
   "filters": [
     { "field": "OrderYear", "label": "Year", "type": "number", "operator": "equals" },

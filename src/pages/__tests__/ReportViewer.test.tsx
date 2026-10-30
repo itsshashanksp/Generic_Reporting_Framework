@@ -21,14 +21,17 @@ vi.mock("../../api/request", async () => ({
 }));
 
 vi.mock("../../components/Grid/GenericGrid", () => ({
-    default: ({ columns, initialSort, onSortChange, serverPagination, busy }: {
+    default: ({ columns, initialSort, onSortChange, serverPagination, busy, autoHeight, stableViewport, height }: {
         columns: Array<{ field: string }>;
         initialSort?: Array<{ field: string; direction: "ASC" | "DESC" }>;
         onSortChange?: (sort: Array<{ field: string; direction: "ASC" | "DESC" }>) => void;
         serverPagination?: { onPageSizeChange: (pageSize: number) => void };
         busy?: boolean;
+        autoHeight?: boolean;
+        stableViewport?: boolean;
+        height?: number;
     }) => {
-        genericGridProps({ serverPagination, busy });
+        genericGridProps({ serverPagination, busy, autoHeight, stableViewport, height });
         return (
             <div
                 data-testid="report-grid"
@@ -123,6 +126,17 @@ describe("ReportViewer runtime", () => {
             meta: { page: 1, pageSize: 100, totalRows: 1, rowsReturned: 1, executionTime: 1 },
         });
         await waitFor(() => expect(screen.queryByRole("status", { name: "Updating results..." })).toBeNull());
+    });
+
+    it("keeps standalone report results at natural height for browser scrolling", async () => {
+        renderReport();
+        await screen.findByTestId("report-grid");
+
+        expect(genericGridProps.mock.calls.at(-1)?.[0]).toMatchObject({
+            autoHeight: true,
+            stableViewport: false,
+            height: undefined,
+        });
     });
 
     it("sends the normalized JSON Query request with the existing runtime state", async () => {

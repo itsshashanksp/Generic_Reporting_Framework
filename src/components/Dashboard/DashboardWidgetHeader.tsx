@@ -26,7 +26,7 @@ export default function DashboardWidgetHeader({
     return (
         <header className={headerClass}>
             <div className={headingClass}>
-                <h2>{title}</h2>
+                <h2 title={title}>{title}</h2>
                 {description && <p>{description}</p>}
             </div>
             {actions && <div className={actionsClass}>{actions}</div>}

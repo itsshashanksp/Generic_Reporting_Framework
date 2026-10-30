@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { formatNumberForDisplay, NULL_DISPLAY_VALUE } from "../../engine/ValueFormatter";
+import { formatCurrencyForDisplay, formatNumberForDisplay, formatPercentageForDisplay, NULL_DISPLAY_VALUE } from "../../engine/ValueFormatter";
 
 import type { FilterDefinition } from "../../types/filter";
 import type { WidgetFilterFields } from "../../engine/DashboardEngine/filterFields";
@@ -19,6 +19,7 @@ interface StatWidgetProps {
     request: WidgetRequest;
     valueField?: string;
     format?: WidgetFormat;
+    currency?: string;
     filterDefinitions?: FilterDefinition[];
     /** Renames shared dashboard filter fields for this widget (see DashboardWidget). */
     filterFields?: WidgetFilterFields;
@@ -29,7 +30,8 @@ interface StatWidgetProps {
 
 function formatValue(
     value: unknown,
-    format: StatWidgetProps["format"]
+    format: StatWidgetProps["format"],
+    currency?: string
 ) {
     if (value === null || (typeof value === "string" && value.trim() === "")) {
         return NULL_DISPLAY_VALUE;
@@ -42,12 +44,7 @@ function formatValue(
     }
 
     if (format === "currency") {
-        return numericValue.toLocaleString("en-IN", {
-            style: "currency",
-            currency: "INR",
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        });
+        return formatCurrencyForDisplay(numericValue, "compact-indian", currency);
     }
 
     if (format === "decimal") {
@@ -58,10 +55,7 @@ function formatValue(
     }
 
     if (format === "percentage") {
-        return `${numericValue.toLocaleString("en-IN", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        })}%`;
+        return formatPercentageForDisplay(numericValue);
     }
 
     return formatNumberForDisplay(numericValue);
@@ -84,6 +78,7 @@ function StatWidgetContent({
     request,
     valueField,
     format,
+    currency,
     filterDefinitions = EMPTY_FILTER_DEFINITIONS,
     filterFields,
     cacheScope,
@@ -111,7 +106,7 @@ function StatWidgetContent({
         return { available: values.length > 0, value: values[0] };
     }, [response, valueField]);
     const { available: hasValue, value } = statistic;
-    const formattedValue = hasValue ? formatValue(value, format) : "";
+    const formattedValue = hasValue ? formatValue(value, format, currency) : "";
 
     return (
         <DashboardWidgetFrame

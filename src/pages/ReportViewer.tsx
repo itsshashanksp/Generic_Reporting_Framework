@@ -469,7 +469,8 @@ export default function ReportViewer() {
                     rowsForExport,
                     report.export?.filename
                         ? `${report.export.filename}.xlsx`
-                        : "report.xlsx"
+                        : "report.xlsx",
+                    report.columns
                 );
             }
 
@@ -495,12 +496,6 @@ export default function ReportViewer() {
             />
         );
     }
-
-    const reportingGrid = report.grid.grouping?.enabled === true;
-    const naturalGridHeight = resolveTableLayout(Math.max(1, rows.length), { pagination: false }).gridHeight;
-    const reportGridHeight = reportingGrid
-        ? "clamp(320px, 58dvh, 720px)"
-        : `min(${naturalGridHeight}px, max(300px, calc(100dvh - 320px)))`;
 
     return (
         <main ref={reportPageRef} className="report-page">
@@ -576,6 +571,7 @@ export default function ReportViewer() {
                             onExportMessage={setExportStatus}
                             onSaveReport={savedReportsOwner ? handleSaveReport : undefined}
                             rows={rows}
+                            columns={report.columns}
                         />
                     </>
                 )}
@@ -599,9 +595,8 @@ export default function ReportViewer() {
                             rows={rows}
                             columns={report.columns}
                             gridConfig={report.grid}
-                            height={reportGridHeight}
-                            autoHeight={false}
-                            stableViewport={reportingGrid}
+                            autoHeight
+                            stableViewport={false}
                             initialSort={report.sort}
                             serverPagination={report.grid.grouping?.enabled ? undefined : {
                                 page: currentPage,

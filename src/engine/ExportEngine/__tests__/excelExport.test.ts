@@ -36,7 +36,7 @@ async function unzip(bytes: Uint8Array): Promise<Record<string, string>> {
     return files;
 }
 
-async function captureWorkbook(rows: Record<string, unknown>[], fileName?: string) {
+async function captureWorkbook(rows: Record<string, unknown>[], fileName?: string, columns?: Parameters<typeof exportExcel>[2]) {
     let blob: Blob | undefined;
     const downloads: string[] = [];
     vi.spyOn(URL, "createObjectURL").mockImplementation(value => {
@@ -48,7 +48,7 @@ async function captureWorkbook(rows: Record<string, unknown>[], fileName?: strin
         downloads.push(this.download);
     });
 
-    await exportExcel(rows, fileName);
+    await exportExcel(rows, fileName, columns);
     // write-excel-file removes its download link and revokes the object URL
     // 100 ms after the click; let that finish before jsdom is torn down.
     await new Promise(resolve => setTimeout(resolve, 150));
@@ -78,33 +78,33 @@ describe("Excel export (write-excel-file)", () => {
 
     it("keeps the SheetJS header order: first-seen keys, later keys appended", () => {
         expect(getExcelSheetData(rows)[0]).toEqual(
-            ["Month", "Sales", "Count", "Code", "Active", "Note", "When", "Iso", "Extra"].map(value => ({ type: String, value }))
+            ["Month", "Sales", "Count", "Code", "Active", "Note", "When", "Iso", "Extra"].map(value => ({ type: String, value, align: "left", fontWeight: "bold" }))
         );
     });
 
     it("writes the same cell types as the previous export", () => {
         const [, first, second] = getExcelSheetData(rows);
         expect(first).toEqual([
-            { type: String, value: "2021-06" },
-            { type: Number, value: 505308.4 },
-            { type: Number, value: 12 },
-            { type: String, value: "00123" },
-            { type: Boolean, value: true },
+            { type: String, value: "2021-06", align: "left" },
+            { type: Number, value: 505308.4, align: "right" },
+            { type: Number, value: 12, align: "right" },
+            { type: String, value: "00123", align: "left" },
+            { type: Boolean, value: true, align: "left" },
             null,
-            { type: Date, value: new Date(Date.UTC(2021, 5, 30)), format: "m/d/yy" },
-            { type: String, value: "2021-06-30" },
+            { type: Date, value: new Date(Date.UTC(2021, 5, 30)), format: "m/d/yy", align: "left" },
+            { type: String, value: "2021-06-30", align: "left" },
             null,
         ]);
         expect(second).toEqual([
-            { type: String, value: "2021-05" },
-            { type: Number, value: -1250.5 },
-            { type: String, value: "17" },
+            { type: String, value: "2021-05", align: "left" },
+            { type: Number, value: -1250.5, align: "right" },
+            { type: String, value: "17", align: "left" },
             null,
-            { type: Boolean, value: false },
+            { type: Boolean, value: false, align: "left" },
             null,
             null,
             null,
-            { type: String, value: "late key" },
+            { type: String, value: "late key", align: "left" },
         ]);
     });
 
@@ -126,6 +126,28 @@ describe("Excel export (write-excel-file)", () => {
         expect(files["xl/styles.xml"]).toContain('formatCode="m/d/yy"');
     });
 
+    it("uses configured headers, typed SQL numbers, alignment, and currency/percentage formats", async () => {
+        const columns = [
+            { field: "Label", header: "Description", dataType: "text" as const },
+            { field: "Amount", header: "Amount", dataType: "currency" as const },
+            { field: "Rate", header: "GST %", dataType: "percentage" as const },
+        ];
+        const sheet = getExcelSheetData([{ Label: "Sale", Amount: "1250.5", Rate: "18", Internal: 1 }], columns);
+        expect(sheet[0]).toEqual([
+            { type: String, value: "Description", align: "left", fontWeight: "bold" },
+            { type: String, value: "Amount", align: "left", fontWeight: "bold" },
+            { type: String, value: "GST %", align: "left", fontWeight: "bold" },
+        ]);
+        expect(sheet[1]).toEqual([
+            { type: String, value: "Sale", align: "left" },
+            { type: Number, value: 1250.5, align: "right", format: "₹#,##0.00" },
+            { type: Number, value: 18, align: "right", format: '0.00"%"' },
+        ]);
+        const { cells } = await captureWorkbook([{ Label: "Sale", Amount: "1250.5", Rate: "18" }], "typed.xlsx", columns);
+        expect(cells.B2).toMatchObject({ type: "n", value: "1250.5" });
+        expect(cells.C2).toMatchObject({ type: "n", value: "18" });
+    });
+
     it("keeps the default filename", async () => {
         const { downloads } = await captureWorkbook([{ A: 1 }]);
         expect(downloads).toEqual(["Report.xlsx"]);
@@ -141,8 +163,8 @@ describe("Excel export (write-excel-file)", () => {
 
     it("writes non-finite numbers as text and skips empty exports", async () => {
         expect(getExcelSheetData([{ A: Number.NaN, B: Infinity }])[1]).toEqual([
-            { type: String, value: "NaN" },
-            { type: String, value: "Infinity" },
+            { type: String, value: "NaN", align: "left" },
+            { type: String, value: "Infinity", align: "left" },
         ]);
         const createObjectURL = vi.spyOn(URL, "createObjectURL");
         await exportExcel([]);

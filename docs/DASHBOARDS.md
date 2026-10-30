@@ -2,7 +2,7 @@
 
 A dashboard is one JSON file in `src/config/dashboards/`. It contains a layout, optional shared filters and refresh settings, and its widgets. Every property is listed in the [Configuration reference](CONFIGURATION.md#dashboard-definition). Validated examples: [`examples/dashboards/minimal-dashboard.json`](../examples/dashboards/minimal-dashboard.json) and [`examples/dashboards/date-filtered-dashboard.json`](../examples/dashboards/date-filtered-dashboard.json).
 
-Checked-in dashboards: `item-dashboard`, `sales-dashboard`, `receipts-dashboard`, `purchase-dashboard`, and `bill-dashboard`.
+The local deployment commonly includes `item-dashboard`, `sales-dashboard`, `receipts-dashboard`, `purchase-dashboard`, and `bill-dashboard`. Those definitions live in the ignored `src/config/dashboards/` runtime directory; tracked regression copies are test fixtures, not public deployment configuration.
 
 ## Layout
 
@@ -11,6 +11,8 @@ The rendered column defaults are 12 on desktop, 6 on tablet, and 1 on mobile. On
 Widget dimensions remain automatic when `width` or `height` is omitted. Within each rendered dashboard row, the framework aligns the natural header footprints of adjacent widgets so their content begins at the same vertical position even when titles, descriptions, or action groups have different lengths. This synchronization is scoped to the actual rendered row: widgets that move into separate rows at responsive breakpoints retain independent natural header heights. It preserves explicit dimensions, Reporting Grid stability, and standalone report layout.
 
 Adjacent dashboard tables coordinate their complete table-region and pagination-footer footprints within the rendered row. Natural viewports with the same visible-row count also share the tallest viewport footprint. The browser's measurement includes any native horizontal scrollbar, so pagination starts, footer bottoms, and card bottoms remain aligned without assuming an operating-system scrollbar size. Explicit-height widgets, standalone reports, and tables that stack into separate responsive rows are not forced to share those heights.
+
+Dashboard table viewports remain bounded by their widget dimensions and may scroll internally. Standalone report grids use natural content height for the current page instead: page-size changes grow the grid, pagination follows the final displayed row, and the browser owns vertical scrolling. Horizontal grid scrolling remains available in both contexts.
 
 Content-sized standard grids with different visible row counts keep independent natural viewports: rows are never stretched and the shorter grid does not receive a large empty scrollable body. The dashboard instead reserves any row-alignment difference as non-scrollable space between the natural viewport and the shared pagination footer. Tables with the same visible-row footprint can still account for a native horizontal scrollbar without moving their footer. Bounded standard grids and dashboard Reporting Grids retain their existing stable viewport contract.
 
@@ -23,11 +25,11 @@ Widgets without an explicit position flow through the CSS grid. Invisible widget
 | `report` | exactly `reportId` | The report's columns and grid, in the shared report/table frame, with compact mobile pagination over the returned rows |
 | `stat` | exactly one of `request`, `queryDefinition`, `reportId`, `widgetId` | One value: `valueField` of the first row (or its first property), formatted with `format` in the `en-IN` locale |
 | `table` | as `stat` | A server-paginated table with sorting, multiple row selection, and optional CSV/Excel export. When `columns` is omitted, they are inferred from the first row |
-| `chart` | as `stat` | A Recharts `bar`, `line`, or `pie` chart of `xField` against `yField`. Non-numeric Y values become zero |
+| `chart` | as `stat` | A supported Recharts visualization of `xField` against numeric `yField`; missing or non-numeric values remain gaps rather than being converted to zero |
 
-- **Inline** `request` or `queryDefinition` keeps the dashboard self-contained. This is what every checked-in dashboard uses.
+- **Inline** `request` or `queryDefinition` keeps the dashboard self-contained. This is what the standard local runtime dashboards use.
 - **`reportId`** reuses a normalized report definition (request and columns).
-- **`widgetId`** references a file in `src/config/widgets/`. It is supported, but no such files are checked in.
+- **`widgetId`** references a file in `src/config/widgets/`. It is supported, but the standard local runtime currently has no reusable widget files.
 
 Each widget has its own loading, empty, error, and retry states, and its own cache scope `dashboard:<dashboardId>:<widgetId>`. A dashboard table widget sends only its first active sort column (reports can send several). Its paging and export are configured on the widget itself (`pageSize`, `pageSizeOptions`, `export`).
 
@@ -95,7 +97,7 @@ An optional `runtimeFilters` array on a dashboard widget adds independent contro
 
 `runtimeFilterDisplay` is optional. The default `"inline"` preserves the established in-card panel. `"dialog"` uses the same filter context, renderer, validation, dynamic options, and request composition in an accessible modal. Opening starts from applied values; Apply validates and commits, Reset clears and commits, while Cancel, Close, and Escape discard the current draft. Database changes retain the existing behavior of clearing widget-local filters.
 
-Table widgets also accept an optional `pagination` object with `style: "modern"`, `pageSize`, `pageSizeOptions`, `showTotalRecords`, `showPageNumbers`, and `showFirstLast`. Its page-size fields override legacy `pageSize` and `pageSizeOptions`; omitted settings retain legacy values and defaults. Paging remains server-side.
+Table widgets also accept an optional `pagination` object with `style: "modern"`, `pageSize`, `pageSizeOptions`, `showTotalRecords`, `showPageNumbers`, and `showFirstLast`. Its page-size fields override legacy `pageSize` and `pageSizeOptions`; omitted settings retain legacy values and defaults. Paging remains server-side. The shared footer uses the actual grid-container width—not only the browser viewport—to wrap and then compact its numbered window, so half-width widgets retain accessible navigation and page-size selection without clipping or resetting state.
 
 Chart widgets support `bar`, `line`, `area`, `pie`, `doughnut`, `treemap`, and `radial-bar` types and may add `chartOptions`. These types reuse the established `xField` category and `yField` numeric-value mappings. The customization UI calls `bar` with vertical orientation **Column** and `bar` with horizontal orientation **Bar**; the canonical JSON remains `chartType: "bar"` plus `chartOptions.orientation`, preserving existing dashboards. Existing `pie` definitions with `chartOptions.appearance: "donut"` normalize to Doughnut without rewriting JSON. Legacy Funnel definitions preserve their query and mappings but display a clear unsupported-chart state; Funnel is not offered or accepted for new customization saves. Horizontal bars, line/area smoothing, responsive legends, Indian/full numeric formatting, Top-N/Others, and chart exports are documented in [Configuration](CONFIGURATION.md). Graphic exports (`png`, `svg`) represent the displayed chart; tabular exports (`csv`, `excel`) contain the complete filtered source chart rows.
 
@@ -215,6 +217,18 @@ Dashboard filters apply to every widget by default. To limit one page-level filt
 ```
 
 Unknown, duplicate, empty, and non-grid targets are configuration errors. Non-targeted widgets do not receive the filter definition or its applied value. Omitting `targetGrids` preserves the existing shared-filter behavior, and widget-level runtime filters continue to combine normally.
+
+To keep selected page filters out of one widget, add `pageFilterExclusions` to that widget. This negative targeting works for every widget type:
+
+```json
+{
+  "id": "all-time-order-total",
+  "type": "stat",
+  "pageFilterExclusions": ["OrderDate"]
+}
+```
+
+The fields must exist in the dashboard's shared `filters` array and may not be duplicated. An empty array is a valid no-op. Exclusions are applied before widget field remapping and request construction, do not mutate shared filter state, and do not affect widget-local runtime filters or backend authorization.
 
 ## Database selector
 

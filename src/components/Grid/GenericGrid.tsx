@@ -6,15 +6,15 @@ import { useGrid } from "../../engine/GridContext";
 
 import {
     compareGridValues,
+    buildAgGridColumnDefs,
+    buildAgGridRowSelection,
     defaultColumn,
     defaultGridOptions,
     gridTheme,
 } from "../../engine/GridEngine";
-import { getContentMinWidth } from "../../engine/GridEngine/contentWidth";
-import { formatValueForDisplay } from "../../engine/ValueFormatter";
 
 import type { GridConfig, SortDefinition } from "../../types/report";
-import type { ColumnAlignment, ColumnDefinition } from "../../types/column";
+import type { ColumnDefinition } from "../../types/column";
 import MobileReportView from "./MobileReportView";
 import Pagination from "./Pagination";
 import { GRID_HEADER_HEIGHT, GRID_ROW_HEIGHT } from "./tableLayout";
@@ -44,14 +44,6 @@ interface Props {
 }
 
 const EMPTY_SORTS: SortDefinition[] = [];
-
-function formatGridValue(value: unknown, dataType?: ColumnDefinition["dataType"]): string {
-    return formatValueForDisplay(value, dataType);
-}
-
-function getColumnAlignment(column: Pick<ColumnDefinition, "align" | "dataType">): ColumnAlignment {
-    return column.align ?? (column.dataType === "number" || column.dataType === "currency" ? "right" : "left");
-}
 
 export default function GenericGrid(props: Props) {
     if (props.gridConfig.grouping?.enabled) {
@@ -97,53 +89,15 @@ function StandardGrid({
 
     useEffect(() => () => setApi(null), [setApi]);
 
-    const columnDefs = useMemo(() => {
-        const getInitialSortState = (field: string) => {
-            const sortIndex = initialSort.findIndex(sort => sort.field === field);
-            if (sortIndex < 0) return {};
+    const columnDefs = useMemo(() => buildAgGridColumnDefs(columns, rows, initialSort), [columns, initialSort, rows]);
 
-            return {
-                initialSort: initialSort[sortIndex].direction === "DESC" ? "desc" as const : "asc" as const,
-                initialSortIndex: sortIndex,
-            };
-        };
-        return columns
-                .filter(column => column.visible)
-                .map(column => {
-                    const alignment = getColumnAlignment(column);
-                    return ({
-                    field: column.field,
-                    headerName: column.header,
-                    sortable: column.sortable,
-                    filter: false,
-                    initialWidth: column.width,
-                    flex: column.width === undefined ? 1 : undefined,
-                    minWidth: getContentMinWidth(
-                        rows,
-                        column.field,
-                        column.header,
-                        column.sortable ?? true,
-                        undefined,
-                        column.dataType,
-                    ),
-                    valueFormatter: ({ value }: { value: unknown }) => formatGridValue(value, column.dataType),
-                    dataType: column.dataType,
-                    align: alignment,
-                    cellClass: `universal-grid__cell--${alignment}`,
-                    headerClass: `universal-grid__header--${alignment}`,
-                    comparator: (left: unknown, right: unknown) => compareGridValues(left, right, column.dataType),
-                    ...getInitialSortState(column.field),
-                });
-                });
-    }, [columns, initialSort, rows]);
-
-    const mobileColumns = useMemo(() => columnDefs.map(column => ({
+    const mobileColumns = useMemo(() => columns.filter(column => column.visible !== false).map(column => ({
         field: column.field,
-        headerName: column.headerName,
+        headerName: column.header,
         sortable: column.sortable !== false,
         dataType: column.dataType,
-        align: column.align,
-    })), [columnDefs]);
+        currency: column.currency,
+    })), [columns]);
 
     const mobileRows = useMemo(() => {
         if (!mobileSort) return rows;
@@ -263,7 +217,7 @@ function StandardGrid({
                     gridConfig.pagination.pageSizeOptions
                 }
 
-                rowSelection={gridConfig.rowSelection}
+                rowSelection={buildAgGridRowSelection(gridConfig.rowSelection)}
 
                 onSortChanged={event => {
                     const sorting: Array<{ field: string; direction: "ASC" | "DESC" }> = event.api.getColumnState()

@@ -1,6 +1,6 @@
 import type { DashboardWidget } from "../types/widget";
 import type { FilterDefinition } from "../types/filter";
-import { mapWidgetFilters } from "./DashboardEngine/filterFields";
+import { getTargetedDashboardFilters, mapWidgetFilters } from "./DashboardEngine/filterFields";
 import { dashboardDateFilterBehaviors } from "./DashboardEngine/dateFilterBehavior";
 import {
     validateFilters as validateFilterDefinitions,
@@ -476,12 +476,12 @@ function validateWidget(
 
 
     const commonKeys = [
-        "id", "type", "title", "description", "width", "height", "visible", "position", "filterFields", "runtimeFilters", "runtimeFilterDisplay",
+        "id", "type", "title", "description", "width", "height", "visible", "position", "filterFields", "pageFilterExclusions", "runtimeFilters", "runtimeFilterDisplay",
     ];
     const definitionKeys = ["queryDefinition", "columns", "filters", "sort", "filterLogic", "grid", "toolbar"];
     const typeKeys: Record<string, string[]> = {
         report: ["request", "reportId", "widgetId", ...definitionKeys],
-        stat: ["request", "reportId", "widgetId", "format", "valueField", ...definitionKeys],
+        stat: ["request", "reportId", "widgetId", "format", "valueField", "currency", ...definitionKeys],
         table: ["request", "reportId", "widgetId", "pageSize", "pageSizeOptions", "pagination", "export", ...definitionKeys],
         chart: ["request", "reportId", "widgetId", "xField", "yField", "chartType", "chartOptions", "chartCustomizationDefaults", "showLegend", "showTooltip", "showGrid", "showLabels", "export", ...definitionKeys],
     };
@@ -558,9 +558,17 @@ function validateWidget(
         errors
     );
 
+    validatePageFilterExclusions(widget, widgetLabel, sharedFilters, errors);
+    const applicableSharedFilters = getTargetedDashboardFilters(
+        sharedFilters,
+        isNonEmptyString(widget.id) ? widget.id : "",
+        Array.isArray(widget.pageFilterExclusions)
+            ? widget.pageFilterExclusions.filter(isNonEmptyString)
+            : []
+    );
     // Inline definitions are checked as the widget sees the shared filters.
     const widgetSharedFilters = mapWidgetFilters(
-        sharedFilters,
+        applicableSharedFilters,
         {},
         validateFilterFields(widget, widgetLabel, sharedFilters, errors)
     ).filters;
@@ -736,7 +744,36 @@ function validateWidget(
                 `Stat widget "${String(widget.id ?? "")}" has invalid format.`
             );
         }
+        validateCurrencyCode(widget.currency, `Stat widget "${String(widget.id ?? "")}" currency`, errors);
+        if (widget.currency !== undefined && widget.format !== "currency") {
+            errors.push(`Stat widget "${String(widget.id ?? "")}" currency is only supported when format is currency.`);
+        }
     }
+}
+
+function validatePageFilterExclusions(
+    widget: Record<string, unknown>,
+    label: string,
+    sharedFilters: FilterDefinition[],
+    errors: string[]
+) {
+    if (widget.pageFilterExclusions === undefined) return;
+    if (!Array.isArray(widget.pageFilterExclusions)) {
+        errors.push(`${label} pageFilterExclusions must be an array of dashboard filter fields.`);
+        return;
+    }
+    const available = new Set(sharedFilters.map(filter => filter.field));
+    const seen = new Set<string>();
+    widget.pageFilterExclusions.forEach((field, index) => {
+        if (!isNonEmptyString(field)) {
+            errors.push(`${label} pageFilterExclusions at index ${index} must be a non-empty field name.`);
+        } else if (seen.has(field)) {
+            errors.push(`${label} pageFilterExclusions contains duplicate field "${field}".`);
+        } else if (!available.has(field)) {
+            errors.push(`${label} pageFilterExclusions references unknown dashboard filter "${field}".`);
+        }
+        if (isNonEmptyString(field)) seen.add(field);
+    });
 }
 
 function validateChartCustomizationDefaults(value: unknown, label: string, errors: string[]) {
@@ -756,12 +793,14 @@ function validateChartCustomizationDefaults(value: unknown, label: string, error
 function validateChartOptions(value: unknown, label: string, errors: string[]) {
     if (value === undefined) return;
     if (!isRecord(value)) return errors.push(`${label} must be an object.`);
-    const keys = ["appearance", "orientation", "showLegend", "showLabels", "showDataLabels", "showCenterTotal", "showGrid", "smooth", "showPoints", "topN", "showOthers", "othersLabel", "numberFormat", "valueFormat", "seriesColors", "categoryColors"];
+    const keys = ["appearance", "orientation", "showLegend", "showLabels", "showDataLabels", "showCenterTotal", "showGrid", "smooth", "showPoints", "topN", "showOthers", "othersLabel", "numberFormat", "valueFormat", "currency", "seriesColors", "categoryColors"];
     rejectUnknownProperties(value, keys, label, errors);
     if (value.appearance !== undefined && value.appearance !== "pie" && value.appearance !== "donut") errors.push(`${label} appearance must be pie or donut.`);
     if (value.orientation !== undefined && value.orientation !== "vertical" && value.orientation !== "horizontal") errors.push(`${label} orientation must be vertical or horizontal.`);
     if (value.numberFormat !== undefined && !["full", "compact", "compact-indian"].includes(String(value.numberFormat))) errors.push(`${label} numberFormat must be full, compact, or compact-indian.`);
     if (value.valueFormat !== undefined && !["number", "decimal", "currency"].includes(String(value.valueFormat))) errors.push(`${label} valueFormat must be number, decimal, or currency.`);
+    validateCurrencyCode(value.currency, `${label} currency`, errors);
+    if (value.currency !== undefined && value.valueFormat !== "currency") errors.push(`${label} currency is only supported when valueFormat is currency.`);
     for (const field of ["showLegend", "showLabels", "showDataLabels", "showCenterTotal", "showGrid", "smooth", "showPoints", "showOthers"]) {
         if (value[field] !== undefined && typeof value[field] !== "boolean") errors.push(`${label} ${field} must be a boolean.`);
     }
@@ -770,6 +809,12 @@ function validateChartOptions(value: unknown, label: string, errors: string[]) {
     validateOptionalString(value.othersLabel, `${label} othersLabel`, errors);
     validateChartColors(value.seriesColors, `${label} seriesColors`, errors);
     validateChartColors(value.categoryColors, `${label} categoryColors`, errors);
+}
+
+function validateCurrencyCode(value: unknown, label: string, errors: string[]) {
+    if (value !== undefined && (typeof value !== "string" || !/^[A-Z]{3}$/.test(value))) {
+        errors.push(`${label} must be a three-letter uppercase ISO 4217 code.`);
+    }
 }
 
 function validateChartColors(value: unknown, label: string, errors: string[], allowEmpty = false) {

@@ -18,7 +18,7 @@ import {
     getWidgetDefinition,
     getWidgetDefinitionIds,
 } from "../WidgetEngine";
-import { mapWidgetFilters } from "./filterFields";
+import { getTargetedDashboardFilters, mapWidgetFilters } from "./filterFields";
 import { applyDateFilterBehavior } from "./dateFilterBehavior";
 
 export type DashboardLoadResult =
@@ -196,7 +196,12 @@ export function resolveDashboardWidgetDefinition(
     widget: DashboardWidget,
     dashboardFilters: FilterDefinition[] = []
 ): ReportDefinition | undefined {
-    const sharedFilters = mapWidgetFilters(dashboardFilters, {}, widget.filterFields).filters;
+    const applicableFilters = getTargetedDashboardFilters(
+        dashboardFilters,
+        widget.id,
+        widget.pageFilterExclusions
+    );
+    const sharedFilters = mapWidgetFilters(applicableFilters, {}, widget.filterFields).filters;
     const filters = mergeFilterDefinitions(
         mergeFilterDefinitions(widget.filters ?? [], widget.runtimeFilters ?? []),
         sharedFilters

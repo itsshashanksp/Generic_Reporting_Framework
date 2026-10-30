@@ -31,6 +31,8 @@ describe("Pagination", () => {
         expect(screen.getByText("Showing 26–50 of 97,454")).toBeTruthy();
         expect(screen.getAllByRole("button").length).toBeLessThanOrEqual(9);
         expect(screen.getByRole("button", { name: "Page 2" }).getAttribute("aria-current")).toBe("page");
+        expect((screen.getByLabelText("Current page") as HTMLInputElement).value).toBe("2");
+        expect(document.querySelector(".universal-grid__page-indicator")?.textContent).toContain("of 3,899");
         fireEvent.click(screen.getByRole("button", { name: "Page 3" }));
         expect(onPageChange).toHaveBeenCalledWith(3);
     });
@@ -59,6 +61,8 @@ describe("Pagination", () => {
         );
         expect(screen.getByText("Showing 51–62")).toBeTruthy();
         expect(screen.queryByText(/ of /)).toBeNull();
+        expect((screen.getByLabelText("Current page") as HTMLInputElement).value).toBe("3");
+        expect(document.querySelector(".universal-grid__page-indicator")?.textContent).not.toContain("of");
         expect((screen.getByRole("button", { name: "Next page" }) as HTMLButtonElement).disabled).toBe(true);
         fireEvent.change(screen.getByLabelText("Rows per page"), { target: { value: "50" } });
         expect(onPageSizeChange).toHaveBeenCalledWith(50);
@@ -78,5 +82,34 @@ describe("Pagination", () => {
     it("calculates compact page tokens", () => {
         expect(getPageTokens(1, 3)).toEqual([1, 2, 3]);
         expect(getPageTokens(50, 100)).toEqual([1, "ellipsis-left", 49, 50, 51, "ellipsis-right", 100]);
+    });
+
+    it("keeps every navigation action in the shared compactable region", () => {
+        render(
+            <Pagination page={50} pageSize={10} totalRows={1_000} rowsOnPage={10}
+                config={{ ...config, showFirstLast: true }} onPageChange={vi.fn()} onPageSizeChange={vi.fn()} />
+        );
+
+        const navigation = screen.getByRole("navigation", { name: "Page navigation" });
+        expect(navigation.querySelectorAll(".universal-grid__page-number")).toHaveLength(5);
+        expect((screen.getByLabelText("Current page") as HTMLInputElement).value).toBe("50");
+        expect(navigation.querySelector(".universal-grid__page-indicator")?.textContent).toContain("of 100");
+        ["First page", "Previous page", "Next page", "Last page"].forEach(name => {
+            expect(screen.getByRole("button", { name })).toBeTruthy();
+        });
+    });
+
+    it("commits compact direct navigation once on blur and clamps the last page", () => {
+        const onPageChange = vi.fn();
+        render(
+            <Pagination page={2} pageSize={10} totalRows={95} rowsOnPage={10}
+                config={config} onPageChange={onPageChange} onPageSizeChange={vi.fn()} />
+        );
+        const input = screen.getByLabelText("Current page");
+        fireEvent.change(input, { target: { value: "999" } });
+        expect(onPageChange).not.toHaveBeenCalled();
+        fireEvent.blur(input);
+        expect(onPageChange).toHaveBeenCalledTimes(1);
+        expect(onPageChange).toHaveBeenCalledWith(10);
     });
 });

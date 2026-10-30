@@ -26,12 +26,39 @@ export function formatNumberForDisplay(value: number): string {
     });
 }
 
-export function formatCurrencyForDisplay(value: number): string {
+export type CurrencyNotation = "standard" | "compact-indian";
+
+export function formatCurrencyForDisplay(
+    value: number,
+    notation: CurrencyNotation = "compact-indian",
+    currency = "INR"
+): string {
     if (!Number.isFinite(value)) return String(value);
+    const absolute = Math.abs(value);
+    if (notation === "compact-indian" && currency === "INR" && absolute >= 100_000) {
+        const unit = absolute >= 10_000_000
+            ? { divisor: 10_000_000, suffix: "Cr" }
+            : { divisor: 100_000, suffix: "L" };
+        const amount = (absolute / unit.divisor).toLocaleString("en-IN", {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+        });
+        return `${value < 0 ? "-" : ""}₹${amount} ${unit.suffix}`;
+    }
     return value.toLocaleString("en-IN", {
+        style: "currency",
+        currency,
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
+}
+
+export function formatPercentageForDisplay(value: number): string {
+    if (!Number.isFinite(value)) return String(value);
+    return `${value.toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })}%`;
 }
 
 function formatDateForDisplay(value: string, includeTime: boolean): string {
@@ -68,17 +95,22 @@ function formatDateForDisplay(value: string, includeTime: boolean): string {
 /** Generic scalar presentation used by grids without altering row data. */
 export function formatValueForDisplay(
     value: unknown,
-    dataType?: ColumnDataType
+    dataType?: ColumnDataType,
+    currency = "INR"
 ): string {
     if (value === null) return NULL_DISPLAY_VALUE;
     if (value === undefined) return "";
     if (typeof value === "number") {
-        return dataType === "currency" ? formatCurrencyForDisplay(value) : formatNumberForDisplay(value);
+        if (dataType === "currency") return formatCurrencyForDisplay(value, "compact-indian", currency);
+        if (dataType === "percentage") return formatPercentageForDisplay(value);
+        return formatNumberForDisplay(value);
     }
-    if ((dataType === "number" || dataType === "currency") && typeof value === "string" && value.trim() !== "") {
+    if ((dataType === "number" || dataType === "currency" || dataType === "percentage") && typeof value === "string" && value.trim() !== "") {
         const numericValue = Number(value);
         if (Number.isFinite(numericValue)) {
-            return dataType === "currency" ? formatCurrencyForDisplay(numericValue) : formatNumberForDisplay(numericValue);
+            if (dataType === "currency") return formatCurrencyForDisplay(numericValue, "compact-indian", currency);
+            if (dataType === "percentage") return formatPercentageForDisplay(numericValue);
+            return formatNumberForDisplay(numericValue);
         }
     }
     if ((dataType === "date" || dataType === "datetime") && typeof value === "string") {
