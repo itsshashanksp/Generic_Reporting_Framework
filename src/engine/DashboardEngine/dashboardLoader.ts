@@ -14,6 +14,7 @@ import type { ReportConfiguration, ReportDefinition } from "../../types/report";
 import { loadDefinition } from "../ReportDefinitionEngine";
 import { buildSqlResourceRequest } from "../ReportDefinitionEngine/loader";
 import type { FilterDefinition } from "../../types/filter";
+import type { WidgetPresentationView } from "../../types/widget";
 import {
     getWidgetDefinition,
     getWidgetDefinitionIds,
@@ -263,6 +264,58 @@ export function resolveDashboardWidgetColumns(
     sharedFilters: FilterDefinition[] = []
 ): ColumnDefinition[] | undefined {
     return resolveDashboardWidgetDefinition(widget, sharedFilters)?.columns ?? widget.columns;
+}
+
+/**
+ * Resolves a presentation-specific source through the same SQL Resource / JSON
+ * Query pipeline as the widget's authored source. Shared and runtime filters
+ * remain widget-owned and therefore apply identically to every view.
+ */
+export function resolveDashboardWidgetPresentationDefinition(
+    widget: DashboardWidget,
+    view: WidgetPresentationView,
+    sharedFilters: FilterDefinition[] = []
+): ReportDefinition | undefined {
+    const mode = view === "table" ? "table" : "chart";
+    const presentation = widget.presentation?.[mode];
+    const hasSpecificSource = presentation?.queryDefinition !== undefined
+        || presentation?.request !== undefined;
+    const base = { ...widget };
+    delete base.queryDefinition;
+    delete base.request;
+    delete base.reportId;
+    delete base.widgetId;
+    // Export belongs to the active renderer. Keeping a chart export while
+    // normalizing a table view would feed PNG/SVG into report validation.
+    delete base.export;
+    if (hasSpecificSource) {
+        // A presentation-specific result shape must not inherit columns, sort,
+        // grouping, or toolbar metadata authored for the widget's other query.
+        delete base.columns;
+        delete base.sort;
+        delete base.grid;
+        delete base.toolbar;
+    }
+    const resolvedWidget: DashboardWidget = {
+        ...base,
+        type: mode,
+        ...(hasSpecificSource
+            ? presentation?.queryDefinition
+                ? { queryDefinition: presentation.queryDefinition }
+                : { request: presentation!.request! }
+            : widget.queryDefinition
+                ? { queryDefinition: widget.queryDefinition }
+                : widget.request
+                    ? { request: widget.request }
+                    : widget.reportId
+                        ? { reportId: widget.reportId }
+                        : { widgetId: widget.widgetId! }),
+        ...(presentation?.columns !== undefined ? { columns: presentation.columns } : {}),
+        ...(mode === "table" && widget.presentation?.table?.sort !== undefined
+            ? { sort: widget.presentation.table.sort }
+            : {}),
+    };
+    return resolveDashboardWidgetDefinition(resolvedWidget, sharedFilters);
 }
 
 function addSharedFilters(

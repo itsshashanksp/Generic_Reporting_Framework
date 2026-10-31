@@ -5,6 +5,7 @@ export {
     resolveDashboardWidgetDefinition,
     resolveDashboardWidgetColumns,
     resolveDashboardWidgetRequest,
+    resolveDashboardWidgetPresentationDefinition,
 } from "./dashboardLoader";
 export { getTargetedDashboardFilters, mapWidgetFilters } from "./filterFields";
 export { inheritDashboardDatabase, requestInheritsDatabase } from "./databaseInheritance";

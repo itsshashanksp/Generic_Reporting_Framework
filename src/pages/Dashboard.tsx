@@ -7,6 +7,7 @@ import {
     resolveDashboardWidgetDefinition,
     resolveDashboardWidgetColumns,
     resolveDashboardWidgetRequest,
+    resolveDashboardWidgetPresentationDefinition,
 } from "../engine/DashboardEngine";
 
 import ReportWidget from "../components/Dashboard/ReportWidget";
@@ -37,6 +38,17 @@ import ErrorState from "../components/Common/Error";
 import type { ChartColorConfiguration, ChartCustomizationDraft } from "../api/chartConfiguration";
 import useDocumentTitle from "../components/Layout/useDocumentTitle";
 import useDashboardRowHeaderAlignment from "../components/Dashboard/useDashboardRowHeaderAlignment";
+import WidgetCustomizationDialog from "../components/Dashboard/WidgetCustomizationDialog";
+import {
+    getInitialPresentationView,
+    getWidgetPresentationAvailability,
+    resolveChartPresentation,
+    presentationViewLabel,
+} from "../engine/WidgetPresentationEngine";
+import type { ChartOptions, WidgetPresentationView, WidgetTableViewState } from "../types/widget";
+import type { PresentationAvailability } from "../engine/WidgetPresentationEngine";
+
+const LEGACY_CHART_VIEWS: WidgetPresentationView[] = ["column", "bar", "line", "area", "pie", "doughnut", "treemap", "radial-bar"];
 
 export default function Dashboard({
     dashboardId = "item-dashboard",
@@ -178,7 +190,11 @@ function DashboardContent({
     const globalDatabase = useOptionalGlobalDatabase();
     const hasUnpinnedWidget = visibleWidgets.some(widget => {
         const request = resolveDashboardWidgetRequest(widget, dashboard.filters ?? []);
-        return request && request.database === undefined;
+        if (request && request.database === undefined) return true;
+        if (!widget.presentation || widget.presentation.allowSwitching === false) return false;
+        return widget.presentation.allowedViews.some(view =>
+            resolveDashboardWidgetPresentationDefinition(widget, view, dashboard.filters ?? [])?.request.database === undefined
+        );
     });
     const pageDatabaseSelection = globalDatabase
         ? globalDatabase.pageDatabaseSelection && hasUnpinnedWidget
@@ -382,7 +398,7 @@ function DashboardContent({
     );
 }
 
-const DashboardWidgetCard = memo(function DashboardWidgetCard({
+export const DashboardWidgetCard = memo(function DashboardWidgetCard({
     widget,
     dashboardId,
     filterDefinitions,
@@ -415,18 +431,86 @@ const DashboardWidgetCard = memo(function DashboardWidgetCard({
             columns: definition?.columns ?? resolveDashboardWidgetColumns(widget, filterDefinitions),
         };
     }, [widget, filterDefinitions, inheritedDatabase]);
+    const presentationOptions = useMemo(
+        () => getWidgetPresentationAvailability(widget),
+        [widget]
+    );
+    const customizationOptions = useMemo<PresentationAvailability[]>(() => {
+        if (presentationOptions.length) return presentationOptions;
+        if (widget.type === "table") return [{ view: "table", label: "Table", available: true, reason: null }];
+        if (widget.type !== "chart") return [];
+        if (widget.presentation?.allowSwitching === false) {
+            const view = getInitialPresentationView(widget);
+            return [{ view, label: presentationViewLabel(view), available: true, reason: null }];
+        }
+        return LEGACY_CHART_VIEWS.map(view => ({ view, label: presentationViewLabel(view), available: true, reason: null }));
+    }, [presentationOptions, widget]);
+    const [selectedPresentation, setSelectedPresentation] = useState<ReturnType<typeof getInitialPresentationView> | null>(null);
+    const [customizationOpen, setCustomizationOpen] = useState(false);
+    const [chartOptionOverrides, setChartOptionOverrides] = useState<ChartOptions>({});
+    const [chartTooltipOverride, setChartTooltipOverride] = useState<boolean | undefined>();
+    const savedChartPresentation = chartColorConfiguration
+        ? chartColorConfiguration.chartType === "bar"
+            ? chartColorConfiguration.orientation === "horizontal" ? "bar" : "column"
+            : chartColorConfiguration.chartType
+        : null;
+    const activePresentation = selectedPresentation
+        ?? (savedChartPresentation && customizationOptions.some(option => option.view === savedChartPresentation && option.available)
+            ? savedChartPresentation
+            : getInitialPresentationView(widget));
+    const tablePresentation = widget.presentation?.table;
+    const initialTableColumns = tablePresentation?.columns ?? resolved.columns ?? [];
+    const initialTablePageSize = tablePresentation?.pagination?.pageSize
+        ?? tablePresentation?.pageSize
+        ?? widget.pagination?.pageSize
+        ?? widget.pageSize
+        ?? 10;
+    const [tableViewState, setTableViewState] = useState<WidgetTableViewState>(() => ({
+        page: 1,
+        pageSize: initialTablePageSize,
+        sort: tablePresentation?.sort ?? resolved.definition?.sort ?? [],
+        columnVisibility: Object.fromEntries(initialTableColumns.map(column => [column.field, column.visible !== false])),
+    }));
+    const [presentationRuntimeFilters, setPresentationRuntimeFilters] = useState<FilterValues>({});
+    const presentationEnabled = presentationOptions.length >= 2;
+    const customizationEnabled = customizationOptions.length > 0;
+    const presentationControl = customizationEnabled ? (
+        <button
+            type="button"
+            className="app-button widget-customize-action"
+            onClick={() => setCustomizationOpen(true)}
+        >Customize</button>
+    ) : null;
+    const activeMode = presentationEnabled
+        ? activePresentation === "table" ? "table" : "chart"
+        : widget.type;
+    const presentationResolved = useMemo(() => {
+        if (!presentationEnabled || (activeMode !== "table" && activeMode !== "chart")) return resolved;
+        const definition = resolveDashboardWidgetPresentationDefinition(widget, activePresentation, filterDefinitions);
+        const baseRequest = definition?.request;
+        const request = baseRequest && inheritDashboardDatabase(baseRequest, inheritedDatabase);
+        return {
+            request,
+            definition: definition && request ? { ...definition, request } : definition,
+            columns: definition?.columns,
+        };
+    }, [presentationEnabled, activeMode, resolved, widget, activePresentation, filterDefinitions, inheritedDatabase]);
+    const activeResolved = presentationEnabled ? presentationResolved : resolved;
+    const activeChart = activeMode === "chart"
+        ? resolveChartPresentation(widget, activePresentation)
+        : null;
     const widgetWidth = Math.min(Math.max(widget.width ?? 12, 1), columns);
     const positionX = widget.position
         ? Math.max(0, Math.min(widget.position.x, columns - widgetWidth))
         : null;
     const positionY = widget.position ? Math.max(1, widget.position.y) : null;
-    const widgetContextKey = `${widget.id}:${resolved.request?.database ?? ""}`;
-    const cacheScope = `${dashboardId}:${widget.id}`;
+    const widgetContextKey = `${widget.id}:${activeResolved.request?.database ?? ""}`;
+    const cacheScope = `${dashboardId}:${widget.id}${presentationEnabled ? `:${activeMode}` : ""}`;
 
     return (
         <div
             key={widgetContextKey}
-            className={`dashboard-widget${widget.type === "table" || widget.type === "report" ? " dashboard-widget--table" : ""}`}
+            className={`dashboard-widget${activeMode === "table" || activeMode === "report" ? " dashboard-widget--table" : ""}`}
             data-dashboard-widget={widget.id}
             data-fixed-height={widget.height !== undefined ? "true" : undefined}
             style={{
@@ -437,33 +521,92 @@ const DashboardWidgetCard = memo(function DashboardWidgetCard({
                 "--dashboard-mobile-widget-width": getResponsiveWidgetWidth(widgetWidth, columns, mobileColumns),
             } as CSSProperties}
         >
-            {widget.type === "report" && resolved.definition && (
-                <ReportWidget definition={resolved.definition} title={widget.title} description={widget.description}
+            {activeMode === "report" && activeResolved.definition && (
+                <ReportWidget definition={activeResolved.definition} title={widget.title} description={widget.description}
                     filterDefinitions={filterDefinitions} filterFields={widget.filterFields} runtimeFilters={widget.runtimeFilters}
                     runtimeFilterDisplay={widget.runtimeFilterDisplay} cacheScope={cacheScope} />
             )}
-            {widget.type === "stat" && resolved.request && (
-                <StatWidget title={widget.title} description={widget.description} request={resolved.request}
+            {activeMode === "stat" && activeResolved.request && (
+                <StatWidget title={widget.title} description={widget.description} request={activeResolved.request}
                     valueField={widget.valueField} format={widget.format} currency={widget.currency} filterDefinitions={filterDefinitions}
                     filterFields={widget.filterFields} runtimeFilters={widget.runtimeFilters}
                     runtimeFilterDisplay={widget.runtimeFilterDisplay} cacheScope={cacheScope} />
             )}
-            {widget.type === "table" && resolved.request && (
-                <TableWidget title={widget.title} description={widget.description} pageSize={widget.pageSize}
-                    pageSizeOptions={widget.pageSizeOptions} pagination={widget.pagination} request={resolved.request}
-                    columns={resolved.columns} filterDefinitions={filterDefinitions} filterFields={widget.filterFields}
+            {activeMode === "table" && activeResolved.request && (
+                <TableWidget title={widget.title} description={widget.description}
+                    pageSize={presentationEnabled ? tablePresentation?.pageSize ?? widget.pageSize : widget.pageSize}
+                    pageSizeOptions={presentationEnabled ? tablePresentation?.pageSizeOptions ?? widget.pageSizeOptions : widget.pageSizeOptions}
+                    pagination={presentationEnabled ? tablePresentation?.pagination ?? widget.pagination : widget.pagination}
+                    request={activeResolved.request}
+                    columns={activeResolved.columns} filterDefinitions={filterDefinitions} filterFields={widget.filterFields}
                     runtimeFilters={widget.runtimeFilters} runtimeFilterDisplay={widget.runtimeFilterDisplay}
-                    cacheScope={cacheScope} exportConfig={widget.export} grouping={resolved.definition?.grid.grouping} />
+                    runtimeFilterValues={customizationEnabled ? presentationRuntimeFilters : undefined}
+                    onRuntimeFilterValuesChange={customizationEnabled ? setPresentationRuntimeFilters : undefined}
+                    cacheScope={cacheScope}
+                    exportConfig={presentationEnabled
+                        ? tablePresentation?.export ?? (widget.type === "table" ? widget.export : undefined)
+                        : widget.export}
+                    grouping={activeResolved.definition?.grid.grouping}
+                    headerActions={presentationControl}
+                    viewState={customizationEnabled ? tableViewState : undefined}
+                    onViewStateChange={customizationEnabled ? next => setTableViewState(previous => (
+                        previous.page === next.page
+                        && previous.pageSize === next.pageSize
+                        && previous.queryKey === next.queryKey
+                        && JSON.stringify(previous.sort) === JSON.stringify(next.sort)
+                        && JSON.stringify(previous.columnVisibility) === JSON.stringify(next.columnVisibility)
+                            ? previous
+                            : next
+                    )) : undefined} />
             )}
-            {widget.type === "chart" && resolved.request && widget.xField && widget.yField && (
-                <ChartWidget title={widget.title} description={widget.description} request={resolved.request}
-                    xField={widget.xField} yField={widget.yField} chartType={widget.chartType}
-                    chartOptions={widget.chartOptions} showLegend={widget.showLegend} showTooltip={widget.showTooltip}
-                    showGrid={widget.showGrid} showLabels={widget.showLabels} filterDefinitions={filterDefinitions}
+            {activeMode === "chart" && activeResolved.request
+                && (activeChart?.xField ?? widget.xField) && (activeChart?.yField ?? widget.yField) && (
+                <ChartWidget title={widget.title} description={widget.description} request={activeResolved.request}
+                    xField={(activeChart?.xField ?? widget.xField)!} yField={(activeChart?.yField ?? widget.yField)!}
+                    chartType={widget.chartType ?? activeChart?.chartType}
+                    chartOptions={{ ...widget.chartOptions, ...widget.presentation?.chart?.chartOptions, ...chartOptionOverrides }}
+                    showLegend={widget.presentation?.chart?.showLegend ?? widget.showLegend}
+                    showTooltip={chartTooltipOverride ?? widget.presentation?.chart?.showTooltip ?? widget.showTooltip}
+                    showGrid={widget.presentation?.chart?.showGrid ?? widget.showGrid}
+                    showLabels={widget.presentation?.chart?.showLabels ?? widget.showLabels} filterDefinitions={filterDefinitions}
                     filterFields={widget.filterFields} runtimeFilters={widget.runtimeFilters}
-                    runtimeFilterDisplay={widget.runtimeFilterDisplay} exportConfig={widget.export} cacheScope={cacheScope}
-                    colorConfiguration={chartColorConfiguration} canCustomizeColors={canCustomizeChart}
+                    runtimeFilterDisplay={widget.runtimeFilterDisplay}
+                    runtimeFilterValues={customizationEnabled ? presentationRuntimeFilters : undefined}
+                    onRuntimeFilterValuesChange={customizationEnabled ? setPresentationRuntimeFilters : undefined}
+                    exportConfig={presentationEnabled
+                        ? widget.presentation?.chart?.export ?? (widget.type === "chart" ? widget.export : undefined)
+                        : widget.export} cacheScope={cacheScope}
+                    colorConfiguration={chartColorConfiguration} canCustomizeColors={false}
+                    headerActions={presentationControl}
+                    presentationChartType={activeChart?.chartType}
+                    presentationOrientation={activeChart?.orientation}
                     onSaveConfiguration={onSaveChartConfiguration ? (customization, revision) => onSaveChartConfiguration(widget.id, customization, revision) : undefined} />
+            )}
+            {customizationOpen && customizationEnabled && (
+                <WidgetCustomizationDialog
+                    widget={widget}
+                    options={customizationOptions}
+                    activeView={activePresentation}
+                    tableState={tableViewState}
+                    chartOptions={{ ...widget.chartOptions, ...widget.presentation?.chart?.chartOptions, ...chartOptionOverrides }}
+                    showTooltip={chartTooltipOverride ?? widget.presentation?.chart?.showTooltip ?? widget.showTooltip}
+                    filterDefinitions={filterDefinitions}
+                    inheritedDatabase={inheritedDatabase}
+                    runtimeFilterValues={presentationRuntimeFilters}
+                    cacheScope={cacheScope}
+                    colorConfiguration={chartColorConfiguration}
+                    canCustomizeChart={canCustomizeChart}
+                    onSaveChartConfiguration={onSaveChartConfiguration
+                        ? (customization, revision) => onSaveChartConfiguration(widget.id, customization, revision)
+                        : undefined}
+                    onApply={customization => {
+                        setSelectedPresentation(customization.view);
+                        setTableViewState(customization.tableState);
+                        setChartOptionOverrides(customization.chartOptions);
+                        setChartTooltipOverride(customization.showTooltip);
+                    }}
+                    onClose={() => setCustomizationOpen(false)}
+                />
             )}
         </div>
     );

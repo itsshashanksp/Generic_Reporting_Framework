@@ -170,6 +170,14 @@ Dynamic option requests inherit the owning widget's effective database—explici
 
 Table widgets apply the same local filters to screen requests and **All rows** exports. Applying a local filter returns the table to page 1 while preserving sort and page size. Cache keys include the complete filtered request.
 
+## Widget presentation switching
+
+An optional widget `presentation` block exposes compatible Table and Chart views from the existing shared engines. One **Customize Widget** action opens the presentation and settings dialog; no separate selector is rendered. The widget ID, title, layout, database, page filters, runtime filters, refresh behavior, and authorization context do not change. Table paging/sort/visibility state is restored after chart visits, while authorized chart customization continues through its existing persistence endpoint.
+
+For correctness, a paginated table cannot reuse its current page as a chart dataset. Table-origin chart views require a presentation-specific JSON Query or SQL Resource that returns the complete intended aggregate. Chart-origin table views can reuse the chart query. Each presentation has its own columns/options and export contract. Unsupported mappings are rejected during configuration validation, and runtime value constraints such as negative proportional values continue to use the chart renderer's existing explanatory states.
+
+All shared page-filter targeting, `pageFilterExclusions`, `filterFields`, and widget runtime filters are applied before either presentation request is built. Cache keys retain query, database, filters, sort, and pagination, and stale requests cannot replace the newly selected view. See [Configuration reference](CONFIGURATION.md#widget-presentation-switching) and the [validated example](../examples/dashboards/presentation-switching-dashboard.json).
+
 Dashboard and widget filters together:
 
 ```json

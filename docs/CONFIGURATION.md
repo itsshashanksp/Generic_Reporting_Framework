@@ -266,6 +266,42 @@ Pie/donut charts do not render negative values as positive slices. When any disp
 
 Chart export accepts `png`, `svg`, `csv`, and `excel`. PNG and SVG export the displayed chart, including presentation transformations. CSV and Excel export the complete filtered source chart rows using the configured `xField` and `yField`, even when Top-N/Others is displayed. Existing spreadsheet formula-injection protection and typed Excel numeric cells are reused. No additional backend request is made.
 
+### Widget presentation switching
+
+Table and chart widgets may opt into identity-preserving presentation switching with `presentation`. Switching is exposed through the widget's single **Customize Widget** dialog alongside settings for the selected table or chart view; there is no second presentation dropdown. Existing widgets need no migration and render exactly as before when this property is absent or `allowSwitching` is `false`, including the legacy authorized chart-customization dialog.
+
+```json
+{
+  "presentation": {
+    "allowSwitching": true,
+    "defaultView": "table",
+    "allowedViews": ["table", "column", "bar", "pie", "doughnut"],
+    "table": {
+      "columns": [
+        { "field": "Category", "header": "Category", "dataType": "text" },
+        { "field": "Value", "header": "Value", "dataType": "currency" }
+      ],
+      "pagination": { "pageSize": 10, "pageSizeOptions": [10, 25, 50] },
+      "export": { "enabled": true, "formats": ["csv", "excel"] }
+    },
+    "chart": {
+      "xField": "Category",
+      "yField": "Value",
+      "chartOptions": { "valueFormat": "currency" },
+      "export": { "enabled": true, "formats": ["png", "svg", "csv", "excel"] }
+    }
+  }
+}
+```
+
+`column` is the shared Bar renderer with vertical orientation; `bar` is horizontal. Supported views are `table`, `column`, `bar`, `line`, `area`, `pie`, `doughnut`, `treemap`, and `radial-bar`. A table view requires authored column metadata. When columns are supplied for a chart source, `xField` must reference a category column and `yField` must reference a `number`, `currency`, or `percentage` column. Line and Area additionally require a date, datetime, or numeric category. No aggregation is inferred.
+
+A table-origin chart must define `presentation.chart.request` or `presentation.chart.queryDefinition`. This mandatory separate complete/aggregated source prevents a server-paged table from being misrepresented as a chart of only its current page. The frontend never performs an unrestricted fetch-all. Chart-origin table views may reuse the chart's complete intended request and paginate it normally. Presentation-specific requests pass through the same SQL Resource/JSON Query validation, database inheritance, filters, permissions, caching, cancellation, and stale-response protection as ordinary widgets.
+
+The universal dialog is also used by legacy dashboard table and chart widgets, without enabling cross-presentation switching unless their configuration permits it. Chart drafts preview through the normal presentation resolver, filters, database inheritance, request cache, and shared chart renderer. Table mode intentionally opens directly on settings and performs no preview request; the real table continues using server-side pagination. **Cancel** discards the draft, **Save Changes** applies the selected view and its table/chart settings without resetting the current table page, and **Reset to Default** restores authored defaults as a draft. Table page, page size, sorting, and column visibility remain controller-owned while chart views are active. Authorized chart colors and supported chart presentation settings continue to use the existing dashboard/widget persistence endpoint. Page-filter exclusions and widget runtime filters remain widget-level and therefore apply to every view. Table and chart export blocks are independent, so image formats never leak into table export and table-only options never appear in chart export. See [`examples/dashboards/presentation-switching-dashboard.json`](../examples/dashboards/presentation-switching-dashboard.json).
+
+Chart tooltips use the same boundary-aware renderer in widgets and customization previews. Full category/value text is preserved, while placement flips and clamps to the visible chart viewport so long content is not clipped by card or chart scrolling boundaries.
+
 ### Reusable widget files
 
 A file in `src/config/widgets/*.json` has `id`, `title`, one query source, and `filters` (use `[]`). Optional keys are `description`, `columns` (optional here, unlike in reports), `sort`, `filterLogic`, `grid`, `toolbar`, and `export`. It is loaded by the same report-definition pipeline with `columnsRequired: false`. Example: [`examples/widgets/customer-summary.json`](../examples/widgets/customer-summary.json).

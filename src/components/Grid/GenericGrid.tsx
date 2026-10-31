@@ -40,6 +40,7 @@ interface Props {
         onPageSizeChange: (pageSize: number) => void;
     };
     onSortChange?: (sort: Array<{ field: string; direction: "ASC" | "DESC" }>) => void;
+    onColumnVisibilityChange?: (visibility: Record<string, boolean>) => void;
     busy?: boolean;
 }
 
@@ -69,6 +70,7 @@ function StandardGrid({
     initialSort = EMPTY_SORTS,
     serverPagination,
     onSortChange,
+    onColumnVisibilityChange,
     busy = false,
 }: Props) {
 
@@ -232,6 +234,12 @@ function StandardGrid({
                         direction: firstSort.direction === "DESC" ? "desc" : "asc",
                     } : null);
                     onSortChange?.(sorting);
+                }}
+
+                onColumnVisible={event => {
+                    onColumnVisibilityChange?.(Object.fromEntries(
+                        event.api.getColumnState().map(column => [column.colId, !column.hide])
+                    ));
                 }}
             />
 

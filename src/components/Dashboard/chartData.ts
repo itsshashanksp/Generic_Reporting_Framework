@@ -109,6 +109,11 @@ export function formatChartNumber(value: unknown, options?: ChartOptions): strin
     return formatted;
 }
 
+/** Keeps a compact amount and its scale suffix together in SVG chart text. */
+export function formatChartLabel(value: unknown, options?: ChartOptions): string {
+    return formatChartNumber(value, options).replace(/ (?=(?:K|L|Cr)$)/, "\u00a0");
+}
+
 export function formatChartTooltipValue(value: unknown, options?: ChartOptions): string {
     if (value === null || value === undefined || value === "") return "—";
     const numeric = Number(value);

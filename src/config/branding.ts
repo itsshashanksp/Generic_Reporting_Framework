@@ -3,17 +3,16 @@ export interface ApplicationBranding {
     shortName: string;
     browserTitle: string;
     description: string;
-    logoUrl: string | null;
     favicon: string | null;
 }
 
 export const APPLICATION_BRANDING: Readonly<ApplicationBranding> = {
-    applicationName: "Sigma Reporting Framework",
-    shortName: "Sigma Framework",
-    browserTitle: "Sigma Reporting Framework",
-    description: "Sigma SQL Reporting and Dashboard Framework",
-    logoUrl: null,
-    favicon: "/favicon.svg",
+  applicationName: "Reporting Dashboard",
+  shortName: "Sigma Reporting",
+  browserTitle: "Sigma Reporting Framework",
+  description:
+    "An open-source, configurable reporting and analytics framework for interactive dashboards, data visualization, and business reporting.",
+  favicon: "https://avatars.githubusercontent.com/u/350623603?s=96&v=4",
 } as const;
 
 export function getApplicationPageTitle(

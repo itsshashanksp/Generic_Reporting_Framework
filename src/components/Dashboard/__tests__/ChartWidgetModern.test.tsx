@@ -89,7 +89,7 @@ describe("modern chart widget", () => {
         expect(await screen.findByTestId("bar-chart")).toBeTruthy();
         expect(screen.getByTestId("chart-series").getAttribute("data-has-label")).toBe("true");
         expect(screen.getByTestId("chart-series").getAttribute("data-label-position")).toBe("top");
-        expect(screen.getByTestId("chart-series").getAttribute("data-label-value")).toBe("60.24 L");
+        expect(screen.getByTestId("chart-series").getAttribute("data-label-value")).toBe("60.24\u00a0L");
         expect(screen.getByTestId("bar-chart").getAttribute("data-margin")).toContain('"top":28');
         expect(screen.getByTestId("x-axis-value").getAttribute("data-padding")).toBe('{"left":24,"right":24}');
         expect(screen.getByTestId("y-axis-value").getAttribute("data-domain")).toBe("[-68,118]");
@@ -183,7 +183,7 @@ describe("modern chart widget", () => {
         expect(screen.getByTestId("tooltip-value").textContent).toContain("1,29,08,199.94");
 
         view.rerender(<DashboardProvider><ChartWidget title="Values" request={request} xField="Category" yField="Amount" chartType="bar" showTooltip chartOptions={{ orientation: "horizontal" }} /></DashboardProvider>);
-        expect((await screen.findByTestId("x-axis-value")).textContent).toBe("1.29 Cr");
+        expect((await screen.findByTestId("x-axis-value")).textContent).toBe("1.29\u00a0Cr");
         expect(document.querySelector(".dashboard-widget-content__chart-canvas")?.getAttribute("style")).toContain("508px");
         expect(screen.getByTestId("y-axis-value").getAttribute("data-width")).toBe("110");
     });
@@ -228,7 +228,7 @@ describe("modern chart widget", () => {
 
         view.rerender(<DashboardProvider><ChartWidget title="Labels" request={request} xField="Category" yField="Amount" chartType="pie" chartOptions={{ appearance: "donut", showDataLabels: true, showCenterTotal: true }} /></DashboardProvider>);
         expect(await screen.findByText("1 K")).toBeTruthy();
-        expect(screen.getByTestId("pie-external-label").textContent).toBe("A: 1 K");
+        expect(screen.getByTestId("pie-external-label").textContent).toBe("A: 1\u00a0K");
     });
 
     it("explains negative and zero-only pie data without misrepresenting it", async () => {
@@ -308,7 +308,7 @@ describe("modern chart widget", () => {
 
         expect(screen.getByRole("button", { name: "Customize" })).toBeTruthy();
         fireEvent.click(screen.getByRole("button", { name: "Customize" }));
-        expect(screen.getByRole("dialog", { name: "Customize Chart" })).toBeTruthy();
+        expect(screen.getByRole("dialog", { name: "Customize Widget" })).toBeTruthy();
         expect(document.querySelector(".chart-color-dialog__fields")).not.toBeNull();
         expect(document.querySelector(".chart-color-dialog__actions")).not.toBeNull();
         expect(document.querySelector(".app-dialog__body > .chart-color-dialog__actions")).toBeNull();

@@ -6,6 +6,7 @@ import type {
     ReportPresentationDefinition,
     ReportQueryDefinitionReference,
     PaginationPresentationConfig,
+    SortDefinition,
 } from "./report";
 
 export type WidgetType =
@@ -62,6 +63,58 @@ export interface ChartCustomizationDefaults {
     valueFormat?: ChartOptions["valueFormat"];
     seriesColors?: Record<string, string>;
     categoryColors?: Record<string, string>;
+}
+
+/** User-selectable view of one dashboard widget. Column is a vertical bar. */
+export type WidgetPresentationView =
+    | "table"
+    | "column"
+    | ChartType;
+
+interface WidgetPresentationSource {
+    /** Optional presentation-specific SQL Resource. It is resolved by the normal report loader. */
+    queryDefinition?: ReportQueryDefinitionReference;
+    /** Optional presentation-specific JSON Query request. */
+    request?: WidgetRequest;
+    /** Result metadata used by table rendering and static compatibility checks. */
+    columns?: ColumnDefinition[];
+}
+
+export interface WidgetTablePresentation extends WidgetPresentationSource {
+    pageSize?: number;
+    pageSizeOptions?: number[];
+    pagination?: PaginationPresentationConfig;
+    sort?: SortDefinition[];
+    export?: ExportConfig;
+}
+
+export interface WidgetChartPresentation extends WidgetPresentationSource {
+    xField: string;
+    yField: string;
+    chartOptions?: ChartOptions;
+    showLegend?: boolean;
+    showTooltip?: boolean;
+    showGrid?: boolean;
+    showLabels?: boolean;
+    export?: ExportConfig;
+}
+
+/** Optional, backwards-compatible presentation switching policy for table/chart widgets. */
+export interface WidgetPresentationConfiguration {
+    allowSwitching?: boolean;
+    defaultView: WidgetPresentationView;
+    allowedViews: WidgetPresentationView[];
+    table?: WidgetTablePresentation;
+    chart?: WidgetChartPresentation;
+}
+
+export interface WidgetTableViewState {
+    /** Internal request identity used to invalidate a page after filters/database change. */
+    queryKey?: string;
+    page: number;
+    pageSize: number;
+    sort: SortDefinition[];
+    columnVisibility: Record<string, boolean>;
 }
 
 export type WidgetRequest = DataRequest;
@@ -145,6 +198,9 @@ export interface DashboardWidgetPresentation {
 
     /** Widget-local runtime filter presentation; omitted preserves inline mode. */
     runtimeFilterDisplay?: "inline" | "dialog";
+
+    /** Alternate table/chart views of this widget; omitted preserves legacy rendering. */
+    presentation?: WidgetPresentationConfiguration;
 
     position?: {
         x: number;

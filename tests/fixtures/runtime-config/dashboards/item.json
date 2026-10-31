@@ -224,7 +224,37 @@
   },
   "xField": "Category",
   "yField": "StockValue",
-  "chartType": "pie"
+  "chartType": "pie",
+  "export": {
+    "enabled": true,
+    "formats": ["png", "svg", "csv", "excel"],
+    "filename": "stock-value-by-category"
+  },
+  "presentation": {
+    "allowSwitching": true,
+    "defaultView": "pie",
+    "allowedViews": ["table", "column", "bar", "pie", "doughnut"],
+    "table": {
+      "columns": [
+        { "field": "Category", "header": "Category", "dataType": "text" },
+        { "field": "StockValue", "header": "Stock Value", "dataType": "currency" }
+      ],
+      "pagination": {
+        "pageSize": 10,
+        "pageSizeOptions": [10, 25, 50]
+      },
+      "export": {
+        "enabled": true,
+        "formats": ["csv", "excel"],
+        "exportCurrentView": true,
+        "exportAll": true
+      }
+    },
+    "chart": {
+      "xField": "Category",
+      "yField": "StockValue"
+    }
+  }
 }
 
   ]

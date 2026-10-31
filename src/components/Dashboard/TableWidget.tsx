@@ -4,6 +4,7 @@ import {
     useMemo,
     useRef,
     useState,
+    type ReactNode,
 } from "react";
 
 import {
@@ -12,6 +13,7 @@ import {
     isRequestAbort,
 } from "../../api/request";
 import { useDashboard } from "../../engine/DashboardContext";
+import type { FilterValues } from "../../engine/FilterContext";
 import { buildFilters, composeRequestFilters } from "../../engine/FilterQueryBuilder";
 import { mapWidgetFilters, type WidgetFilterFields } from "../../engine/DashboardEngine/filterFields";
 import { createRequestCacheKey, getCachedResponse, getOrCreateInFlightRequest, setCachedResponse } from "../../engine/RequestCache";
@@ -22,7 +24,7 @@ import type { FilterDefinition } from "../../types/filter";
 import type { ColumnDefinition } from "../../types/column";
 import { inferColumnDataType } from "../../engine/ColumnEngine";
 import type { GridConfig, PaginationPresentationConfig } from "../../types/report";
-import type { WidgetRequest } from "../../types/widget";
+import type { WidgetRequest, WidgetTableViewState } from "../../types/widget";
 import type { GroupingConfig } from "../../types/grouping";
 import { buildReportingExportRows } from "../../engine/GridEngine";
 import ExportMenu, { type ExportMenuOption } from "../Common/ExportMenu";
@@ -53,6 +55,11 @@ interface TableWidgetProps {
     runtimeFilters?: FilterDefinition[];
     runtimeFilterDisplay?: "inline" | "dialog";
     grouping?: GroupingConfig;
+    headerActions?: ReactNode;
+    viewState?: WidgetTableViewState;
+    onViewStateChange?: (state: WidgetTableViewState) => void;
+    runtimeFilterValues?: FilterValues;
+    onRuntimeFilterValuesChange?: (values: FilterValues) => void;
 }
 
 type SortDirection = "ASC" | "DESC";
@@ -107,7 +114,8 @@ export default function TableWidget({
     ...props
 }: TableWidgetProps) {
     return (
-        <WidgetFilterController filters={runtimeFilters} database={props.request.database} widgetTitle={props.title} display={props.runtimeFilterDisplay}>
+        <WidgetFilterController filters={runtimeFilters} database={props.request.database} widgetTitle={props.title} display={props.runtimeFilterDisplay}
+            appliedValues={props.runtimeFilterValues} onAppliedValuesChange={props.onRuntimeFilterValuesChange}>
             {controls => <TableWidgetContent {...props} runtimeFilters={runtimeFilters} widgetFilterControls={controls} />}
         </WidgetFilterController>
     );
@@ -128,6 +136,9 @@ function TableWidgetContent({
     runtimeFilters = EMPTY_FILTER_DEFINITIONS,
     widgetFilterControls,
     grouping,
+    headerActions,
+    viewState,
+    onViewStateChange,
 }: TableWidgetProps & { widgetFilterControls: WidgetFilterControls }) {
     const { refreshKey, appliedFilters } = useDashboard();
 
@@ -136,9 +147,9 @@ function TableWidgetContent({
         configured: configuredPageSize,
         value: configuredPageSize,
     });
-    const activePageSize = pageSizeState.configured === configuredPageSize
+    const activePageSize = viewState?.pageSize ?? (pageSizeState.configured === configuredPageSize
         ? pageSizeState.value
-        : configuredPageSize;
+        : configuredPageSize);
     const [rows, setRows] = useState<Record<string, unknown>[]>([]);
     const [totalRows, setTotalRows] = useState(0);
     const [resultViewKey, setResultViewKey] = useState("");
@@ -146,7 +157,7 @@ function TableWidgetContent({
         queryKey: "",
         page: 1,
     });
-    const [sort, setSort] = useState<SortState | null>(null);
+    const [sort, setSort] = useState<SortState | null>(() => viewState?.sort[0] ?? null);
     const [retryKey, setRetryKey] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -159,6 +170,12 @@ function TableWidgetContent({
     const [exportProgress, setExportProgress] = useState("");
     const [exportError, setExportError] = useState("");
     const previousExportRequestKey = useRef("");
+    const controlledViewStateRef = useRef(viewState);
+    const onViewStateChangeRef = useRef(onViewStateChange);
+    useEffect(() => {
+        controlledViewStateRef.current = viewState;
+        onViewStateChangeRef.current = onViewStateChange;
+    }, [viewState, onViewStateChange]);
 
     // Screen requests and export-all share these, so both use the mapped fields.
     const dashboardFilters = useMemo(() => {
@@ -182,9 +199,9 @@ function TableWidgetContent({
         [request, dashboardFilters, widgetFilters, configuredPageSize]
     );
 
-    const currentPage = pageState.queryKey === queryKey
-        ? pageState.page
-        : 1;
+    const currentPage = viewState
+        ? viewState.queryKey === undefined || viewState.queryKey === queryKey ? viewState.page : 1
+        : pageState.queryKey === queryKey ? pageState.page : 1;
     const viewKey = useMemo(
         () => JSON.stringify({ queryKey, currentPage, activePageSize, sort }),
         [queryKey, currentPage, activePageSize, sort]
@@ -253,6 +270,9 @@ function TableWidgetContent({
                     setResultViewKey(viewKey);
                     setError(null);
                     setLoading(false);
+                    if (controlledViewStateRef.current?.queryKey !== queryKey) {
+                        onViewStateChangeRef.current?.({ ...controlledViewStateRef.current!, queryKey, page: currentPage });
+                    }
                     return;
                 }
             }
@@ -304,8 +324,13 @@ function TableWidgetContent({
                 );
 
                 if (responseTotal > 0 && currentPage > pageCount) {
-                    setPageState({ queryKey, page: pageCount });
+                    if (controlledViewStateRef.current) onViewStateChangeRef.current?.({ ...controlledViewStateRef.current, queryKey, page: pageCount });
+                    else setPageState({ queryKey, page: pageCount });
                     return;
+                }
+
+                if (controlledViewStateRef.current?.queryKey !== queryKey) {
+                    onViewStateChangeRef.current?.({ ...controlledViewStateRef.current!, queryKey, page: currentPage });
                 }
 
                 setRows(responseRows);
@@ -389,10 +414,10 @@ function TableWidgetContent({
     const configuredGridColumns = useMemo<ColumnDefinition[]>(
         () => configuredColumns?.map(column => ({
             ...column,
-            visible: column.visible !== false,
+            visible: viewState?.columnVisibility[column.field] ?? column.visible !== false,
             sortable: column.sortable !== false,
         })) ?? [],
-        [configuredColumns]
+        [configuredColumns, viewState?.columnVisibility]
     );
     const inferredGridColumns = useMemo<ColumnDefinition[]>(
         () => {
@@ -421,7 +446,13 @@ function TableWidgetContent({
         }
 
         setSort(nextSort);
-        setPageState({ queryKey, page: 1 });
+        if (viewState) onViewStateChange?.({
+            ...viewState,
+            queryKey,
+            page: 1,
+            sort: nextSort ? [nextSort] : [],
+        });
+        else setPageState({ queryKey, page: 1 });
     };
 
     const handlePageSize = (value: number) => {
@@ -429,7 +460,8 @@ function TableWidgetContent({
             configured: configuredPageSize,
             value,
         });
-        setPageState({ queryKey, page: 1 });
+        if (viewState) onViewStateChange?.({ ...viewState, queryKey, page: 1, pageSize: value });
+        else setPageState({ queryKey, page: 1 });
     };
 
     const exportFileName = exportConfig?.filename || title.replace(/\s+/g, "-").toLowerCase();
@@ -538,16 +570,21 @@ function TableWidgetContent({
                 : getDashboardTableContentHeight(gridRows.length, activePageSize)}
             autoHeight={false}
             stableViewport={reportingEnabled}
-            initialSort={request.sort}
+            initialSort={sort ? [sort] : request.sort}
             serverPagination={reportingEnabled ? undefined : {
                 page: currentPage,
                 pageSize: activePageSize,
                 totalRows: gridTotalRows,
                 disabled: isViewLoading,
-                onPageChange: page => setPageState({ queryKey, page }),
+                onPageChange: page => viewState
+                    ? onViewStateChange?.({ ...viewState, queryKey, page })
+                    : setPageState({ queryKey, page }),
                 onPageSizeChange: handlePageSize,
             }}
             onSortChange={handleSort}
+            onColumnVisibilityChange={columnVisibility => {
+                if (viewState) onViewStateChange?.({ ...viewState, columnVisibility });
+            }}
             busy={tableState === "loading"}
         />;
     };
@@ -565,6 +602,7 @@ function TableWidgetContent({
                         role={showRefreshingStatus ? "status" : undefined}
                         aria-hidden={showRefreshingStatus ? undefined : true}
                     >{showRefreshingStatus ? "Refreshing…" : ""}</span>
+                    {headerActions}
                     {widgetFilterControls.button}
                     <ExportMenu
                         options={exportOptions}

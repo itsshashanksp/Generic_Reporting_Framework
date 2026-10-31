@@ -4,6 +4,7 @@ import {
     getDashboard,
     getDashboardIds,
     resolveDashboardWidgetColumns,
+    resolveDashboardWidgetPresentationDefinition,
     resolveDashboardWidgetRequest,
 } from "..";
 import { validateDashboard } from "../../DashboardValidator";
@@ -89,6 +90,23 @@ describe("DashboardEngine", () => {
             },
         });
         expect(chart).toMatchObject({ xField: "Category", yField: "StockValue" });
+    });
+
+    it("resolves the Item stock-value chart as a currency table without changing its SQL contract", () => {
+        const result = getDashboard("item-dashboard");
+        if (result.status !== "valid") throw new Error("Expected valid Item dashboard");
+        const stock = result.dashboard.widgets.find(widget => widget.id === "stock-value")!;
+        const table = resolveDashboardWidgetPresentationDefinition(stock, "table", result.dashboard.filters ?? []);
+
+        expect(table?.request).toMatchObject({
+            action: "sql",
+            resource: "widgets/item-stock-value-by-category",
+        });
+        expect(table?.columns).toEqual([
+            expect.objectContaining({ field: "Category", dataType: "text" }),
+            expect.objectContaining({ field: "StockValue", dataType: "currency" }),
+        ]);
+        expect(stock.presentation?.table?.export?.formats).toEqual(["csv", "excel"]);
     });
 
     it("resolves every inline Bill widget through the shared backend SQL resource mode", () => {

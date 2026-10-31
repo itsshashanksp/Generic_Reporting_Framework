@@ -5,6 +5,8 @@ import { validateDashboard } from "../../engine/DashboardValidator";
 import { loadNavigation } from "../../engine/NavigationEngine";
 import { getReportValidationErrors } from "../../engine/ReportDefinitionEngine/validator";
 import { buildWidgetRegistry } from "../../engine/WidgetEngine/widgetLoader";
+import { resolveDashboardWidgetPresentationDefinition } from "../../engine/DashboardEngine";
+import type { DashboardDefinition } from "../../types/dashboard";
 
 const reports = import.meta.glob("../../../examples/reports/*.json", { eager: true, import: "default" }) as Record<string, unknown>;
 const dashboards = import.meta.glob("../../../examples/dashboards/*.json", { eager: true, import: "default" }) as Record<string, unknown>;
@@ -59,6 +61,7 @@ describe("configuration coverage report", () => {
         for (const [path, report] of Object.entries(reports)) expect(getReportValidationErrors(report), path).toEqual([]);
         for (const [path, dashboard] of Object.entries(dashboards)) {
             expect(validateDashboard(dashboard, { reportIds, widgetIds }).errors, path).toEqual([]);
+            resolvePresentationDefinitions(dashboard, path);
         }
         for (const [path, menu] of Object.entries(menus)) {
             expect(() => loadNavigation(menu, { reportIds, dashboardIds }), path).not.toThrow();
@@ -78,6 +81,7 @@ describe("configuration coverage report", () => {
         for (const [path, report] of Object.entries(runtimeReports)) expect(getReportValidationErrors(report), path).toEqual([]);
         for (const [path, dashboard] of Object.entries(runtimeDashboards)) {
             expect(validateDashboard(dashboard, { reportIds: localReportIds, widgetIds }).errors, path).toEqual([]);
+            resolvePresentationDefinitions(dashboard, path);
         }
         for (const [path, menu] of Object.entries(runtimeMenus)) {
             expect(() => loadNavigation(menu, { reportIds: localReportIds, dashboardIds: localDashboardIds }), path).not.toThrow();
@@ -96,3 +100,13 @@ describe("configuration coverage report", () => {
         expect(serialized).not.toMatch(/"(?:rowNumber|row_number|serialNumber|showRowNumbers)"\s*:/i);
     });
 });
+
+function resolvePresentationDefinitions(value: unknown, path: string) {
+    const dashboard = value as DashboardDefinition;
+    dashboard.widgets?.forEach(widget => widget.presentation?.allowedViews.forEach(view => {
+        expect(
+            () => resolveDashboardWidgetPresentationDefinition(widget, view, dashboard.filters ?? []),
+            `${path}: ${widget.id}/${view}`
+        ).not.toThrow();
+    }));
+}

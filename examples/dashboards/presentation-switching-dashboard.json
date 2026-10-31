@@ -1,0 +1,71 @@
+{
+  "id": "presentation-switching-dashboard",
+  "title": "Widget Presentation Switching",
+  "description": "One widget with independent paged table and aggregated chart presentations.",
+  "layout": { "columns": 12, "tabletColumns": 6, "mobileColumns": 1 },
+  "widgets": [
+    {
+      "id": "orders-presentation",
+      "type": "table",
+      "title": "Orders",
+      "description": "Switch between order details and a complete status summary.",
+      "width": 12,
+      "request": {
+        "action": "select",
+        "source": { "table": "DemoOrders" },
+        "fields": ["OrderId", "Status", "OrderDate", "Amount"]
+      },
+      "columns": [
+        { "field": "OrderId", "header": "Order", "dataType": "number" },
+        { "field": "Status", "header": "Status", "dataType": "text" },
+        { "field": "OrderDate", "header": "Order Date", "dataType": "date" },
+        { "field": "Amount", "header": "Amount", "dataType": "currency" }
+      ],
+      "pagination": {
+        "pageSize": 25,
+        "pageSizeOptions": [10, 25, 50, 100],
+        "showTotalRecords": true,
+        "showPageNumbers": true,
+        "showFirstLast": true
+      },
+      "export": {
+        "enabled": true,
+        "formats": ["csv", "excel"],
+        "exportCurrentView": true,
+        "exportAll": true
+      },
+      "presentation": {
+        "allowSwitching": true,
+        "defaultView": "table",
+        "allowedViews": ["table", "column", "bar", "pie", "doughnut"],
+        "chart": {
+          "request": {
+            "action": "select",
+            "source": { "table": "DemoOrders" },
+            "fields": [
+              "Status",
+              { "function": "SUM", "field": "Amount", "alias": "Value" }
+            ],
+            "groupBy": ["Status"]
+          },
+          "columns": [
+            { "field": "Status", "header": "Status", "dataType": "text" },
+            { "field": "Value", "header": "Sales", "dataType": "currency" }
+          ],
+          "xField": "Status",
+          "yField": "Value",
+          "chartOptions": {
+            "showLegend": true,
+            "showLabels": true,
+            "showGrid": true,
+            "valueFormat": "currency"
+          },
+          "export": {
+            "enabled": true,
+            "formats": ["png", "svg", "csv", "excel"]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Filter } from "lucide-react";
 
@@ -20,16 +20,21 @@ export default function WidgetFilterController({
     widgetTitle,
     children,
     display = "inline",
+    appliedValues,
+    onAppliedValuesChange,
 }: {
     filters: FilterDefinition[];
     database?: string;
     widgetTitle: string;
     display?: "inline" | "dialog";
+    appliedValues?: FilterValues;
+    onAppliedValuesChange?: (values: FilterValues) => void;
     children: (controls: WidgetFilterControls) => ReactNode;
 }) {
     return (
         <FilterProvider>
-            <WidgetFilterControllerContent filters={filters} database={database} widgetTitle={widgetTitle} display={display}>
+            <WidgetFilterControllerContent filters={filters} database={database} widgetTitle={widgetTitle} display={display}
+                appliedValues={appliedValues} onAppliedValuesChange={onAppliedValuesChange}>
                 {children}
             </WidgetFilterControllerContent>
         </FilterProvider>
@@ -42,15 +47,24 @@ function WidgetFilterControllerContent({
     widgetTitle,
     children,
     display,
+    appliedValues: controlledAppliedValues,
+    onAppliedValuesChange,
 }: {
     filters: FilterDefinition[];
     database?: string;
     widgetTitle: string;
     display: "inline" | "dialog";
+    appliedValues?: FilterValues;
+    onAppliedValuesChange?: (values: FilterValues) => void;
     children: (controls: WidgetFilterControls) => ReactNode;
 }) {
     const { filters, clearFilters, replaceFilters } = useFilters();
-    const [appliedValues, setAppliedValues] = useState<FilterValues>({});
+    const [internalAppliedValues, setInternalAppliedValues] = useState<FilterValues>({});
+    const appliedValues = controlledAppliedValues ?? internalAppliedValues;
+    const setAppliedValues = useCallback((values: FilterValues) => {
+        setInternalAppliedValues(values);
+        onAppliedValuesChange?.(values);
+    }, [onAppliedValuesChange]);
     const [open, setOpen] = useState(false);
     const [error, setError] = useState("");
     const panelId = useId();
@@ -77,7 +91,7 @@ function WidgetFilterControllerContent({
         setAppliedValues({});
         setError("");
         setOpen(false);
-    }, [database, clearFilters]);
+    }, [database, clearFilters, setAppliedValues]);
 
     const toggle = () => {
         if (open) {
@@ -86,7 +100,7 @@ function WidgetFilterControllerContent({
             if (display === "dialog") restoreTriggerFocus();
             return;
         }
-        if (display === "dialog") replaceFilters(appliedValues);
+        replaceFilters(appliedValues);
         setOpen(true);
         if (!open) {
             window.requestAnimationFrame(() => {

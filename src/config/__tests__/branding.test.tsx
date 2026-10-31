@@ -15,7 +15,6 @@ const customBranding: ApplicationBranding = {
     shortName: "Configurable App",
     browserTitle: "Configured Browser Brand",
     description: "Configured application description",
-    logoUrl: "/branding/logo.svg",
     favicon: "/branding/favicon.ico",
 };
 
@@ -37,14 +36,10 @@ describe("application branding", () => {
         expect(getApplicationPageTitle("  ", customBranding)).toBe("Configured Browser Brand");
     });
 
-    it("renders an optional configured logo and preserves long application names", () => {
-        const { rerender } = render(<BrandIdentity branding={customBranding} />);
+    it("renders the configured application name without requiring a logo asset", () => {
+        render(<BrandIdentity branding={customBranding} />);
         expect(screen.getByText(customBranding.applicationName)).toBeTruthy();
-        expect(screen.getByRole("img", { name: `${customBranding.applicationName} logo` }).getAttribute("src")).toBe(customBranding.logoUrl);
-
-        rerender(<BrandIdentity branding={{ ...customBranding, logoUrl: null }} />);
         expect(screen.queryByRole("img")).toBeNull();
-        expect(screen.getByText(customBranding.applicationName)).toBeTruthy();
     });
 
     it("applies one configurable favicon and description metadata entry", () => {

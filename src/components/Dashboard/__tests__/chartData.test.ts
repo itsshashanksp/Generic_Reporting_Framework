@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { applyChartTopN, buildChartPresentation, describeChartData, formatChartCategoryLabel, formatChartNumber, formatChartPercentage, formatChartTooltipValue, getChartOverflowLayout, getChartValueDomain, getHorizontalBarChartHeight, getHorizontalCategoryAxisWidth, getVisiblePieLabelIndexes, mapChartData, resolveChartLabelVisibility } from "../chartData";
+import { applyChartTopN, buildChartPresentation, describeChartData, formatChartCategoryLabel, formatChartLabel, formatChartNumber, formatChartPercentage, formatChartTooltipValue, getChartOverflowLayout, getChartValueDomain, getHorizontalBarChartHeight, getHorizontalCategoryAxisWidth, getVisiblePieLabelIndexes, mapChartData, resolveChartLabelVisibility } from "../chartData";
 
 describe("chart data presentation", () => {
     it("formats chart values without changing their numeric precision", () => {
@@ -18,6 +18,8 @@ describe("chart data presentation", () => {
         expect(formatChartNumber(6020000, { numberFormat: "compact-indian" })).toBe("60.2 L");
         expect(formatChartNumber(12910000, { numberFormat: "full" })).toBe("1,29,10,000");
         expect(formatChartTooltipValue(12910000, { valueFormat: "currency" })).toBe("₹1,29,10,000.00");
+        expect(formatChartLabel(6024000, { valueFormat: "currency" })).toBe("₹60.24\u00a0L");
+        expect(formatChartLabel(12900000, { valueFormat: "currency" })).toBe("₹1.29\u00a0Cr");
     });
 
     it("suppresses colliding and tiny pie labels as the available radius shrinks", () => {

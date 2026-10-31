@@ -11,6 +11,7 @@ import {
     validateDatabaseId,
 } from "./ReportDefinitionEngine/validator";
 import { unknownPropertyMessage } from "./configurationValidation";
+import { getWidgetPresentationAvailability } from "./WidgetPresentationEngine";
 
 export interface DashboardValidationResult {
     valid: boolean;
@@ -476,7 +477,7 @@ function validateWidget(
 
 
     const commonKeys = [
-        "id", "type", "title", "description", "width", "height", "visible", "position", "filterFields", "pageFilterExclusions", "runtimeFilters", "runtimeFilterDisplay",
+        "id", "type", "title", "description", "width", "height", "visible", "position", "filterFields", "pageFilterExclusions", "runtimeFilters", "runtimeFilterDisplay", "presentation",
     ];
     const definitionKeys = ["queryDefinition", "columns", "filters", "sort", "filterLogic", "grid", "toolbar"];
     const typeKeys: Record<string, string[]> = {
@@ -577,6 +578,7 @@ function validateWidget(
         errors.push(`${widgetLabel} runtimeFilterDisplay must be inline or dialog.`);
     }
     addRuntimeFilterDiagnostics(widget, widgetLabel, widgetSharedFilters, warnings);
+    validateWidgetPresentation(widget, widgetLabel, errors);
 
     const hasReportId = widget.reportId !== undefined;
     const hasWidgetId = widget.widgetId !== undefined;
@@ -773,6 +775,152 @@ function validatePageFilterExclusions(
             errors.push(`${label} pageFilterExclusions references unknown dashboard filter "${field}".`);
         }
         if (isNonEmptyString(field)) seen.add(field);
+    });
+}
+
+function validateWidgetPresentation(
+    widget: Record<string, unknown>,
+    widgetLabel: string,
+    errors: string[]
+) {
+    if (widget.presentation === undefined) return;
+    const label = `${widgetLabel} presentation`;
+    if (!isRecord(widget.presentation)) {
+        errors.push(`${label} must be an object.`);
+        return;
+    }
+    if (widget.type !== "table" && widget.type !== "chart") {
+        errors.push(`${label} is supported only for table and chart widgets.`);
+        return;
+    }
+    const presentation = widget.presentation;
+    rejectUnknownProperties(presentation, ["allowSwitching", "defaultView", "allowedViews", "table", "chart"], label, errors);
+    if (presentation.allowSwitching !== undefined && typeof presentation.allowSwitching !== "boolean") {
+        errors.push(`${label} allowSwitching must be a boolean.`);
+    }
+    const supportedViews = ["table", "column", ...chartTypes.filter(type => type !== "funnel")];
+    if (!isNonEmptyString(presentation.defaultView) || !supportedViews.includes(presentation.defaultView)) {
+        errors.push(`${label} defaultView must be table, column, bar, line, area, pie, doughnut, treemap, or radial-bar.`);
+    }
+    if (!Array.isArray(presentation.allowedViews) || presentation.allowedViews.length < 2) {
+        errors.push(`${label} allowedViews must contain at least two views.`);
+    } else {
+        presentation.allowedViews.forEach((view, index) => {
+            if (!isNonEmptyString(view) || !supportedViews.includes(view)) {
+                errors.push(`${label} allowedViews[${index}] is not a supported presentation.`);
+            }
+        });
+        if (new Set(presentation.allowedViews).size !== presentation.allowedViews.length) {
+            errors.push(`${label} allowedViews must not contain duplicates.`);
+        }
+        if (isNonEmptyString(presentation.defaultView) && !presentation.allowedViews.includes(presentation.defaultView)) {
+            errors.push(`${label} defaultView must be included in allowedViews.`);
+        }
+    }
+
+    validateTablePresentation(presentation.table, `${label} table`, widget, errors);
+    validateChartPresentation(presentation.chart, `${label} chart`, widget, errors);
+
+    if (Array.isArray(presentation.allowedViews)) {
+        getWidgetPresentationAvailability(widget as unknown as DashboardWidget)
+            .filter(option => !option.available)
+            .forEach(option => errors.push(`${label} view "${option.view}" is unavailable: ${option.reason}`));
+    }
+}
+
+function validateTablePresentation(
+    value: unknown,
+    label: string,
+    widget: Record<string, unknown>,
+    errors: string[]
+) {
+    if (value === undefined) return;
+    if (!isRecord(value)) return errors.push(`${label} must be an object.`);
+    rejectUnknownProperties(value, ["queryDefinition", "request", "columns", "pageSize", "pageSizeOptions", "pagination", "sort", "export"], label, errors);
+    validatePresentationSource(value, label, widget, errors);
+    if (value.pageSize !== undefined) validatePositiveInteger(value.pageSize, `${label} pageSize`, errors);
+    if (value.pageSizeOptions !== undefined) {
+        if (!Array.isArray(value.pageSizeOptions) || value.pageSizeOptions.length === 0) errors.push(`${label} pageSizeOptions must be a non-empty array.`);
+        else value.pageSizeOptions.forEach((option, index) => validatePositiveInteger(option, `${label} pageSizeOptions[${index}]`, errors));
+    }
+    validateWidgetPagination(value.pagination, `${label} pagination`, errors);
+    validateSortDefinitions(value.sort, `${label} sort`, errors);
+    validateExportConfig(value.export, `${label} export`, errors);
+}
+
+function validateChartPresentation(
+    value: unknown,
+    label: string,
+    widget: Record<string, unknown>,
+    errors: string[]
+) {
+    if (value === undefined) return;
+    if (!isRecord(value)) return errors.push(`${label} must be an object.`);
+    rejectUnknownProperties(value, ["queryDefinition", "request", "columns", "xField", "yField", "chartOptions", "showLegend", "showTooltip", "showGrid", "showLabels", "export"], label, errors);
+    validatePresentationSource(value, label, widget, errors);
+    validateOptionalString(value.xField, `${label} xField`, errors);
+    validateOptionalString(value.yField, `${label} yField`, errors);
+    validateChartOptions(value.chartOptions, `${label} chartOptions`, errors);
+    validateChartExport(value.export, `${label} export`, errors);
+    for (const field of ["showLegend", "showTooltip", "showGrid", "showLabels"]) {
+        if (value[field] !== undefined && typeof value[field] !== "boolean") errors.push(`${label} ${field} must be a boolean.`);
+    }
+}
+
+function validatePresentationSource(
+    value: Record<string, unknown>,
+    label: string,
+    widget: Record<string, unknown>,
+    errors: string[]
+) {
+    if (value.queryDefinition !== undefined && value.request !== undefined) {
+        errors.push(`${label} requires at most one of queryDefinition or request.`);
+        return;
+    }
+    if (value.request !== undefined) validateRequest(value.request, label, errors);
+    if (value.columns !== undefined) validatePresentationColumns(value.columns, `${label} columns`, errors);
+    if (value.queryDefinition !== undefined) {
+        getReportValidationErrors({
+            id: `${String(widget.id ?? "widget")}-${label}`,
+            title: String(widget.title ?? "Widget presentation"),
+            queryDefinition: value.queryDefinition,
+            columns: Array.isArray(value.columns) ? value.columns : [],
+            filters: [],
+        }, { columnsRequired: false }).forEach(error => errors.push(`${label}: ${error}`));
+    }
+}
+
+function validatePresentationColumns(value: unknown, label: string, errors: string[]) {
+    if (!Array.isArray(value) || value.length === 0) {
+        errors.push(`${label} must be a non-empty array.`);
+        return;
+    }
+    const fields = new Set<string>();
+    const dataTypes = ["text", "number", "currency", "percentage", "boolean", "date", "datetime"];
+    value.forEach((column, index) => {
+        const columnLabel = `${label}[${index}]`;
+        if (!isRecord(column)) return errors.push(`${columnLabel} must be an object.`);
+        rejectUnknownProperties(column, ["field", "header", "visible", "sortable", "width", "dataType", "currency"], columnLabel, errors);
+        if (!isNonEmptyString(column.field)) errors.push(`${columnLabel} field is required.`);
+        else if (fields.has(column.field)) errors.push(`${label} contains duplicate field "${column.field}".`);
+        else fields.add(column.field);
+        if (!isNonEmptyString(column.header)) errors.push(`${columnLabel} header is required.`);
+        if (column.dataType !== undefined && !dataTypes.includes(String(column.dataType))) errors.push(`${columnLabel} dataType is invalid.`);
+        for (const field of ["visible", "sortable"]) if (column[field] !== undefined && typeof column[field] !== "boolean") errors.push(`${columnLabel} ${field} must be a boolean.`);
+        if (column.width !== undefined) validatePositiveInteger(column.width, `${columnLabel} width`, errors);
+        validateCurrencyCode(column.currency, `${columnLabel} currency`, errors);
+        if (column.currency !== undefined && column.dataType !== "currency") errors.push(`${columnLabel} currency is only supported for currency columns.`);
+    });
+}
+
+function validateSortDefinitions(value: unknown, label: string, errors: string[]) {
+    if (value === undefined) return;
+    if (!Array.isArray(value)) return errors.push(`${label} must be an array.`);
+    value.forEach((sort, index) => {
+        if (!isRecord(sort)) return errors.push(`${label}[${index}] must be an object.`);
+        rejectUnknownProperties(sort, ["field", "direction"], `${label}[${index}]`, errors);
+        if (!isNonEmptyString(sort.field)) errors.push(`${label}[${index}] field is required.`);
+        if (sort.direction !== "ASC" && sort.direction !== "DESC") errors.push(`${label}[${index}] direction must be ASC or DESC.`);
     });
 }
 
